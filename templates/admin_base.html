@@ -8,12 +8,6 @@
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <meta name="csrf-token" content="{{ csrf_token | default('') }}" />
-      {# admin_components.js's session-timeout timer has always read this exact
-      meta tag (with a documented "falls back to 30 if not present" comment) but
-      it was never emitted anywhere — so the client-side auto-logout
-      warning/redirect silently hardcoded 30 minutes regardless of the real
-      configured SESSION_TIMEOUT_MINUTES, disagreeing with server-side
-      enforcement (dependencies.py) whenever an operator changes it. #}
       <meta
         name="session-timeout-minutes"
         content="{{ session_timeout_minutes | default(30) }}"
@@ -69,7 +63,7 @@
 
       <!-- KinJo Admin Design System -->
       <link rel="stylesheet" href="/static/css/admin_design_system.css?v=3.3" />
-      <link rel="stylesheet" href="/static/css/top-menu.css?v=1.1" />
+      <link rel="stylesheet" href="/static/css/top-menu.css?v=2.0" />
       <link rel="stylesheet" href="/static/css/design-tokens.css?v=2" />
       <link rel="stylesheet" href="/static/css/layout.css?v=1.3" />
       <link rel="stylesheet" href="/static/css/components.css?v=1.3" />
@@ -81,11 +75,6 @@
       {% if ui_dir == 'rtl' %}
       <link rel="stylesheet" href="/static/css/rtl.css?v=1.1" />
       {% endif %}
-      {# dark-mode.css used to sit inside the RTL branch above, so the entire
-         English admin had no dark theme: with kinjo_lang=en and the OS set to
-         dark, the media query matched but the stylesheet was never requested
-         and the page stayed light. Direction and theme are independent axes --
-         rtl.css is direction-specific, dark-mode.css is not. #}
       <link rel="stylesheet" href="/static/css/dark-mode.css?v=1.0" />
 
       <!-- SweetAlert2 (self-hosted v11.14.5) -->
@@ -126,8 +115,6 @@
           <header class="admin-header">
             <div class="admin-header-left">
               {% from 'components/kinjo_logo.html' import kinjo_logo %}
-              {# Layout lives in .header-logo (admin_design_system.css). Inline styles
-                 here would outrank the stylesheet and restart the specificity war. #}
               <a
                 href="/admin/dashboard"
                 class="header-logo"
@@ -173,10 +160,6 @@
                       class="dropdown-item d-flex align-items-center justify-content-between {% if ui_lang == 'ar' %}active{% endif %}"
                       onclick="setAdminLanguage('ar')"
                     >
-                      {# English mode must show the English word: the integrity
-                         pass rewrites Arabic on English pages, which turned this
-                         option into a second "English" entry and left no way to
-                         pick Arabic. #}
                       {% if ui_lang == 'en' %}Arabic{% else %}العربية{% endif %}
                       {% if ui_lang == 'ar' %}<i
                         class="bi bi-check2 ms-2"
@@ -251,96 +234,539 @@
                   </li>
                 </ul>
               </div>
+
+              <!-- Mobile Navigation Toggle Button (<1024px) -->
+              <button
+                class="mobile-nav-toggle-btn ms-2 me-1"
+                id="adminMobileNavToggle"
+                type="button"
+                aria-expanded="false"
+                aria-controls="adminMobileDrawer"
+                aria-label="{% if ui_lang == 'en' %}Toggle navigation menu{% else %}تبديل القائمة الرئيسية{% endif %}"
+              >
+                <i class="bi bi-list fs-4" aria-hidden="true"></i>
+              </button>
             </div>
           </header>
 
           <aside id="admin-sidebar">
             <nav class="admin-top-nav" aria-label="{% if ui_lang == 'en' %}Main navigation{% else %}القائمة الرئيسية{% endif %}">
-              {% set current_path = request.url.path %} {% set sidebar_sections = [ { "id": "overview", "icon": "bi-speedometer2", "label_ar": "نظرة عامة", "label_en": "Overview", "items": [ {"href": "/admin/dashboard", "icon": "bi-speedometer2", "label_ar": "لوحة التحكم الإدارية", "label_en": "Admin Dashboard", "active_paths": ["/admin/dashboard", "/dashboard"]}, {"href": "/admin/observability", "icon": "bi-activity", "label_ar": "مراقبة النظام", "label_en": "System Health", "active_paths": ["/admin/observability"]}, {"href": "/admin/alerts", "icon": "bi-bell", "label_ar": "التنبيهات", "label_en": "Alerts", "active_paths": ["/admin/alerts"]} ] }, { "id": "people-organizations", "icon": "bi-people", "label_ar": "الأشخاص والجهات", "label_en": "People & Organizations", "items": [ {"href": "/admin/users", "icon": "bi-people", "label_ar": "المستخدمون", "label_en": "Users", "active_paths": ["/admin/users", "/admin/users/create"], "active_prefixes": ["/admin/users/"]}, {"href": "/admin/users/import", "icon": "bi-person-up", "label_ar": "استيراد المستخدمين", "label_en": "Import Users", "active_paths": ["/admin/users/import"]}, {"href": "/admin/kg-overview", "icon": "bi-buildings", "label_ar": "نظرة عامة على الحضانات", "label_en": "Kindergarten Overview", "active_paths": ["/admin/kg-overview"]}, {"href": "/admin/kindergartens", "icon": "bi-building", "label_ar": "سجل الحضانات", "label_en": "Kindergarten Records", "active_paths": ["/admin/kindergartens", "/admin/kindergartens/new"], "active_prefixes": ["/admin/kindergartens/"]} ] }, { "id": "communication-data", "icon": "bi-send", "label_ar": "التواصل والبيانات", "label_en": "Communication & Data", "items": [ {"href": "/admin/messages", "icon": "bi-envelope", "label_ar": "الرسائل", "label_en": "Messages", "active_paths": ["/admin/messages"], "active_prefixes": ["/admin/messages/"], "group_label_ar": "التواصل", "group_label_en": "Communication"}, {"href": "/admin/messages/compose", "icon": "bi-pencil-square", "label_ar": "إنشاء رسالة", "label_en": "Compose Message", "active_paths": ["/admin/messages/compose"], "group_label_ar": "التواصل", "group_label_en": "Communication"}, {"href": "/admin/contact-messages", "icon": "bi-chat-left-text", "label_ar": "رسائل التواصل", "label_en": "Contact Messages", "active_paths": ["/admin/contact-messages"], "group_label_ar": "التواصل", "group_label_en": "Communication"}, {"href": "/admin/imported-kindergartens", "icon": "bi-database-check", "label_ar": "بيانات الحضانات المستوردة", "label_en": "Imported Kindergarten Data", "active_paths": ["/admin/imported-kindergartens"], "group_label_ar": "إدارة البيانات", "group_label_en": "Data Management"}, {"href": "/admin/import-kindergartens", "icon": "bi-file-earmark-arrow-up", "label_ar": "استيراد الحضانات", "label_en": "Import Kindergartens", "active_paths": ["/admin/import-kindergartens"], "group_label_ar": "إدارة البيانات", "group_label_en": "Data Management"}, {"href": "/admin/import-logs", "icon": "bi-clock-history", "label_ar": "سجل الاستيراد", "label_en": "Import History", "active_paths": ["/admin/import-logs"], "group_label_ar": "إدارة البيانات", "group_label_en": "Data Management"} ] }, { "id": "operations-safety", "icon": "bi-shield-exclamation", "label_ar": "العمليات والسلامة", "label_en": "Operations & Safety", "items": [ {"href": "/admin/reports/incidents", "icon": "bi-list-check", "label_ar": "تقارير الحوادث", "label_en": "Incident Reports", "active_paths": ["/admin/reports/incidents"], "active_prefixes": ["/admin/reports/incidents/"]}, {"href": "/admin/safety-analytics", "icon": "bi-heart-pulse", "label_ar": "تحليلات الحوادث", "label_en": "Incident Analytics", "active_paths": ["/admin/safety-analytics"]} ] }, { "id": "analytics-reporting", "icon": "bi-bar-chart-line", "label_ar": "التحليلات والتقارير", "label_en": "Analytics & Reporting", "items": [ {"href": "/admin/analytics", "icon": "bi-graph-up-arrow", "label_ar": "نظرة عامة على التحليلات", "label_en": "Analytics Overview", "active_paths": ["/admin/analytics", "/admin/analytics/dashboard"], "active_prefixes": ["/admin/analytics/drilldown/"]}, {"href": "/admin/heatmap", "icon": "bi-globe-asia-australia", "label_ar": "التحليل الجغرافي", "label_en": "Geographic Analysis", "active_paths": ["/admin/heatmap"]}, {"href": "/admin/kpi", "icon": "bi-speedometer", "label_ar": "مؤشرات أداء الشبكة", "label_en": "Network KPIs", "active_paths": ["/admin/kpi"]}, {"href": "/admin/analytics/reports", "icon": "bi-file-earmark-text", "label_ar": "مركز التقارير", "label_en": "Reports Center", "active_paths": ["/admin/analytics/reports"]}, {"href": "/admin/analytics/decision-support", "icon": "bi-lightbulb", "label_ar": "دعم القرار", "label_en": "Decision Support", "active_paths": ["/admin/analytics/decision-support"]}, {"href": "/admin/daily-reports-organization", "icon": "bi-calendar-check", "label_ar": "تنظيم التقارير اليومية", "label_en": "Daily Report Organization", "active_paths": ["/admin/daily-reports-organization", "/daily-reports"]}, {"href": "/reports/analytics", "icon": "bi-calendar2-data", "label_ar": "تحليلات التقارير اليومية", "label_en": "Daily Reports Analytics", "active_paths": ["/reports/analytics", "/admin/analytics/daily-reports"]}, {"href": "/admin/analytics/charts", "icon": "bi-bar-chart", "label_ar": "مستكشف الرسوم البيانية", "label_en": "Charts Explorer", "active_paths": ["/admin/analytics/charts", "/admin/charts/dashboard", "/api/admin/charts/dashboard"]} ] }, { "id": "governance", "icon": "bi-bank", "label_ar": "الحوكمة", "label_en": "Governance", "items": [ {"href": "/admin/governance-reports", "icon": "bi-clipboard-data", "label_ar": "حوكمة التقارير اليومية", "label_en": "Daily Report Governance", "active_paths": ["/admin/governance-reports"]}, {"href": "/admin/governance/reminders", "icon": "bi-bell", "label_ar": "تذكيرات الالتزام", "label_en": "Compliance Reminders", "active_paths": ["/admin/governance/reminders"]}, {"href": "/admin/classification", "icon": "bi-award", "label_ar": "التصنيف والمقارنات", "label_en": "Classification & Benchmarks", "active_paths": ["/admin/classification"]}, {"href": "/admin/agency-reports", "icon": "bi-bank", "label_ar": "تقارير الجهات الرسمية", "label_en": "Official Agency Reports", "active_paths": ["/admin/agency-reports"], "active_prefixes": ["/admin/agency-reports/"]} ] }, { "id": "security-account", "icon": "bi-shield-lock", "label_ar": "الأمان والحساب", "label_en": "Security & Account", "items": [ {"href": "/admin/audit-logs", "icon": "bi-journal-check", "label_ar": "سجل التدقيق", "label_en": "Audit Log", "active_paths": ["/admin/audit-logs", "/audit-logs"]}, {"href": "/admin/impersonate", "icon": "bi-person-bounding-box", "label_ar": "الدخول المقيّد بصفة مستخدم", "label_en": "Controlled User Access", "active_paths": ["/admin/impersonate"]}, {"href": "/admin/profile", "icon": "bi-person-circle", "label_ar": "الملف الشخصي للمسؤول", "label_en": "Admin Profile", "active_paths": ["/admin/profile"]}, {"href": "/admin/settings", "icon": "bi-gear", "label_ar": "إعدادات النظام", "label_en": "System Settings", "active_paths": ["/admin/settings"]}, {"href": "/admin/help", "icon": "bi-life-preserver", "label_ar": "مركز المساعدة", "label_en": "Help Center", "active_paths": ["/admin/help"]} ] } ] %} {% set full_admin_navigation =
-              current_user and current_user.role.value == "ADMIN" %} {# Exact
-              destinations take precedence over broader contextual prefixes. #}
-              {% set nav_state = namespace(exact_match=false) %} {% for section
-              in sidebar_sections %} {% for item in section["items"] %} {% if
-              current_path == item.href %}{% set nav_state.exact_match = true
-              %}{% endif %} {% endfor %} {% endfor %}
+              {% set current_path = request.url.path %}
+              {% set sidebar_sections = [
+                {
+                  "id": "command-center",
+                  "icon": "bi-speedometer2",
+                  "label_ar": "مركز القيادة",
+                  "label_en": "Command Center",
+                  "items": [
+                    {
+                      "href": "/admin/dashboard",
+                      "icon": "bi-speedometer2",
+                      "label_ar": "لوحة التحكم الإدارية",
+                      "label_en": "Admin Dashboard",
+                      "active_paths": ["/admin/dashboard", "/dashboard"]
+                    },
+                    {
+                      "href": "/admin/observability",
+                      "icon": "bi-activity",
+                      "label_ar": "مراقبة النظام",
+                      "label_en": "System Health",
+                      "active_paths": ["/admin/observability"]
+                    },
+                    {
+                      "href": "/admin/alerts",
+                      "icon": "bi-bell",
+                      "label_ar": "التنبيهات",
+                      "label_en": "Alerts",
+                      "active_paths": ["/admin/alerts"]
+                    }
+                  ]
+                },
+                {
+                  "id": "nurseries-network",
+                  "icon": "bi-buildings",
+                  "label_ar": "الحضانات والشبكة",
+                  "label_en": "Nurseries & Network",
+                  "items": [
+                    {
+                      "href": "/admin/kg-overview",
+                      "icon": "bi-buildings",
+                      "label_ar": "نظرة عامة على الحضانات",
+                      "label_en": "Nursery Overview",
+                      "active_paths": ["/admin/kg-overview"],
+                      "group_label_ar": "دليل وعمليات الحضانات",
+                      "group_label_en": "Nursery Directory & Operations"
+                    },
+                    {
+                      "href": "/admin/kindergartens",
+                      "icon": "bi-building",
+                      "label_ar": "سجل الحضانات",
+                      "label_en": "Nursery Directory",
+                      "active_paths": ["/admin/kindergartens", "/admin/kindergartens/new"],
+                      "active_prefixes": ["/admin/kindergartens/"],
+                      "group_label_ar": "دليل وعمليات الحضانات",
+                      "group_label_en": "Nursery Directory & Operations"
+                    },
+                    {
+                      "href": "/admin/heatmap",
+                      "icon": "bi-globe-asia-australia",
+                      "label_ar": "التحليل الجغرافي",
+                      "label_en": "Geographic Analysis",
+                      "active_paths": ["/admin/heatmap"],
+                      "group_label_ar": "دليل وعمليات الحضانات",
+                      "group_label_en": "Nursery Directory & Operations"
+                    },
+                    {
+                      "href": "/admin/imported-kindergartens",
+                      "icon": "bi-database-check",
+                      "label_ar": "بيانات الحضانات المستوردة",
+                      "label_en": "Imported Nursery Data",
+                      "active_paths": ["/admin/imported-kindergartens"],
+                      "group_label_ar": "إدارة البيانات والاستيراد",
+                      "group_label_en": "Data Management & Import"
+                    },
+                    {
+                      "href": "/admin/import-kindergartens",
+                      "icon": "bi-file-earmark-arrow-up",
+                      "label_ar": "استيراد الحضانات",
+                      "label_en": "Import Nurseries",
+                      "active_paths": ["/admin/import-kindergartens"],
+                      "group_label_ar": "إدارة البيانات والاستيراد",
+                      "group_label_en": "Data Management & Import"
+                    },
+                    {
+                      "href": "/admin/import-logs",
+                      "icon": "bi-clock-history",
+                      "label_ar": "سجل الاستيراد",
+                      "label_en": "Import History",
+                      "active_paths": ["/admin/import-logs"],
+                      "group_label_ar": "إدارة البيانات والاستيراد",
+                      "group_label_en": "Data Management & Import"
+                    }
+                  ]
+                },
+                {
+                  "id": "intelligence-reporting",
+                  "icon": "bi-bar-chart-line",
+                  "label_ar": "التحليلات والتقارير",
+                  "label_en": "Intelligence & Reporting",
+                  "items": [
+                    {
+                      "href": "/admin/analytics",
+                      "icon": "bi-graph-up-arrow",
+                      "label_ar": "نظرة عامة على التحليلات",
+                      "label_en": "Analytics Overview",
+                      "active_paths": ["/admin/analytics", "/admin/analytics/dashboard"],
+                      "active_prefixes": ["/admin/analytics/drilldown/"],
+                      "group_label_ar": "التحليلات ومؤشرات الأداء",
+                      "group_label_en": "Analytics & KPIs"
+                    },
+                    {
+                      "href": "/admin/kpi",
+                      "icon": "bi-speedometer",
+                      "label_ar": "مؤشرات أداء الشبكة",
+                      "label_en": "Network KPIs",
+                      "active_paths": ["/admin/kpi"],
+                      "group_label_ar": "التحليلات ومؤشرات الأداء",
+                      "group_label_en": "Analytics & KPIs"
+                    },
+                    {
+                      "href": "/admin/analytics/charts",
+                      "icon": "bi-bar-chart",
+                      "label_ar": "مستكشف الرسوم البيانية",
+                      "label_en": "Charts Explorer",
+                      "active_paths": ["/admin/analytics/charts", "/admin/charts/dashboard", "/api/admin/charts/dashboard"],
+                      "group_label_ar": "التحليلات ومؤشرات الأداء",
+                      "group_label_en": "Analytics & KPIs"
+                    },
+                    {
+                      "href": "/admin/analytics/decision-support",
+                      "icon": "bi-lightbulb",
+                      "label_ar": "دعم القرار",
+                      "label_en": "Decision Support",
+                      "active_paths": ["/admin/analytics/decision-support"],
+                      "group_label_ar": "التحليلات ومؤشرات الأداء",
+                      "group_label_en": "Analytics & KPIs"
+                    },
+                    {
+                      "href": "/admin/analytics/reports",
+                      "icon": "bi-file-earmark-text",
+                      "label_ar": "مركز التقارير",
+                      "label_en": "Reports Center",
+                      "active_paths": ["/admin/analytics/reports"],
+                      "group_label_ar": "مركز التقارير والعمليات",
+                      "group_label_en": "Reports Center & Operations"
+                    },
+                    {
+                      "href": "/admin/daily-reports-organization",
+                      "icon": "bi-calendar-check",
+                      "label_ar": "تنظيم التقارير اليومية",
+                      "label_en": "Daily Report Operations",
+                      "active_paths": ["/admin/daily-reports-organization", "/daily-reports"],
+                      "group_label_ar": "مركز التقارير والعمليات",
+                      "group_label_en": "Reports Center & Operations"
+                    },
+                    {
+                      "href": "/reports/analytics",
+                      "icon": "bi-calendar2-data",
+                      "label_ar": "تحليلات التقارير اليومية",
+                      "label_en": "Daily Reports Analytics",
+                      "active_paths": ["/reports/analytics", "/admin/analytics/daily-reports"],
+                      "group_label_ar": "مركز التقارير والعمليات",
+                      "group_label_en": "Reports Center & Operations"
+                    },
+                    {
+                      "href": "/admin/reports/incidents",
+                      "icon": "bi-list-check",
+                      "label_ar": "تقارير الحوادث",
+                      "label_en": "Incident Reports",
+                      "active_paths": ["/admin/reports/incidents"],
+                      "active_prefixes": ["/admin/reports/incidents/"],
+                      "group_label_ar": "مركز التقارير والعمليات",
+                      "group_label_en": "Reports Center & Operations"
+                    },
+                    {
+                      "href": "/admin/safety-analytics",
+                      "icon": "bi-heart-pulse",
+                      "label_ar": "تحليلات الحوادث",
+                      "label_en": "Incident Analytics",
+                      "active_paths": ["/admin/safety-analytics"],
+                      "group_label_ar": "مركز التقارير والعمليات",
+                      "group_label_en": "Reports Center & Operations"
+                    },
+                    {
+                      "href": "/admin/agency-reports",
+                      "icon": "bi-bank",
+                      "label_ar": "تقارير الجهات الرسمية",
+                      "label_en": "Official Agency Reports",
+                      "active_paths": ["/admin/agency-reports"],
+                      "active_prefixes": ["/admin/agency-reports/"],
+                      "group_label_ar": "مركز التقارير والعمليات",
+                      "group_label_en": "Reports Center & Operations"
+                    },
+                    {
+                      "href": "/admin/classification",
+                      "icon": "bi-award",
+                      "label_ar": "التصنيف والمقارنات",
+                      "label_en": "Classification & Benchmarks",
+                      "active_paths": ["/admin/classification"],
+                      "group_label_ar": "مركز التقارير والعمليات",
+                      "group_label_en": "Reports Center & Operations"
+                    }
+                  ]
+                },
+                {
+                  "id": "users-access",
+                  "icon": "bi-people",
+                  "label_ar": "المستخدمون والصلاحيات",
+                  "label_en": "Users & Access",
+                  "items": [
+                    {
+                      "href": "/admin/users",
+                      "icon": "bi-people",
+                      "label_ar": "المستخدمون",
+                      "label_en": "User Directory",
+                      "active_paths": ["/admin/users", "/admin/users/create"],
+                      "active_prefixes": ["/admin/users/"],
+                      "group_label_ar": "إدارة المستخدمين",
+                      "group_label_en": "User Management"
+                    },
+                    {
+                      "href": "/admin/users/import",
+                      "icon": "bi-person-up",
+                      "label_ar": "استيراد المستخدمين",
+                      "label_en": "Import Users",
+                      "active_paths": ["/admin/users/import"],
+                      "group_label_ar": "إدارة المستخدمين",
+                      "group_label_en": "User Management"
+                    },
+                    {
+                      "href": "/admin/impersonate",
+                      "icon": "bi-person-bounding-box",
+                      "label_ar": "الدخول المقيّد بصفة مستخدم",
+                      "label_en": "Controlled User Access",
+                      "active_paths": ["/admin/impersonate"],
+                      "group_label_ar": "إدارة المستخدمين",
+                      "group_label_en": "User Management"
+                    },
+                    {
+                      "href": "/admin/messages",
+                      "icon": "bi-envelope",
+                      "label_ar": "الرسائل",
+                      "label_en": "Messages",
+                      "active_paths": ["/admin/messages"],
+                      "active_prefixes": ["/admin/messages/"],
+                      "group_label_ar": "التواصل والرسائل",
+                      "group_label_en": "Communication & Messages"
+                    },
+                    {
+                      "href": "/admin/messages/compose",
+                      "icon": "bi-pencil-square",
+                      "label_ar": "إنشاء رسالة",
+                      "label_en": "Compose Message",
+                      "active_paths": ["/admin/messages/compose"],
+                      "group_label_ar": "التواصل والرسائل",
+                      "group_label_en": "Communication & Messages"
+                    },
+                    {
+                      "href": "/admin/contact-messages",
+                      "icon": "bi-chat-left-text",
+                      "label_ar": "رسائل التواصل",
+                      "label_en": "Contact Messages",
+                      "active_paths": ["/admin/contact-messages"],
+                      "group_label_ar": "التواصل والرسائل",
+                      "group_label_en": "Communication & Messages"
+                    }
+                  ]
+                },
+                {
+                  "id": "governance-audit",
+                  "icon": "bi-shield-check",
+                  "label_ar": "الحوكمة والتدقيق",
+                  "label_en": "Governance & Audit",
+                  "items": [
+                    {
+                      "href": "/admin/governance-reports",
+                      "icon": "bi-clipboard-data",
+                      "label_ar": "حوكمة التقارير اليومية",
+                      "label_en": "Daily Report Governance",
+                      "active_paths": ["/admin/governance-reports"],
+                      "group_label_ar": "الحوكمة والالتزام",
+                      "group_label_en": "Governance & Compliance"
+                    },
+                    {
+                      "href": "/admin/governance/reminders",
+                      "icon": "bi-bell",
+                      "label_ar": "تذكيرات الالتزام",
+                      "label_en": "Compliance Reminders",
+                      "active_paths": ["/admin/governance/reminders"],
+                      "group_label_ar": "الحوكمة والالتزام",
+                      "group_label_en": "Governance & Compliance"
+                    },
+                    {
+                      "href": "/admin/audit-logs",
+                      "icon": "bi-journal-check",
+                      "label_ar": "سجل التدقيق",
+                      "label_en": "Audit Log",
+                      "active_paths": ["/admin/audit-logs", "/audit-logs"],
+                      "group_label_ar": "الحوكمة والالتزام",
+                      "group_label_en": "Governance & Compliance"
+                    },
+                    {
+                      "href": "/admin/profile",
+                      "icon": "bi-person-circle",
+                      "label_ar": "الملف الشخصي للمسؤول",
+                      "label_en": "Admin Profile",
+                      "active_paths": ["/admin/profile"],
+                      "group_label_ar": "النظام والإعدادات",
+                      "group_label_en": "System & Settings"
+                    },
+                    {
+                      "href": "/admin/settings",
+                      "icon": "bi-gear",
+                      "label_ar": "إعدادات النظام",
+                      "label_en": "System Settings",
+                      "active_paths": ["/admin/settings"],
+                      "group_label_ar": "النظام والإعدادات",
+                      "group_label_en": "System & Settings"
+                    },
+                    {
+                      "href": "/admin/help",
+                      "icon": "bi-life-preserver",
+                      "label_ar": "مركز المساعدة",
+                      "label_en": "Help Center",
+                      "active_paths": ["/admin/help"],
+                      "group_label_ar": "النظام والإعدادات",
+                      "group_label_en": "System & Settings"
+                    }
+                  ]
+                }
+              ] %}
+              {% set full_admin_navigation = current_user and current_user.role.value == "ADMIN" %}
+              {# Exact destinations take precedence over broader contextual prefixes. #}
+              {% set nav_state = namespace(exact_match=false) %}
+              {% for section in sidebar_sections %}
+                {% for item in section["items"] %}
+                  {% if current_path == item.href %}
+                    {% set nav_state.exact_match = true %}
+                  {% endif %}
+                {% endfor %}
+              {% endfor %}
 
-              <div class="top-nav-container">
+              <!-- Desktop Navigation (Tier 2) -->
+              <div class="top-nav-container top-nav-desktop-container">
                 <ul class="top-menu" role="menubar">
-                  {% for section in sidebar_sections %} {% if
-                  full_admin_navigation or section.id == "people-organizations"
-                  %} {% set section_state = namespace(active=false) %} {% for
-                  item in section["items"] %} {% if full_admin_navigation or
-                  item.href == "/admin/users" %} {% set item_state =
-                  namespace(active=current_path == item.href) %} {% if not
-                  nav_state.exact_match and current_path in item.active_paths
-                  %}{% set item_state.active = true %}{% endif %} {% if not
-                  nav_state.exact_match and item.active_prefixes is defined %}
-                  {% for prefix in item.active_prefixes %} {% if
-                  current_path.startswith(prefix) %}{% set item_state.active =
-                  true %}{% endif %} {% endfor %} {% endif %} {% if
-                  item_state.active %}{% set section_state.active = true %}{%
-                  endif %} {% endif %} {% endfor %}
+                  {% for section in sidebar_sections %}
+                    {% if full_admin_navigation or section.id == "users-access" %}
+                      {% set section_state = namespace(active=false) %}
+                      {% for item in section["items"] %}
+                        {% if full_admin_navigation or item.href == "/admin/users" %}
+                          {% set item_state = namespace(active=current_path == item.href) %}
+                          {% if not nav_state.exact_match and current_path in item.active_paths %}
+                            {% set item_state.active = true %}
+                          {% endif %}
+                          {% if not nav_state.exact_match and item.active_prefixes is defined %}
+                            {% for prefix in item.active_prefixes %}
+                              {% if current_path.startswith(prefix) %}
+                                {% set item_state.active = true %}
+                              {% endif %}
+                            {% endfor %}
+                          {% endif %}
+                          {% if item_state.active %}
+                            {% set section_state.active = true %}
+                          {% endif %}
+                        {% endif %}
+                      {% endfor %}
 
-                  <li class="top-menu-item has-dropdown" role="presentation">
-                    <button
-                      class="top-menu-link dropdown-toggle{% if section_state.active %} active{% endif %}"
-                      type="button"
-                      aria-expanded="false"
-                      role="menuitem"
-                    >
-                      <i class="bi {{ section.icon }}" aria-hidden="true"></i>
-                      <span
-                        >{% if ui_lang == 'en' %}{{ section.label_en }}{% else
-                        %}{{ section.label_ar }}{% endif %}</span
-                      >
-                    </button>
-                    <ul class="top-menu-dropdown shadow-sm" role="menu">
-                      {% set ns = namespace(current_group=none) %} {% for item
-                      in section["items"] %} {% if full_admin_navigation or
-                      item.href == "/admin/users" %} {% set item_state =
-                      namespace(active=current_path == item.href) %} {% if not
-                      nav_state.exact_match and current_path in
-                      item.active_paths %}{% set item_state.active = true %}{%
-                      endif %} {% if not nav_state.exact_match and
-                      item.active_prefixes is defined %} {% for prefix in
-                      item.active_prefixes %} {% if
-                      current_path.startswith(prefix) %}{% set item_state.active
-                      = true %}{% endif %} {% endfor %} {% endif %} {% if
-                      item.group_label_ar is defined and item.group_label_ar !=
-                      ns.current_group %} {% set ns.current_group =
-                      item.group_label_ar %}
-                      <li class="dropdown-group-label" role="presentation">
-                        {% if ui_lang == 'en' %}{{ item.group_label_en }}{% else
-                        %}{{ item.group_label_ar }}{% endif %}
-                      </li>
-                      {% endif %}
-
-                      <li role="presentation">
-                        <a
-                          href="{{ item.href }}"
-                          class="dropdown-item{% if item_state.active %} active{% endif %}"
+                      <li class="top-menu-item has-dropdown" role="presentation">
+                        <button
+                          class="top-menu-link dropdown-toggle{% if section_state.active %} active{% endif %}"
+                          type="button"
+                          aria-expanded="false"
+                          aria-haspopup="true"
                           role="menuitem"
-                          {%
-                          if
-                          item_state.active
-                          %}
-                          aria-current="page"
-                          {%
-                          endif
-                          %}
                         >
-                          <i class="bi {{ item.icon }}" aria-hidden="true"></i>
-                          <span
-                            >{% if ui_lang == 'en' %}{{ item.label_en }}{% else
-                            %}{{ item.label_ar }}{% endif %}</span
-                          >
-                        </a>
+                          <i class="bi {{ section.icon }} nav-icon" aria-hidden="true"></i>
+                          <span>{% if ui_lang == 'en' %}{{ section.label_en }}{% else %}{{ section.label_ar }}{% endif %}</span>
+                          <i class="bi bi-chevron-down nav-chevron" aria-hidden="true"></i>
+                        </button>
+                        <ul class="top-menu-dropdown shadow-sm" role="menu">
+                          {% set ns = namespace(current_group=none) %}
+                          {% for item in section["items"] %}
+                            {% if full_admin_navigation or item.href == "/admin/users" %}
+                              {% set item_state = namespace(active=current_path == item.href) %}
+                              {% if not nav_state.exact_match and current_path in item.active_paths %}
+                                {% set item_state.active = true %}
+                              {% endif %}
+                              {% if not nav_state.exact_match and item.active_prefixes is defined %}
+                                {% for prefix in item.active_prefixes %}
+                                  {% if current_path.startswith(prefix) %}
+                                    {% set item_state.active = true %}
+                                  {% endif %}
+                                {% endfor %}
+                              {% endif %}
+                              {% if item.group_label_ar is defined and item.group_label_ar != ns.current_group %}
+                                {% set ns.current_group = item.group_label_ar %}
+                                <li class="dropdown-group-label" role="presentation">
+                                  {% if ui_lang == 'en' %}{{ item.group_label_en }}{% else %}{{ item.group_label_ar }}{% endif %}
+                                </li>
+                              {% endif %}
+
+                              <li role="presentation">
+                                <a
+                                  href="{{ item.href }}"
+                                  class="dropdown-item{% if item_state.active %} active{% endif %}"
+                                  role="menuitem"
+                                  {% if item_state.active %}aria-current="page"{% endif %}
+                                >
+                                  <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                                  <span>{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
+                                </a>
+                              </li>
+                            {% endif %}
+                          {% endfor %}
+                        </ul>
                       </li>
-                      {% endif %} {% endfor %}
-                    </ul>
-                  </li>
-                  {% endif %} {% endfor %}
+                    {% endif %}
+                  {% endfor %}
                 </ul>
+              </div>
+
+              <!-- Mobile Navigation Drawer (<1024px) -->
+              <div class="mobile-nav-backdrop" id="adminMobileBackdrop" aria-hidden="true"></div>
+              <div
+                class="mobile-nav-drawer"
+                id="adminMobileDrawer"
+                role="dialog"
+                aria-modal="true"
+                aria-label="{% if ui_lang == 'en' %}Main navigation{% else %}القائمة الرئيسية{% endif %}"
+              >
+                <div class="mobile-nav-header">
+                  <h2 class="mobile-nav-title">
+                    {% if ui_lang == 'en' %}Main Menu{% else %}القائمة الرئيسية{% endif %}
+                  </h2>
+                  <button
+                    type="button"
+                    class="mobile-nav-close-btn"
+                    id="adminMobileDrawerClose"
+                    aria-label="{% if ui_lang == 'en' %}Close menu{% else %}إغلاق القائمة{% endif %}"
+                  >
+                    <i class="bi bi-x-lg fs-5" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div class="mobile-nav-body">
+                  <ul class="mobile-nav-accordion" role="list">
+                    {% for section in sidebar_sections %}
+                      {% if full_admin_navigation or section.id == "users-access" %}
+                        {% set section_state = namespace(active=false) %}
+                        {% for item in section["items"] %}
+                          {% if full_admin_navigation or item.href == "/admin/users" %}
+                            {% set item_state = namespace(active=current_path == item.href) %}
+                            {% if not nav_state.exact_match and current_path in item.active_paths %}
+                              {% set item_state.active = true %}
+                            {% endif %}
+                            {% if not nav_state.exact_match and item.active_prefixes is defined %}
+                              {% for prefix in item.active_prefixes %}
+                                {% if current_path.startswith(prefix) %}
+                                  {% set item_state.active = true %}
+                                {% endif %}
+                              {% endfor %}
+                            {% endif %}
+                            {% if item_state.active %}
+                              {% set section_state.active = true %}
+                            {% endif %}
+                          {% endif %}
+                        {% endfor %}
+
+                        <li class="mobile-nav-section{% if section_state.active %} open{% endif %}">
+                          <button
+                            type="button"
+                            class="mobile-nav-section-btn{% if section_state.active %} active{% endif %}"
+                            aria-expanded="{% if section_state.active %}true{% else %}false{% endif %}"
+                            aria-controls="mobile-section-{{ section.id }}"
+                          >
+                            <span class="d-flex align-items-center gap-2">
+                              <i class="bi {{ section.icon }}" aria-hidden="true"></i>
+                              <span>{% if ui_lang == 'en' %}{{ section.label_en }}{% else %}{{ section.label_ar }}{% endif %}</span>
+                            </span>
+                            <i class="bi bi-chevron-down section-chevron" aria-hidden="true"></i>
+                          </button>
+                          <ul
+                            class="mobile-nav-submenu"
+                            id="mobile-section-{{ section.id }}"
+                            role="list"
+                          >
+                            {% for item in section["items"] %}
+                              {% if full_admin_navigation or item.href == "/admin/users" %}
+                                {% set item_state = namespace(active=current_path == item.href) %}
+                                {% if not nav_state.exact_match and current_path in item.active_paths %}
+                                  {% set item_state.active = true %}
+                                {% endif %}
+                                {% if not nav_state.exact_match and item.active_prefixes is defined %}
+                                  {% for prefix in item.active_prefixes %}
+                                    {% if current_path.startswith(prefix) %}
+                                      {% set item_state.active = true %}
+                                    {% endif %}
+                                  {% endfor %}
+                                {% endif %}
+                                <li>
+                                  <a
+                                    href="{{ item.href }}"
+                                    class="mobile-nav-link{% if item_state.active %} active{% endif %}"
+                                    {% if item_state.active %}aria-current="page"{% endif %}
+                                  >
+                                    <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                                    <span>{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
+                                  </a>
+                                </li>
+                              {% endif %}
+                            {% endfor %}
+                          </ul>
+                        </li>
+                      {% endif %}
+                    {% endfor %}
+                  </ul>
+                </div>
               </div>
             </nav>
           </aside>
@@ -387,7 +813,7 @@
       {% block extra_scripts %}{% endblock %}
       {% block extra_js %}{% endblock %}
 
-      <!-- Admin Initialization -->
+      <!-- Admin Navigation & Shell Initialization -->
       <script>
         (function () {
           "use strict";
@@ -401,10 +827,6 @@
             } catch (_error) {
               // Ignore storage failures and still persist via cookie.
             }
-            // kinjo_lang is written by the server only (see ui_language.py):
-            // a host-only document.cookie write cannot overwrite the
-            // domain-wide cookie, so both survive with different values and
-            // the language renders one step behind. Ask the server instead.
             fetch("/api/ui-language", {
               method: "POST",
               credentials: "same-origin",
@@ -461,14 +883,139 @@
             return Promise.resolve(window.confirm(opts.title));
           };
 
-          /* ── Nav group collapsible ──────────────────────────────── */
+          /* ── Desktop Top Menu Keyboard & Accessible Interaction ── */
+          function setupTopMenu() {
+            var menuItems = document.querySelectorAll(".top-menu-item.has-dropdown");
+            menuItems.forEach(function (item) {
+              var btn = item.querySelector(".top-menu-link.dropdown-toggle");
+              var dropdown = item.querySelector(".top-menu-dropdown");
+              if (!btn || !dropdown) return;
+
+              btn.addEventListener("click", function (e) {
+                e.preventDefault();
+                var isOpen = item.classList.contains("open");
+                // Close other open desktop dropdowns
+                menuItems.forEach(function (other) {
+                  if (other !== item) {
+                    other.classList.remove("open");
+                    var otherBtn = other.querySelector(".top-menu-link.dropdown-toggle");
+                    if (otherBtn) otherBtn.setAttribute("aria-expanded", "false");
+                  }
+                });
+                item.classList.toggle("open", !isOpen);
+                btn.setAttribute("aria-expanded", !isOpen ? "true" : "false");
+              });
+
+              btn.addEventListener("keydown", function (e) {
+                if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+                  if (!item.classList.contains("open")) {
+                    e.preventDefault();
+                    item.classList.add("open");
+                    btn.setAttribute("aria-expanded", "true");
+                    var firstLink = dropdown.querySelector("a.dropdown-item");
+                    if (firstLink) firstLink.focus();
+                  }
+                } else if (e.key === "Escape") {
+                  if (item.classList.contains("open")) {
+                    e.preventDefault();
+                    item.classList.remove("open");
+                    btn.setAttribute("aria-expanded", "false");
+                    btn.focus();
+                  }
+                }
+              });
+
+              dropdown.addEventListener("keydown", function (e) {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  item.classList.remove("open");
+                  btn.setAttribute("aria-expanded", "false");
+                  btn.focus();
+                }
+              });
+            });
+
+            // Close desktop dropdowns on outside click
+            document.addEventListener("click", function (e) {
+              if (!e.target.closest(".top-menu-item.has-dropdown")) {
+                menuItems.forEach(function (item) {
+                  item.classList.remove("open");
+                  var btn = item.querySelector(".top-menu-link.dropdown-toggle");
+                  if (btn) btn.setAttribute("aria-expanded", "false");
+                });
+              }
+            });
+          }
+
+          /* ── Mobile Navigation Drawer (<1024px) ────────────────── */
+          function setupMobileDrawer() {
+            var toggleBtn = document.getElementById("adminMobileNavToggle");
+            var drawer = document.getElementById("adminMobileDrawer");
+            var backdrop = document.getElementById("adminMobileBackdrop");
+            var closeBtn = document.getElementById("adminMobileDrawerClose");
+            if (!toggleBtn || !drawer || !backdrop) return;
+
+            function openDrawer() {
+              drawer.classList.add("open");
+              backdrop.classList.add("open");
+              toggleBtn.setAttribute("aria-expanded", "true");
+              document.body.style.overflow = "hidden";
+              if (closeBtn) closeBtn.focus();
+            }
+
+            function closeDrawer() {
+              drawer.classList.remove("open");
+              backdrop.classList.remove("open");
+              toggleBtn.setAttribute("aria-expanded", "false");
+              document.body.style.overflow = "";
+              toggleBtn.focus();
+            }
+
+            toggleBtn.addEventListener("click", function (e) {
+              e.preventDefault();
+              var isOpen = drawer.classList.contains("open");
+              if (isOpen) closeDrawer();
+              else openDrawer();
+            });
+
+            if (closeBtn) {
+              closeBtn.addEventListener("click", function (e) {
+                e.preventDefault();
+                closeDrawer();
+              });
+            }
+
+            backdrop.addEventListener("click", function () {
+              closeDrawer();
+            });
+
+            document.addEventListener("keydown", function (e) {
+              if (e.key === "Escape" && drawer.classList.contains("open")) {
+                e.preventDefault();
+                closeDrawer();
+              }
+            });
+
+            // Mobile Accordion Sections
+            var sections = drawer.querySelectorAll(".mobile-nav-section");
+            sections.forEach(function (sec) {
+              var secBtn = sec.querySelector(".mobile-nav-section-btn");
+              if (!secBtn) return;
+              secBtn.addEventListener("click", function () {
+                var isOpen = sec.classList.contains("open");
+                sec.classList.toggle("open", !isOpen);
+                secBtn.setAttribute("aria-expanded", !isOpen ? "true" : "false");
+              });
+            });
+          }
+
+          /* ── Nav group collapsible (legacy compatibility) ───────── */
           function setupNavGroups() {
             document
               .querySelectorAll(".admin-nav-group")
               .forEach(function (group) {
                 var btn = group.querySelector(".admin-nav-group-title");
                 if (!btn) return;
-                // Auto-expand if a child link is currently active
                 var hasActive = !!group.querySelector(".admin-nav-item.active");
                 if (hasActive || group.classList.contains("open")) {
                   group.classList.add("open");
@@ -488,6 +1035,8 @@
           }
 
           document.addEventListener("DOMContentLoaded", function () {
+            setupTopMenu();
+            setupMobileDrawer();
             setupNavGroups();
           });
 

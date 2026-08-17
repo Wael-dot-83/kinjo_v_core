@@ -1,5 +1,6 @@
 /* ============================================================================
    TOP NAVIGATION MENU (MAIN MENU) — Tier 2
+   UX-02: Admin Top Navigation Simplification & Information Architecture
 
    Colours come from the --admin-nav-* tokens in design-tokens.css. This tier is
    deliberately a light working surface under the green Tier 1 band, and its
@@ -9,8 +10,8 @@
    ============================================================================ */
 
 .admin-top-nav {
-  background-color: var(--admin-nav-bg);
-  border-block-end: 1px solid var(--admin-nav-border);
+  background-color: var(--admin-nav-bg, #ffffff);
+  border-block-end: 1px solid var(--admin-nav-border, #e2e8f0);
   position: relative;
   /* Navigation must always sit above page-level controls and charts. */
   z-index: 1100;
@@ -18,7 +19,7 @@
 }
 
 .top-nav-container {
-  padding: 0 var(--kinjo-spacing-6);
+  padding: 0 var(--kinjo-spacing-6, 1.5rem);
 }
 
 .top-menu {
@@ -27,92 +28,107 @@
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 .top-menu-item {
   position: relative;
 }
 
-/* Base link styles */
+/* Base link / trigger styles */
 .top-menu-link {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
-  font-size: 15px;
+  padding: 12px 14px;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--admin-nav-ink);
+  color: var(--admin-nav-ink, #334155);
   text-decoration: none;
   background: transparent;
   border: none;
   border-block-end: 2px solid transparent;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease,
-    border-color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   white-space: nowrap;
+  border-radius: 4px 4px 0 0;
 }
 
-.top-menu-link i {
-  color: var(--admin-nav-ink-muted);
+.top-menu-link i.nav-icon {
+  color: var(--admin-nav-ink-muted, #64748b);
   font-size: 1.1rem;
+}
+
+.top-menu-link .nav-chevron {
+  font-size: 0.75rem;
+  color: var(--admin-nav-ink-muted, #64748b);
+  transition: transform 0.2s ease;
+  margin-inline-start: 2px;
 }
 
 /* Hover and Active states */
 .top-menu-link:hover,
-.top-menu-item:hover > .top-menu-link {
-  color: var(--admin-nav-ink-strong);
-  background-color: var(--admin-nav-hover);
+.top-menu-item:hover > .top-menu-link,
+.top-menu-item.open > .top-menu-link {
+  color: var(--admin-nav-ink-strong, #0f172a);
+  background-color: var(--admin-nav-hover, #f1f5f9);
 }
 
-.top-menu-link:hover i,
-.top-menu-item:hover > .top-menu-link i {
-  color: var(--admin-nav-ink);
+.top-menu-link:hover i.nav-icon,
+.top-menu-item:hover > .top-menu-link i.nav-icon,
+.top-menu-item.open > .top-menu-link i.nav-icon {
+  color: var(--admin-nav-ink, #334155);
 }
 
 .top-menu-link:focus-visible {
-  outline: 2px solid var(--admin-nav-accent);
+  outline: 2px solid var(--admin-nav-accent, #2563eb);
   outline-offset: -2px;
 }
 
-/* One marker for the active tier, not two. The underline used to compete with a
-   4px inline-start bar that another stylesheet added with !important. */
+/* Active workspace marker */
 .top-menu-link.active {
-  color: var(--admin-nav-accent);
+  color: var(--admin-nav-accent, #2563eb);
   font-weight: 600;
-  border-block-end-color: var(--admin-nav-accent);
+  border-block-end-color: var(--admin-nav-accent, #2563eb);
 }
 
-.top-menu-link.active i {
-  color: var(--admin-nav-accent);
+.top-menu-link.active i.nav-icon,
+.top-menu-link.active .nav-chevron {
+  color: var(--admin-nav-accent, #2563eb);
+}
+
+.top-menu-item.open .nav-chevron {
+  transform: rotate(180deg);
 }
 
 /* ============================================================================
-   DROPDOWN MENUS
+   DROPDOWN MENUS (Desktop)
    ============================================================================ */
 
 .top-menu-dropdown {
   position: absolute;
   top: 100%;
   inset-inline-start: 0; /* Respects RTL */
-  min-width: 240px;
-  background-color: var(--admin-nav-bg);
-  border: 1px solid var(--admin-nav-border);
+  min-width: 250px;
+  max-width: 320px;
+  background-color: var(--admin-nav-bg, #ffffff);
+  border: 1px solid var(--admin-nav-border, #e2e8f0);
   border-radius: 8px;
-  padding: 8px 0;
+  padding: 6px 0;
   margin: 0;
   list-style: none;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   opacity: 0;
   visibility: hidden;
-  transform: translateY(10px);
-  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+  transform: translateY(8px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
   z-index: 1110;
 }
 
-/* Show dropdown on hover */
+/* Show dropdown on hover, focus-within, or when .open class is set via JS */
 .top-menu-item.has-dropdown:hover .top-menu-dropdown,
-.top-menu-item.has-dropdown:focus-within .top-menu-dropdown {
+.top-menu-item.has-dropdown:focus-within .top-menu-dropdown,
+.top-menu-item.has-dropdown.open .top-menu-dropdown {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -121,61 +137,305 @@
 .dropdown-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 20px;
-  font-size: 14px;
+  gap: 10px;
+  padding: 8px 16px;
+  font-size: 13.5px;
   font-weight: 500;
-  color: var(--admin-nav-ink);
+  color: var(--admin-nav-ink, #334155);
   text-decoration: none;
-  transition: background-color 0.15s ease, color 0.15s ease,
-    border-color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   border-inline-start: 3px solid transparent;
+  min-height: 38px;
 }
 
 .dropdown-item i {
-  color: var(--admin-nav-ink-muted);
-  font-size: 1.1rem;
+  color: var(--admin-nav-ink-muted, #64748b);
+  font-size: 1.05rem;
+  flex-shrink: 0;
 }
 
-.dropdown-item:hover {
-  background-color: var(--admin-nav-hover);
-  color: var(--admin-nav-ink-strong);
+.dropdown-item:hover,
+.dropdown-item:focus-visible {
+  background-color: var(--admin-nav-hover, #f1f5f9);
+  color: var(--admin-nav-ink-strong, #0f172a);
+  outline: none;
 }
 
-.dropdown-item:hover i {
-  color: var(--admin-nav-ink);
+.dropdown-item:hover i,
+.dropdown-item:focus-visible i {
+  color: var(--admin-nav-ink, #334155);
 }
 
 .dropdown-item.active {
-  background-color: var(--admin-nav-accent-soft);
-  color: var(--admin-nav-accent);
+  background-color: var(--admin-nav-accent-soft, #eff6ff);
+  color: var(--admin-nav-accent, #2563eb);
   font-weight: 600;
-  border-inline-start-color: var(--admin-nav-accent);
+  border-inline-start-color: var(--admin-nav-accent, #2563eb);
 }
 
 .dropdown-item.active i {
-  color: var(--admin-nav-accent);
+  color: var(--admin-nav-accent, #2563eb);
 }
 
-/* #9CA3AF was 2.54:1 on white — below AA for this 11px label. */
 .dropdown-group-label {
-  padding: 12px 20px 4px;
+  padding: 10px 16px 4px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--admin-nav-ink-muted);
+  color: var(--admin-nav-ink-muted, #64748b);
+  border-block-start: 1px solid var(--admin-nav-border, #f1f5f9);
+  margin-block-start: 4px;
 }
 
-/* Responsive adjustments */
-@media (max-width: 991.98px) {
-  .top-menu {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 4px; /* for scrollbar */
+.dropdown-group-label:first-child {
+  border-block-start: none;
+  margin-block-start: 0;
+  padding-block-start: 4px;
+}
+
+/* ============================================================================
+   MOBILE DRAWER NAVIGATION (<1024px)
+   ============================================================================ */
+
+.mobile-nav-toggle-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--admin-nav-border, #cbd5e1);
+  border-radius: 6px;
+  color: var(--admin-nav-ink, #334155);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.mobile-nav-toggle-btn:hover,
+.mobile-nav-toggle-btn:focus-visible {
+  background-color: var(--admin-nav-hover, #f1f5f9);
+  color: var(--admin-nav-accent, #2563eb);
+  outline: 2px solid var(--admin-nav-accent, #2563eb);
+  outline-offset: 1px;
+}
+
+.mobile-nav-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 1190;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.mobile-nav-backdrop.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mobile-nav-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 320px;
+  max-width: 86vw;
+  background-color: var(--admin-nav-bg, #ffffff);
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+/* RTL / LTR Drawer Placement */
+[dir="rtl"] .mobile-nav-drawer {
+  right: 0;
+  left: auto;
+  transform: translateX(100%);
+}
+
+[dir="ltr"] .mobile-nav-drawer {
+  left: 0;
+  right: auto;
+  transform: translateX(-100%);
+}
+
+.mobile-nav-drawer.open {
+  transform: translateX(0) !important;
+}
+
+.mobile-nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-block-end: 1px solid var(--admin-nav-border, #e2e8f0);
+  background-color: var(--admin-nav-hover, #f8fafc);
+}
+
+.mobile-nav-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--admin-nav-ink-strong, #0f172a);
+  margin: 0;
+}
+
+.mobile-nav-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--admin-nav-ink-muted, #64748b);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.mobile-nav-close-btn:hover,
+.mobile-nav-close-btn:focus-visible {
+  background-color: var(--admin-nav-hover, #e2e8f0);
+  color: var(--admin-nav-ink-strong, #0f172a);
+  outline: 2px solid var(--admin-nav-accent, #2563eb);
+}
+
+.mobile-nav-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px 24px;
+}
+
+.mobile-nav-accordion {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobile-nav-section-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  min-height: 48px;
+  background-color: var(--admin-nav-hover, #f8fafc);
+  border: 1px solid var(--admin-nav-border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--admin-nav-ink, #334155);
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  text-align: start;
+}
+
+.mobile-nav-section-btn:hover,
+.mobile-nav-section-btn:focus-visible {
+  background-color: var(--admin-nav-accent-soft, #eff6ff);
+  color: var(--admin-nav-accent, #2563eb);
+  border-color: var(--admin-nav-accent, #2563eb);
+  outline: 2px solid var(--admin-nav-accent, #2563eb);
+  outline-offset: -1px;
+}
+
+.mobile-nav-section-btn.active {
+  background-color: var(--admin-nav-accent-soft, #eff6ff);
+  color: var(--admin-nav-accent, #2563eb);
+  border-color: var(--admin-nav-accent, #2563eb);
+}
+
+.mobile-nav-section-btn .section-chevron {
+  font-size: 0.85rem;
+  transition: transform 0.25s ease;
+}
+
+.mobile-nav-section-btn[aria-expanded="true"] .section-chevron {
+  transform: rotate(180deg);
+}
+
+.mobile-nav-submenu {
+  list-style: none;
+  padding: 6px 0 6px 12px;
+  margin: 4px 0 0 0;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+}
+
+[dir="rtl"] .mobile-nav-submenu {
+  padding-left: 0;
+  padding-right: 12px;
+}
+
+.mobile-nav-section.open .mobile-nav-submenu {
+  display: flex;
+}
+
+.mobile-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--admin-nav-ink, #475569);
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.mobile-nav-link i {
+  font-size: 1.1rem;
+  color: var(--admin-nav-ink-muted, #64748b);
+}
+
+.mobile-nav-link:hover,
+.mobile-nav-link:focus-visible {
+  background-color: var(--admin-nav-hover, #f1f5f9);
+  color: var(--admin-nav-ink-strong, #0f172a);
+  outline: 2px solid var(--admin-nav-accent, #2563eb);
+}
+
+.mobile-nav-link.active {
+  background-color: var(--admin-nav-accent-soft, #eff6ff);
+  color: var(--admin-nav-accent, #2563eb);
+  font-weight: 600;
+}
+
+.mobile-nav-link.active i {
+  color: var(--admin-nav-accent, #2563eb);
+}
+
+/* ============================================================================
+   RESPONSIVE BREAKPOINTS (<1024px)
+   ============================================================================ */
+
+@media (max-width: 1023.98px) {
+  .top-nav-desktop-container {
+    display: none !important;
   }
-  
-  .top-menu-item.has-dropdown:hover .top-menu-dropdown {
-    /* Optional: Disable hover on mobile and rely on JS click */
+
+  .mobile-nav-toggle-btn {
+    display: inline-flex;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-nav-drawer,
+  .mobile-nav-backdrop,
+  .mobile-nav-toggle-btn {
+    display: none !important;
   }
 }
