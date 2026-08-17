@@ -266,3 +266,29 @@ def test_a_missing_compose_file_aborts_rather_than_deploying_a_partial_stack():
     src = _code()
     assert 'die "KINJO_COMPOSE_FILES names a missing file' in src
     assert "the running stack's compose files are not present" in src
+
+
+def test_edge_probe_does_not_reference_a_conditionally_assigned_variable():
+    """The TLS probe must not read EDGE_FILE, which only one path assigns.
+
+    It did, and `set -u` aborted a real deploy at that line -- after the build,
+    container recreation, migration and health check had all succeeded. The
+    release was live and correct, but the script died before printing DEPLOY_OK,
+    so a deploy that had already worked reported failure. A variable read on
+    every path must be assigned on every path.
+    """
+    src = _code()
+    probe = src.split('"$HEALTHY"', 1)[1]
+    assert "EDGE_FILE" not in probe, (
+        "the TLS probe must gate on a flag assigned on every path, not on the "
+        "overlay filename that only the bare-host branch assigns"
+    )
+    assert "EDGE_OVERLAY_ACTIVE" in probe
+
+
+def test_edge_overlay_flag_is_initialised_before_any_branch():
+    """EDGE_OVERLAY_ACTIVE must hold a value whichever branch runs."""
+    src = _code()
+    init = src.index("EDGE_OVERLAY_ACTIVE=0")
+    assert init < src.index('if [[ -n "${KINJO_COMPOSE_FILES:-}" ]]')
+    assert init < src.index('if [[ "$EDGE_OVERLAY_ACTIVE" == "1" ]]')

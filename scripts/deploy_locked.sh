@@ -58,6 +58,11 @@ die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 # KINJO_COMPOSE_FILES overrides both for a deliberate stack change.
 # ---------------------------------------------------------------------------
 COMPOSE_ARGS=(-f "$COMPOSE_FILE")
+# Set on every path below, so the TLS probe near the end can never reference an
+# unassigned variable under `set -u`. "Any overlay beyond prod" is the right
+# question there: prod alone publishes no TLS listener, and each overlay we
+# ship (edge, cf-origin) brings one.
+EDGE_OVERLAY_ACTIVE=0
 if [[ -n "${KINJO_COMPOSE_FILES:-}" ]]; then
   COMPOSE_ARGS=()
   IFS=',' read -r -a _requested <<< "$KINJO_COMPOSE_FILES"
@@ -93,6 +98,13 @@ else
     log "compose files: no running container; auto-detected"
   fi
 fi
+
+# Written as if/then, not `[[ ... ]] && ...`: under `set -e` a trailing test that
+# evaluates false makes the whole compound return non-zero and kills the script.
+if [[ ${#COMPOSE_ARGS[@]} -gt 2 ]]; then
+  EDGE_OVERLAY_ACTIVE=1
+fi
+log "compose invocation: ${COMPOSE_ARGS[*]}"
 
 [[ -n "$TARBALL" ]] || die "usage: $0 <tarball> [release-sha]"
 [[ -f "$TARBALL" ]] || die "tarball not found: $TARBALL"
@@ -262,10 +274,19 @@ for _ in $(seq 1 30); do
 done
 [[ "$HEALTHY" == "1" ]] || die "web did not become healthy -- rollback image was tagged above"
 
-# With the edge deployed, also prove the public path terminates TLS and reaches
-# the app. Non-fatal on its own: certificate problems must be loud but must not
-# trigger a rollback of an application that is demonstrably healthy above.
-if [[ " ${COMPOSE_ARGS[*]} " == *"$EDGE_FILE"* ]]; then
+# With a TLS edge deployed, also prove the public path terminates TLS and
+# reaches the app. Non-fatal on its own: certificate problems must be loud but
+# must not trigger a rollback of an application that is demonstrably healthy
+# above.
+#
+# Gated on EDGE_OVERLAY_ACTIVE rather than on the overlay's filename. This test
+# used to read `*"$EDGE_FILE"*`, which was only ever assigned on the bare-host
+# path -- so once the compose set was adopted from the container label, `set -u`
+# aborted the deploy here with "EDGE_FILE: unbound variable". Everything that
+# matters had already succeeded (build, recreate, migrate, health), so it failed
+# after the mutation window with the lock released and no DEPLOY_OK printed:
+# a deploy that worked but could not say so. The flag is assigned on every path.
+if [[ "$EDGE_OVERLAY_ACTIVE" == "1" ]]; then
   if curl -sSf -o /dev/null --max-time 10 https://127.0.0.1/health \
        --resolve "${KINJO_DOMAIN:-localhost}:443:127.0.0.1" 2>/dev/null; then
     log "edge: https health OK"
