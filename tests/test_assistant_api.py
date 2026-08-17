@@ -1,4 +1,4 @@
-"""tests/test_assistant_api.py — Unit and integration tests for KinJo AI Assistant & Chatbot API.
+"""tests/test_assistant_api.py — Unit and integration tests for KinJo AI Assistant & Multi-Role Chatbot API.
 """
 
 import pytest
@@ -14,7 +14,7 @@ def client():
 def test_assistant_chat_arabic_enrollment(client):
     response = client.post(
         "/api/assistant/chat",
-        json={"message": "كيف يمكنني تسجيل طفلي في الروضة؟", "lang": "ar"},
+        json={"message": "كيف يمكنني تسجيل طفلي في الروضة؟", "lang": "ar", "role": "parent"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -40,7 +40,7 @@ def test_assistant_chat_arabic_kindergarten_search(client):
 def test_assistant_chat_arabic_daily_reports(client):
     response = client.post(
         "/api/assistant/chat",
-        json={"message": "أين أجد التقارير اليومية لطفلي؟", "lang": "ar"},
+        json={"message": "أين أجد التقارير اليومية لطفلي؟", "lang": "ar", "role": "parent"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -48,10 +48,32 @@ def test_assistant_chat_arabic_daily_reports(client):
     assert any("/parent/dashboard" in a["url"] for a in data["actions"])
 
 
+def test_assistant_chat_supervisor_qa(client):
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "كيف أدقق سجل الحضور والنسب القانونية للأطفال؟", "lang": "ar", "role": "supervisor"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent"] == "supervisor_qa_audit"
+    assert any("supervisor" in a["url"].lower() for a in data["actions"])
+
+
+def test_assistant_chat_manager_operations(client):
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "كيف أدير طلبات التسجيل والسعة الاستيعابية في الحضانة؟", "lang": "ar", "role": "manager"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent"] == "manager_operations"
+    assert any("dashboard" in a["url"] or "kindergartens" in a["url"] for a in data["actions"])
+
+
 def test_assistant_chat_english_enrollment(client):
     response = client.post(
         "/api/assistant/chat",
-        json={"message": "How do I register or apply for enrollment?", "lang": "en"},
+        json={"message": "How do I register or apply for enrollment?", "lang": "en", "role": "parent"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -104,6 +126,6 @@ def test_assistant_chat_empty_message(client):
 def test_assistant_chat_oversized_message(client):
     response = client.post(
         "/api/assistant/chat",
-        json={"message": "A" * 1500, "lang": "en"},
+        json={"message": "A" * 1001, "lang": "en"},
     )
     assert response.status_code == 422

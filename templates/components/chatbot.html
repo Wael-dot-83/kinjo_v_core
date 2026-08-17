@@ -1,7 +1,8 @@
 <!-- templates/components/chatbot.html -->
-<!-- KinJo Bilingual Floating AI/FAQ Chatbot Widget -->
+<!-- KinJo Elite Multi-Role AI Assistant / FAQ Chatbot Widget -->
 
 <div id="kinjo-chatbot-widget" class="kinjo-chatbot-widget" data-ui-lang="{{ ui_lang | default('ar') }}">
+  
   <!-- Floating Launcher Button -->
   <button
     id="kinjo-chatbot-launcher"
@@ -32,17 +33,23 @@
     <header class="chatbot-header">
       <div class="chatbot-header-info">
         <div class="chatbot-avatar-wrap">
-          <div class="chatbot-avatar">
+          <div class="chatbot-avatar chatbot-bot-avatar">
             <i class="bi bi-robot"></i>
           </div>
-          <span class="chatbot-status-dot" title="{% if ui_lang == 'en' %}Online{% else %}متصل{% endif %}"></span>
+          <span class="chatbot-status-dot" title="{% if ui_lang == 'en' %}Online & Verified{% else %}متصل ومعتمد{% endif %}"></span>
         </div>
         <div class="chatbot-header-text">
-          <h2 id="chatbot-header-title" class="chatbot-title">
-            {% if ui_lang == 'en' %}KinJo Assistant{% else %}مساعد كينجو الذكي{% endif %}
-          </h2>
-          <span class="chatbot-subtitle">
-            {% if ui_lang == 'en' %}Online &amp; Ready to Help{% else %}متصل ومستعد للمساعدة{% endif %}
+          <div class="chatbot-title-row">
+            <h2 id="chatbot-header-title" class="chatbot-title">
+              {% if ui_lang == 'en' %}KinJo AI Assistant{% else %}مساعد كينجو الذكي{% endif %}
+            </h2>
+            <span class="chatbot-badge-pill">
+              <i class="bi bi-patch-check-fill"></i>
+              {% if ui_lang == 'en' %}Official{% else %}معتمد{% endif %}
+            </span>
+          </div>
+          <span class="chatbot-subtitle" id="chatbot-subtitle-text">
+            {% if ui_lang == 'en' %}National Kindergarten Support System{% else %}المنظومة الوطنية لدعم رياض الأطفال{% endif %}
           </span>
         </div>
       </div>
@@ -55,7 +62,7 @@
           aria-label="{% if ui_lang == 'en' %}Clear Chat{% else %}مسح المحادثة{% endif %}"
           title="{% if ui_lang == 'en' %}Clear Chat{% else %}مسح المحادثة{% endif %}"
         >
-          <i class="bi bi-trash3"></i>
+          <i class="bi bi-arrow-counterclockwise"></i>
         </button>
         <button
           id="chatbot-close-btn"
@@ -69,6 +76,37 @@
       </div>
     </header>
 
+    <!-- Role Selector Strip (User Persona Switcher) -->
+    <div class="chatbot-role-selector" id="chatbot-role-selector" aria-label="Select User Role">
+      <span class="chatbot-role-label">
+        <i class="bi bi-person-badge"></i>
+        <span class="lang-en-content">Role:</span>
+        <span class="lang-ar-content">أنا:</span>
+      </span>
+      <div class="chatbot-role-pills">
+        <button type="button" class="chatbot-role-pill is-active" data-role="parent" title="ولي أمر / Parent">
+          <span class="chatbot-role-icon">👨‍👩‍👧</span>
+          <span class="lang-en-content">Parent</span>
+          <span class="lang-ar-content">ولي أمر</span>
+        </button>
+        <button type="button" class="chatbot-role-pill" data-role="supervisor" title="مشرف تربوي / Supervisor">
+          <span class="chatbot-role-icon">📋</span>
+          <span class="lang-en-content">Supervisor</span>
+          <span class="lang-ar-content">مشرف تربوي</span>
+        </button>
+        <button type="button" class="chatbot-role-pill" data-role="manager" title="مدير حضانة / Manager">
+          <span class="chatbot-role-icon">🏢</span>
+          <span class="lang-en-content">Manager</span>
+          <span class="lang-ar-content">مدير حضانة</span>
+        </button>
+        <button type="button" class="chatbot-role-pill" data-role="general" title="زائر / Visitor">
+          <span class="chatbot-role-icon">👤</span>
+          <span class="lang-en-content">Visitor</span>
+          <span class="lang-ar-content">زائر</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Messages Container -->
     <div
       id="chatbot-messages-container"
@@ -77,30 +115,38 @@
       aria-live="polite"
       tabindex="0"
     >
-      <!-- Initial Welcome Message injected via JS -->
+      <!-- Initial Welcome Message injected via JS with dynamic avatar -->
     </div>
 
-    <!-- Typing Indicator -->
-    <div id="chatbot-typing-indicator" class="chatbot-typing-indicator" style="display: none;" aria-hidden="true">
-      <span class="chatbot-typing-dot"></span>
-      <span class="chatbot-typing-dot"></span>
-      <span class="chatbot-typing-dot"></span>
+    <!-- Typing Indicator with Avatar -->
+    <div id="chatbot-typing-indicator" class="chatbot-typing-wrap" style="display: none;" aria-hidden="true">
+      <div class="chatbot-msg-avatar chatbot-bot-msg-avatar">
+        <i class="bi bi-robot"></i>
+      </div>
+      <div class="chatbot-typing-bubble">
+        <span class="chatbot-typing-dot"></span>
+        <span class="chatbot-typing-dot"></span>
+        <span class="chatbot-typing-dot"></span>
+      </div>
     </div>
 
     <!-- Quick Prompt Chips -->
     <div id="chatbot-quick-chips" class="chatbot-quick-chips" aria-label="Suggested Topics">
-      <!-- Injected dynamically -->
+      <!-- Injected dynamically based on active role -->
     </div>
 
     <!-- Input Footer -->
     <footer class="chatbot-footer">
       <form id="chatbot-input-form" class="chatbot-input-form" autocomplete="off">
+        <div class="chatbot-active-user-avatar" id="chatbot-active-user-avatar" title="Current Role Avatar">
+          <span id="chatbot-user-avatar-icon">👨‍👩‍👧</span>
+        </div>
         <input
           type="text"
           id="chatbot-input-field"
           class="chatbot-input-field"
-          placeholder="{% if ui_lang == 'en' %}Type a question...{% else %}اكتب سؤالك هنا...{% endif %}"
-          maxlength="1000"
+          placeholder="{% if ui_lang == 'en' %}Ask a question...{% else %}اكتب سؤالك هنا...{% endif %}"
+          maxlength="1500"
           aria-label="{% if ui_lang == 'en' %}Message input{% else %}حقل إدخال الرسالة{% endif %}"
           required
         />
