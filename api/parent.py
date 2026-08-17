@@ -597,4 +597,16 @@ def get_parent_daily_reports(
             "total_count": total,
             "total_pages": max(1, (total + page_size - 1) // page_size),
         }
+
+    if report_list:
+        log_audit_event(
+            db=db,
+            action=AuditAction.PARENT_DATA_VIEWED,
+            actor=current_user,
+            target_type="DailyReport",
+            target_ids=[r["id"] for r in report_list],
+            metadata={"child_ids": child_ids, "report_count": len(report_list)},
+            sensitivity_level=3,
+        )
+
     return response

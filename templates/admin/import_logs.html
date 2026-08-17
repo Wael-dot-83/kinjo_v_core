@@ -161,6 +161,10 @@
     if (toVal) params.set('to', toVal);
     params.set('page', currentPage);
 
+    if (history.replaceState) {
+      history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+    }
+
     try {
       const res = await fetch(`/api/admin/imports/logs?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -266,9 +270,24 @@
     document.getElementById('statusFilter').value = '';
     document.getElementById('dateFrom').value = '';
     document.getElementById('dateTo').value = '';
+    if (history.replaceState) {
+      history.replaceState(null, '', window.location.pathname);
+    }
     loadLogs(1);
   });
   document.getElementById('refreshBtn').addEventListener('click', () => loadLogs(currentPage));
+
+  (function restoreFiltersFromUrl() {
+    const qs = new URLSearchParams(window.location.search);
+    const typeVal = qs.get('type');
+    const statusVal = qs.get('status');
+    const fromVal = qs.get('from');
+    const toVal = qs.get('to');
+    if (typeVal) document.getElementById('typeFilter').value = typeVal;
+    if (statusVal) document.getElementById('statusFilter').value = statusVal;
+    if (fromVal) document.getElementById('dateFrom').value = fromVal;
+    if (toVal) document.getElementById('dateTo').value = toVal;
+  })();
 
   loadLogs();
 })();

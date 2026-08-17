@@ -397,8 +397,32 @@ class AdminDashboard {
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
-      if (!response.ok)
+      if (!response.ok) {
+        if (response.status === 403) {
+          this._setErrorMessage(
+            this.t(
+              "errors.admin_access_required",
+              "Admin access required. Please contact your administrator.",
+            ),
+          );
+          this.setState("error");
+          if (refreshBtn) {
+            refreshBtn.disabled = false;
+            refreshBtn.classList.remove("is-loading");
+            if (refreshText)
+              refreshText.textContent =
+                lang === "en"
+                  ? "Access Denied"
+                  : "ممنوع الوصول";
+            if (refreshIcon) {
+              refreshIcon.classList.remove("spin", "bi-arrow-clockwise");
+              refreshIcon.classList.add("bi-shield-lock");
+            }
+          }
+          return;
+        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       const data = await response.json();
       this._lastData = data;
       this.renderDashboard(data);

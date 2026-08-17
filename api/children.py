@@ -50,6 +50,15 @@ def _authorize_child_access(
     child IDs cannot be used to discover another tenant's records.
     """
     if current_user.role == models.UserRole.ADMIN:
+        log_audit_event(
+            db=db,
+            action=AuditAction.CHILD_DATA_ACCESSED,
+            actor=current_user,
+            target_type="Child",
+            target_ids=child.id,
+            metadata={"role": "ADMIN"},
+            sensitivity_level=2,
+        )
         return
     if current_user.role == models.UserRole.PARENT:
         parent_profile = db.query(models.ParentProfile).filter(
@@ -57,6 +66,15 @@ def _authorize_child_access(
         ).first()
         if not parent_profile or child.parent_id != parent_profile.id:
             raise HTTPException(status_code=403, detail="Not authorized for this child")
+        log_audit_event(
+            db=db,
+            action=AuditAction.CHILD_DATA_ACCESSED,
+            actor=current_user,
+            target_type="Child",
+            target_ids=child.id,
+            metadata={"role": "PARENT"},
+            sensitivity_level=3,
+        )
         return
     if current_user.role in (models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
         if current_user.role == models.UserRole.SUPERVISOR and not allow_supervisor:
@@ -68,6 +86,15 @@ def _authorize_child_access(
         ).first()
         if not enrollment:
             raise HTTPException(status_code=404, detail="Child not found")
+        log_audit_event(
+            db=db,
+            action=AuditAction.CHILD_DATA_ACCESSED,
+            actor=current_user,
+            target_type="Child",
+            target_ids=child.id,
+            metadata={"role": current_user.role.value},
+            sensitivity_level=2,
+        )
         return
     raise HTTPException(status_code=403, detail="Not authorized for this child")
 

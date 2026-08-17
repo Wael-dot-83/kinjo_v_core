@@ -224,6 +224,10 @@ class AuditAction:
     # External / government API
     GOVERNMENT_API_ACCESS = "GOVERNMENT_API_ACCESS"
 
+    # Parent/child data access (privacy-compliance traceability)
+    PARENT_DATA_VIEWED = "PARENT_DATA_VIEWED"
+    CHILD_DATA_ACCESSED = "CHILD_DATA_ACCESSED"
+
 
 EXPORT_ACTIONS = {
     "user_export": AuditAction.USER_EXPORT,
