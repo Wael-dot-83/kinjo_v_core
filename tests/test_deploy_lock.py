@@ -197,3 +197,26 @@ def test_obsolete_root_deploy_script_is_marked():
     """scripts/deploy.sh at the root targets /srv/kinjo, a venv and systemd
     units that do not exist here; running it would fail confusingly."""
     assert "obsolete" in _src().lower()
+
+
+def test_data_ownership_is_fixed_before_containers_are_recreated():
+    """The hardened image runs as a non-root uid; ./data is root-owned on the host.
+
+    If the chown ran after `up -d`, the new container would be live against a
+    directory it cannot write, and the deploy would still report success — the
+    health check passes because serving pages needs no write access. Attachments,
+    uploads and exports would fail silently at runtime instead.
+    """
+    src = _code()
+    assert src.index("chown -R") < src.index("up -d --build")
+
+
+def test_data_ownership_step_is_inside_the_lock():
+    src = _code()
+    assert src.index("chown -R") > src.index("flock -n 9")
+
+
+def test_attachments_write_bit_is_restored_not_just_ownership():
+    """data/attachments ships as dr-x---r-x: chown alone leaves it unwritable."""
+    src = _code()
+    assert "chmod -R u+rwX" in src
