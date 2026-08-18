@@ -161,6 +161,20 @@
       </style>
 
       <!-- Custom CSS -->
+      <!-- Canonical design tokens.
+
+           kinjo.css references six tokens it does not define itself
+           (--kinjo-brand, --kinjo-color-bg-body, --kinjo-color-border,
+           --kinjo-color-border-subtle, --kinjo-color-text-muted and
+           --kinjo-font-family-en), and they live only here. Without this file the
+           26 declarations that use them are invalid at computed-value time and are
+           dropped silently -- the page still returns 200, it just loses its
+           component outlines, muted text colour and Latin font stack. That reaches
+           403, 404, auth/change-password and reports/analytics_dashboard.
+
+           Same ?v= as admin_base.html on purpose: one asset, one cache key. -->
+      <link rel="stylesheet" href="/static/css/design-tokens.css?v=3e1c124bd60a" />
+
       <link rel="stylesheet" href="/static/css/kinjo.css?v=f2fe92eb6e98" />
       <link rel="stylesheet" href="/static/css/parent-dashboard.css?v=d95cb3f4d997" />
       <link rel="stylesheet" href="/static/css/chatbot.css?v=9202a5752be2" />
