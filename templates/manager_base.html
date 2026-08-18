@@ -24,6 +24,37 @@
     <meta name="color-scheme" content="light" />
 
     <!-- noscript: reveal immediately if JS is disabled -->
+    <!-- Render failsafe.
+
+         The shell script at the end of <body> reveals the document by clearing
+         the inline `visibility: hidden` on <html>. That single line is the only
+         thing standing between the user and a blank white page, and it sits at
+         the bottom of a long IIFE: if anything in that block throws, fails to
+         parse, or never runs, the reveal never executes and the whole panel
+         renders blank.
+
+         The <noscript> rule below does NOT cover this. It fires only when
+         scripting is *disabled*; when scripts are enabled and one of them
+         breaks, it stays inert -- which is exactly the case that produces a
+         blank page for a real user.
+
+         These listeners are registered in <head>, before anything can fail, and
+         are independent of the shell script, so they survive a syntax error in
+         it and not just a runtime throw. DOMContentLoaded fires after the shell
+         script would normally have revealed the page, so on the healthy path
+         this changes nothing. -->
+    <script>
+      (function () {
+        function reveal() {
+          document.documentElement.style.visibility = "";
+        }
+        document.addEventListener("DOMContentLoaded", reveal);
+        window.addEventListener("load", reveal);
+        window.addEventListener("error", reveal);
+        setTimeout(reveal, 2000);
+      })();
+    </script>
+
     <noscript><style>html { visibility: visible !important; }</style></noscript>
 
     <!-- Favicon -->
