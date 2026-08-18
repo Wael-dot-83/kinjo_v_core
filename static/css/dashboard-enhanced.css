@@ -547,7 +547,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
 [dir="rtl"] .badge,
 [dir="rtl"] td,
 [dir="rtl"] th {
-  font-family: "Cairo", "Noto Sans Arabic", Tahoma, sans-serif;
+  font-family: var(--kinjo-font-family-ar);
 }
 
 /* 18. Table controls styling */

@@ -11,8 +11,11 @@
   --chart-color-6: #065f46; /* emerald dark  */
 
   /* Arabic/RTL typography stack */
-  --font-arabic: "Cairo", "Noto Sans Arabic", sans-serif;
-  --font-latin: "Inter", "Segoe UI", sans-serif;
+  /* Aliases. The canonical stacks live in design-tokens.css; these names are
+     kept so existing rules keep working, but they no longer carry their own
+     opinion. They used to lead with Cairo, which this shell never loads. */
+  --font-arabic: var(--kinjo-font-family-ar);
+  --font-latin: var(--kinjo-font-family-en);
 
   /* Sidebar layout token */
   --admin-sidebar-width: 280px;
@@ -93,10 +96,13 @@
   --text-3xl: 32px;
 
   /* Font Families */
-  --font-family-ar: "Cairo", "Noto Sans Arabic", sans-serif;
-  --font-family-en:
-    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-family-mono: "JetBrains Mono", "Fira Code", monospace;
+  --font-family-ar: var(--kinjo-font-family-ar);
+  --font-family-en: var(--kinjo-font-family-en);
+  /* No monospace webfont is loaded anywhere in this product, so leading with
+     JetBrains Mono meant developers who have it installed saw a different
+     face from everyone else. System mono first is predictable. */
+  --font-family-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas,
+    "Liberation Mono", monospace;
   --font-family-base: var(--font-family-ar);
   --font-family-ltr: var(--font-family-en);
 }
