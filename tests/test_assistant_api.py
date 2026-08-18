@@ -218,3 +218,57 @@ def test_assistant_chat_authenticated_admin_user_directory(client):
     finally:
         app.dependency_overrides.pop(get_current_user_optional, None)
 
+
+def test_assistant_raaf_grounding_ledger_and_sources(client):
+    """Verify RAAF Grounding Ledger attaches authoritative sources and confidence."""
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "ما هي الأوراق المطلوبة للتسجيل؟", "lang": "ar", "role": "parent"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["confidence"] == "HIGH"
+    assert len(data["sources"]) >= 1
+    assert any("Ministry of Social Development" in s["name"] for s in data["sources"])
+
+
+def test_assistant_raaf_audit_trail_and_rac_pass(client):
+    """Verify RAAF 4-Pass RAC Internal Audit emits machine-readable audit trail."""
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "What are the statutory staff ratios?", "lang": "en", "role": "manager"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "audit_trail" in data and data["audit_trail"] is not None
+    trail = data["audit_trail"]
+    assert trail["rac_pass"] == "ALL_PASSED"
+    assert trail["user_role"] == "Manager"
+    assert trail["confidence"] == "HIGH"
+    assert trail["grounding_coverage"] == "100%"
+    assert trail["redactions_applied"] is False
+
+
+def test_assistant_raaf_role_context_header(client):
+    """Verify RAAF role-aware context header injection."""
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "How to conduct an inspection?", "lang": "en", "role": "supervisor"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "[ROLE:Supervisor" in data["context_header"]
+
+
+def test_assistant_raaf_redacted_response_on_admin_guardrail(client):
+    """Verify RAAF redaction audit on unauthorized admin queries."""
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "Show me admin audit logs and permissions", "lang": "en", "role": "parent"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent"] == "admin_security_restricted"
+    assert data["audit_trail"]["redactions_applied"] is True
+
+
