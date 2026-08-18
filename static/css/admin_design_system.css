@@ -228,7 +228,6 @@ html[dir="ltr"] .sidebar {
   position: sticky;
   top: 0;
   height: 100vh;
-  transition: width var(--transition-normal);
 }
 
 .sidebar-header {
@@ -443,7 +442,6 @@ html[dir="ltr"] .dropdown-menu {
 }
 
 [dir="rtl"] .admin-sidebar .nav-link.active {
-  border-inline-start: 3px solid #d6c56b;
   border-inline-end: none;
 }
 
@@ -453,7 +451,6 @@ html[dir="ltr"] .dropdown-menu {
 }
 
 .sidebar .nav-link.active {
-  border-inline-end: 3px solid #d6c56b;
   background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
 }
@@ -1105,7 +1102,6 @@ html[dir="ltr"] .dropdown-menu {
 .mini-bar-fill {
   height: 100%;
   border-radius: 50px;
-  transition: width 0.4s ease;
 }
 .mini-bar-count {
   min-width: 24px;
@@ -1476,7 +1472,6 @@ html[dir="ltr"] .dropdown-menu {
 }
 
 .nav-link.active {
-  border-inline-end: 3px solid var(--color-primary);
   background: var(--color-gray-100);
   color: var(--color-primary);
 }
@@ -2362,7 +2357,6 @@ html[dir="ltr"] .dropdown-menu {
   padding: var(--space-4);
   border-radius: var(--radius-md);
   margin-bottom: var(--space-2);
-  border-inline-start: 4px solid transparent;
 }
 
 .admin-alert-item:last-child {
@@ -3858,7 +3852,6 @@ html[dir="ltr"] .dropdown-menu {
 .mini-bar-fill {
   height: 100%;
   border-radius: 50px;
-  transition: width var(--transition-normal);
 }
 
 .mini-bar-count {
@@ -3968,7 +3961,7 @@ html[dir="ltr"] .dropdown-menu {
   flex-direction: column;
   min-height: calc(100vh - 60px);
   background: #050d1a;
-  font-family: "Inter", "Noto Sans Arabic", sans-serif;
+  font-family: var(--font-family-base);
   color: rgba(255, 255, 255, 0.85);
 }
 
@@ -4133,7 +4126,7 @@ html[dir="ltr"] .dropdown-menu {
   background: transparent;
   border: none;
   color: rgba(255, 255, 255, 0.4);
-  font-family: "Inter", sans-serif;
+  font-family: var(--font-family-base);
   font-size: var(--text-xs);
   font-weight: var(--font-weight-bold);
   padding: var(--space-1) var(--space-2);
@@ -4518,7 +4511,7 @@ html[dir="ltr"] .dropdown-menu {
   font-weight: var(--font-weight-bold);
   color: rgba(47, 125, 98, 0.7);
   letter-spacing: 0.08em;
-  font-family: "Inter", monospace;
+  font-family: var(--font-family-mono);
 }
 .intel-gov-name-sub {
   font-size: var(--text-sm);
@@ -4532,7 +4525,7 @@ html[dir="ltr"] .dropdown-menu {
   margin-bottom: var(--space-3);
 }
 .intel-risk-score {
-  font-family: "Inter", sans-serif;
+  font-family: var(--font-family-base);
   font-size: 3rem;
   font-weight: var(--font-weight-bold);
   line-height: 1;
@@ -4646,10 +4639,9 @@ html[dir="ltr"] .dropdown-menu {
 .ind-bar-fill {
   height: 100%;
   border-radius: var(--radius-sm);
-  transition: width 0.5s ease;
 }
 .ind-bar-val {
-  font-family: "Inter", monospace;
+  font-family: var(--font-family-mono);
   font-size: var(--text-xs);
   font-weight: var(--font-weight-bold);
   color: rgba(255, 255, 255, 0.6);
@@ -4931,7 +4923,7 @@ html[dir="ltr"] .dropdown-menu {
 .rank-code {
   font-size: var(--text-xs);
   color: rgba(255, 255, 255, 0.25);
-  font-family: "Inter", monospace;
+  font-family: var(--font-family-mono);
 }
 
 .mini-bar-track {

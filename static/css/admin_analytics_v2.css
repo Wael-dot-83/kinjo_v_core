@@ -159,9 +159,7 @@
 }
 .exec-banner__heading {
   font: 800 1.75rem/1.2 var(--font-ar);
-  background: linear-gradient(to right, #fff, var(--slate-300));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #ffffff;
   margin: 0 0 var(--sp-4);
 }
 .exec-banner__insights {
@@ -1207,7 +1205,6 @@
   background: #fff;
   border: 1px solid var(--slate-200);
   border-radius: var(--r-md);
-  border-inline-start: 6px solid transparent;
   transition:
     box-shadow 0.2s ease,
     transform 0.2s ease;

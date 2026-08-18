@@ -39,6 +39,7 @@ body.admin-container {
   color: var(--kinjo-color-text-primary);
   font-family: var(--kinjo-font-family);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .admin-layout {
@@ -83,25 +84,16 @@ body.admin-container {
   outline-offset: -4px;
 }
 
-/* Tier 1 — the brand band. Deep KinJo green, from --admin-header-* in
-   design-tokens.css; see the rationale there for why this tier is green and the
-   nav below it is not. Flat rather than gradient on purpose: a gradient makes the
-   effective contrast behind the text depend on where the text happens to sit, and
-   the muted role line has no headroom to spare. */
+/* Tier 1 — the brand band. Uses --admin-header-bg from design-tokens.css.
+   The token is the deep KinJo green (#064E32) so white sits at 9.8:1 on it.
+   Flat rather than gradient on purpose: a gradient makes the effective contrast
+   behind the text depend on where the text happens to sit. */
 .admin-header {
   height: var(--admin-header-height);
-  background:
-    radial-gradient(
-      circle at 18% 50%,
-      rgba(255, 255, 255, 0.05),
-      transparent 28%
-    ),
-    linear-gradient(120deg, #0f4cbd 0%, #155ecf 55%, #1b67d8 100%);
+  background-color: var(--admin-header-bg);
   color: var(--admin-header-ink);
-  border-block-end: 1px solid rgba(212, 175, 55, 0.22);
-  box-shadow:
-    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
-    0 8px 28px rgba(8, 17, 33, 0.1);
+  border-block-end: 1px solid var(--admin-header-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -118,14 +110,11 @@ body.admin-container {
   gap: var(--kinjo-spacing-4);
 }
 
-/* ============================================================================
-   HEADER REDESIGN (Enterprise Components)
-   ============================================================================ */
 .admin-header-right {
-  gap: 1.5rem; /* 24px */
+  gap: var(--kinjo-spacing-4);
 }
 
-/* Controls sit on the green band, so they take their ink from the header tokens
+/* Controls sit on the header band, so they take their ink from the header tokens
    rather than the page's grey scale. */
 .btn-header-action,
 .btn-header-user {
@@ -134,12 +123,14 @@ body.admin-container {
   display: flex;
   align-items: center;
   color: var(--admin-header-ink-soft);
-  padding: 0.25rem 0.5rem;
-  border-radius: 8px;
-  transition:
-    background-color 150ms ease,
-    color 150ms ease;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--kinjo-radius-md);
+  transition: background-color var(--kinjo-transition-fast),
+              color var(--kinjo-transition-fast);
   cursor: pointer;
+  font-size: var(--kinjo-font-size-sm);
+  font-weight: var(--kinjo-font-weight-medium);
+  line-height: 1.5;
 }
 
 .btn-header-action:hover,
@@ -161,23 +152,23 @@ body.admin-container {
 
 .header-divider {
   width: 1px;
-  height: 32px;
+  height: 24px;
   background-color: var(--admin-header-divider);
 }
 
 /* Gold, echoing the logo badge across the band instead of introducing a third
    accent. Dark green initials on it clear AA at 4.66:1. */
 .header-user-avatar {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background-color: var(--admin-header-avatar-bg);
   color: var(--admin-header-avatar-ink);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: var(--kinjo-font-weight-semibold);
+  font-size: var(--kinjo-font-size-sm);
   flex-shrink: 0;
 }
 
@@ -185,36 +176,31 @@ body.admin-container {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  margin-inline-start: 12px;
-  margin-inline-end: 8px;
+  margin-inline-start: var(--kinjo-spacing-3);
+  margin-inline-end: var(--kinjo-spacing-2);
   text-align: start;
 }
 
-/* The manager shell's brand is an icon plus a wordmark rather than the badge, so
-   it needs the type styling the admin logo gets from the image itself. */
 .header-logo-wordmark {
-  gap: 12px;
-  font-size: 20px;
-  font-weight: 700;
+  gap: var(--kinjo-spacing-3);
+  font-size: var(--kinjo-font-size-lg);
+  font-weight: var(--kinjo-font-weight-bold);
   color: var(--admin-header-ink);
-}
-
-.header-logo-wordmark span {
   letter-spacing: -0.01em;
 }
 
 .header-user-name {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--kinjo-font-size-sm);
+  font-weight: var(--kinjo-font-weight-semibold);
   color: var(--admin-header-ink);
-  line-height: 1.2;
+  line-height: 1.3;
 }
 
 .header-user-role {
-  font-size: 14px;
-  font-weight: 400;
+  font-size: var(--kinjo-font-size-xs);
+  font-weight: var(--kinjo-font-weight-normal);
   color: var(--admin-header-ink-muted);
-  line-height: 1.2;
+  line-height: 1.3;
   margin-top: 2px;
 }
 
@@ -223,24 +209,25 @@ body.admin-container {
   margin-inline-start: 4px;
 }
 
-/* Dropdown refinements. These panels hang below the green band but are not part of
+/* Dropdown refinements. These panels hang below the header band but are not part of
    it — they are the same light material as the nav's dropdowns, so they share the
    --admin-nav-* tokens rather than repeating the greys. */
 .header-lang-dropdown .dropdown-menu {
   min-width: 180px;
   border: 1px solid var(--admin-nav-border);
-  border-radius: 8px;
-  padding: 0.5rem;
+  border-radius: var(--kinjo-radius-lg);
+  padding: var(--kinjo-spacing-2);
+  box-shadow: var(--kinjo-shadow-md);
 }
 
 .header-lang-dropdown .dropdown-item {
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
-  font-weight: 500;
+  border-radius: var(--kinjo-radius-md);
+  padding: var(--kinjo-spacing-2) var(--kinjo-spacing-3);
+  font-weight: var(--kinjo-font-weight-medium);
   color: var(--admin-nav-ink);
-  transition:
-    background-color 150ms ease,
-    color 150ms ease;
+  font-size: var(--kinjo-font-size-sm);
+  transition: background-color var(--kinjo-transition-fast),
+              color var(--kinjo-transition-fast);
 }
 
 .header-lang-dropdown .dropdown-item:hover,
@@ -252,20 +239,22 @@ body.admin-container {
 .header-lang-dropdown .dropdown-item.active {
   background-color: var(--admin-nav-accent-soft);
   color: var(--admin-nav-accent);
-  font-weight: 600;
+  font-weight: var(--kinjo-font-weight-semibold);
 }
 
 .header-user-dropdown .dropdown-menu {
   min-width: 220px;
   border: 1px solid var(--admin-nav-border);
-  border-radius: 8px;
-  padding: 0.5rem;
+  border-radius: var(--kinjo-radius-lg);
+  padding: var(--kinjo-spacing-2);
+  box-shadow: var(--kinjo-shadow-md);
 }
 
 .header-user-dropdown .dropdown-item {
-  border-radius: 6px;
-  font-weight: 500;
+  border-radius: var(--kinjo-radius-md);
+  font-weight: var(--kinjo-font-weight-medium);
   color: var(--admin-nav-ink);
+  font-size: var(--kinjo-font-size-sm);
 }
 
 .header-user-dropdown .dropdown-item:hover,
@@ -298,30 +287,41 @@ body.admin-container {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: .75rem var(--kinjo-spacing-6);
-  background: #f8fafc;
-  border-top: 1px solid #d9e5df;
-  color: #527060;
-  font-size: .75rem;
+  gap: var(--kinjo-spacing-4);
+  padding: var(--kinjo-spacing-3) var(--kinjo-spacing-6);
+  background: var(--kinjo-color-bg-surface);
+  border-top: 1px solid var(--kinjo-color-border-subtle);
+  color: var(--kinjo-color-text-muted);
+  font-size: var(--kinjo-font-size-xs);
 }
 
 /* Page title — shared across admin pages (analytics, dashboard, help
-   center, reporting). Several templates set this class (some also
-   reference an undefined --type-page-title var) with no CSS backing
-   anywhere in the loaded stylesheet chain, so it rendered as a bare,
-   unstyled <h1>. */
+   center, reporting). */
 .admin-page-title {
-  font: var(--kinjo-font-weight-bold) var(--kinjo-font-size-2xl) / 1.3
-    var(--kinjo-font-family);
+  font-size: var(--kinjo-font-size-2xl);
+  font-weight: var(--kinjo-font-weight-bold);
+  line-height: 1.3;
   color: var(--kinjo-color-text-primary);
-  margin: 0;
+  margin: 0 0 var(--kinjo-spacing-6);
+}
+
+.admin-page-subtitle {
+  font-size: var(--kinjo-font-size-base);
+  color: var(--kinjo-color-text-secondary);
+  margin: 0 0 var(--kinjo-spacing-6);
+  max-width: 70ch;
+  line-height: 1.6;
 }
 
 /* Page Containers */
 .admin-page-container {
   max-width: 1440px;
   margin: 0 auto;
+}
+
+/* Section spacing */
+.admin-section + .admin-section {
+  margin-top: var(--kinjo-spacing-8);
 }
 
 /* Grid Layouts */

@@ -3,9 +3,6 @@
    Professional · Interactive · Colorful · Bilingual-Safe
    ══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Google Font: Noto Sans Arabic + Inter (Latin) ───────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
-
 /* ── Design Tokens ───────────────────────────────────────────────────────── */
 :root {
   /* Brand Palette */
@@ -46,7 +43,6 @@
 
   /* Motion */
   --kj-ease:       cubic-bezier(0.4, 0, 0.2, 1);
-  --kj-bounce:     cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* ── Page-level typography ───────────────────────────────────────────────── */
@@ -176,8 +172,6 @@
 .kg-hero-pattern {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
-  background-size: 20px 20px;
   pointer-events: none;
 }
 
@@ -358,7 +352,7 @@
   border-radius: 16px;
   padding: 1.3rem 1.25rem;
   box-shadow: var(--kj-shadow-sm);
-  transition: transform 0.25s var(--kj-bounce), box-shadow 0.25s var(--kj-ease);
+  transition: transform 0.25s var(--kj-ease), box-shadow 0.25s var(--kj-ease);
   position: relative;
   overflow: hidden;
   animation: kgFadeUp 0.45s var(--kj-ease) both;
@@ -435,7 +429,7 @@
   justify-content: center;
   font-size: 1.2rem;
   flex-shrink: 0;
-  transition: transform 0.25s var(--kj-bounce);
+  transition: transform 0.25s var(--kj-ease);
 }
 
 .kg-metric-card:hover .kg-metric-icon { transform: scale(1.12) rotate(-4deg); }
@@ -453,7 +447,7 @@
   color: #0f172a;
   line-height: 1;
   margin-bottom: 0.3rem;
-  animation: kgCountUp 0.5s var(--kj-bounce) both;
+  animation: kgCountUp 0.5s var(--kj-ease) both;
 }
 
 .kg-metric-value .kg-metric-unit {

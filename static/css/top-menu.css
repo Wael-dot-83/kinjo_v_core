@@ -1,13 +1,13 @@
 /* ============================================================================
-   TOP NAVIGATION MENU (MAIN MENU) — Tier 2
-   UX-02: Admin Top Navigation Simplification & Information Architecture
+    TOP NAVIGATION MENU (MAIN MENU) — Tier 2
+    UX-02: Admin Top Navigation Simplification & Information Architecture
 
-   Colours come from the --admin-nav-* tokens in design-tokens.css. This tier is
-   deliberately a light working surface under the green Tier 1 band, and its
-   accent is --kinjo-action (blue), not the brand green: green already carries
-   "ready / healthy" meaning in this admin, so a green active tab would read as a
-   status. See the token block for the full rationale.
-   ============================================================================ */
+    Colours come from the --admin-nav-* tokens in design-tokens.css. This tier is
+    deliberately a light working surface under the green Tier 1 band, and its
+    accent is --kinjo-action (blue), not the brand green: green already carries
+    "ready / healthy" meaning in this admin, so a green active tab would read as a
+    status. See the token block for the full rationale.
+    ============================================================================ */
 
 .admin-top-nav {
   background-color: var(--admin-nav-bg, #ffffff);
@@ -102,8 +102,8 @@
 }
 
 /* ============================================================================
-   DROPDOWN MENUS (Desktop)
-   ============================================================================ */
+    DROPDOWN MENUS (Desktop)
+    ============================================================================ */
 
 .top-menu-dropdown {
   position: absolute;
@@ -143,8 +143,7 @@
   font-weight: 500;
   color: var(--admin-nav-ink, #334155);
   text-decoration: none;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-  border-inline-start: 3px solid transparent;
+  transition: background-color 0.15s ease, color 0.15s ease;
   min-height: 38px;
 }
 
@@ -170,7 +169,6 @@
   background-color: var(--admin-nav-accent-soft, #eff6ff);
   color: var(--admin-nav-accent, var(--kinjo-action));
   font-weight: 600;
-  border-inline-start-color: var(--admin-nav-accent, var(--kinjo-action));
 }
 
 .dropdown-item.active i {
@@ -195,8 +193,8 @@
 }
 
 /* ============================================================================
-   MOBILE DRAWER NAVIGATION (<1024px)
-   ============================================================================ */
+    MOBILE DRAWER NAVIGATION (<1024px)
+    ============================================================================ */
 
 .mobile-nav-toggle-btn {
   display: none;
@@ -419,8 +417,8 @@
 }
 
 /* ============================================================================
-   RESPONSIVE BREAKPOINTS (<1024px)
-   ============================================================================ */
+    RESPONSIVE BREAKPOINTS (<1024px)
+    ============================================================================ */
 
 @media (max-width: 1023.98px) {
   .top-nav-desktop-container {

@@ -638,7 +638,7 @@ h6 {
 }
 
 html[lang="en"] .sidebar-section-title {
-  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  font-family: var(--kinjo-font-family-en);
 }
 
 [dir="rtl"] .sidebar {
@@ -3148,10 +3148,7 @@ body.sidebar-open .sidebar-backdrop {
 .empty-state i {
   font-size: 3.5rem !important;
   opacity: 0.15 !important;
-  background: linear-gradient(135deg, var(--kinjo-primary), var(--kinjo-info));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--kinjo-color-text-muted);
   display: block;
   margin-bottom: 1.25rem !important;
 }

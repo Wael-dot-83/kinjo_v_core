@@ -241,11 +241,11 @@
 .dfe-alert-item {
   background: #fff;
   border-radius: 10px;
-  border: 1.5px solid var(--kinjo-color-border);
-  border-inline-start: 4px solid var(--sev-color, var(--kinjo-color-border));
+  border: 1px solid var(--kinjo-color-border);
+  border-inline-start: 3px solid var(--sev-color, var(--kinjo-color-border));
   padding: .875rem 1rem;
   display:flex; align-items:flex-start; gap:.875rem;
-  transition: box-shadow 160ms, opacity 300ms, max-height 350ms;
+  transition: box-shadow 160ms, opacity 300ms;
   animation: dfeSlideIn 280ms ease-out;
 }
 @keyframes dfeSlideIn {
@@ -355,7 +355,6 @@
   padding: 1.5rem !important;
 }
 .status-widget {
-  border-inline-start: 4px solid transparent !important;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 #attendanceCard      { border-inline-start-color: #198754 !important; }

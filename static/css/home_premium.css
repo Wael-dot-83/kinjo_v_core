@@ -73,9 +73,7 @@
   line-height: 1.3;
   letter-spacing: -0.02em;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--kinjo-action-hover) 0%, var(--kinjo-action) 50%, #06B6D4 100%) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
+  color: var(--kinjo-action);
   text-shadow: 0 2px 4px rgba(15, 23, 42, 0.02);
 }
 

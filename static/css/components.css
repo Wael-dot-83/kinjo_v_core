@@ -1,6 +1,8 @@
 /* static/css/components.css */
 
-/* Button Components */
+/* ============================================================================
+   BUTTONS
+   ============================================================================ */
 .k-btn {
   display: inline-flex;
   align-items: center;
@@ -13,8 +15,11 @@
   border-radius: var(--kinjo-radius-md);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all var(--kinjo-transition-fast);
+  transition: background-color var(--kinjo-transition-fast),
+              border-color var(--kinjo-transition-fast),
+              box-shadow var(--kinjo-transition-fast);
   text-decoration: none;
+  line-height: 1.5;
 }
 .k-btn:disabled {
   opacity: 0.6;
@@ -24,9 +29,11 @@
 .k-btn-primary {
   background-color: var(--kinjo-color-primary);
   color: var(--kinjo-color-text-inverse);
+  border-color: var(--kinjo-color-primary);
 }
 .k-btn-primary:hover:not(:disabled) {
   background-color: var(--kinjo-color-primary-hover);
+  border-color: var(--kinjo-color-primary-hover);
 }
 
 .k-btn-outline {
@@ -38,7 +45,19 @@
   background-color: var(--kinjo-color-bg-hover);
 }
 
-/* Card Components (for KPIs and Panels) */
+.k-btn-ghost {
+  background-color: transparent;
+  color: var(--kinjo-color-text-secondary);
+  border-color: transparent;
+}
+.k-btn-ghost:hover:not(:disabled) {
+  background-color: var(--kinjo-color-bg-hover);
+  color: var(--kinjo-color-text-primary);
+}
+
+/* ============================================================================
+   CARDS
+   ============================================================================ */
 .k-card {
   background-color: var(--kinjo-color-bg-surface);
   border: 1px solid var(--kinjo-color-border);
@@ -49,7 +68,47 @@
   flex-direction: column;
 }
 
-/* Data Table Components */
+.k-card--elevated {
+  box-shadow: var(--kinjo-shadow-md);
+  border-color: transparent;
+}
+
+.k-card--interactive {
+  transition: box-shadow var(--kinjo-transition-fast),
+              border-color var(--kinjo-transition-fast);
+}
+.k-card--interactive:hover {
+  box-shadow: var(--kinjo-shadow-md);
+  border-color: var(--kinjo-color-border-hover);
+}
+
+.k-card-header {
+  padding: var(--kinjo-spacing-4) var(--kinjo-spacing-5);
+  border-bottom: 1px solid var(--kinjo-color-border-subtle);
+  background-color: var(--kinjo-color-bg-body);
+}
+
+.k-card-title {
+  font-size: var(--kinjo-font-size-lg);
+  font-weight: var(--kinjo-font-weight-semibold);
+  color: var(--kinjo-color-text-primary);
+  margin: 0;
+}
+
+.k-card-body {
+  padding: var(--kinjo-spacing-5);
+  flex: 1;
+}
+
+.k-card-footer {
+  padding: var(--kinjo-spacing-4) var(--kinjo-spacing-5);
+  border-top: 1px solid var(--kinjo-color-border-subtle);
+  background-color: var(--kinjo-color-bg-body);
+}
+
+/* ============================================================================
+   DATA TABLES
+   ============================================================================ */
 .k-table-container {
   width: 100%;
   overflow-x: auto;
@@ -67,7 +126,7 @@
 .k-table th,
 .k-table td {
   padding: var(--kinjo-spacing-3) var(--kinjo-spacing-4);
-  border-block-end: 1px solid var(--kinjo-color-border);
+  border-block-end: 1px solid var(--kinjo-color-border-subtle);
 }
 
 .k-table th {
@@ -83,13 +142,19 @@
   background-color: var(--kinjo-color-bg-hover);
 }
 
+.k-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 /* RTL support for k-table */
 [dir="rtl"] .k-table th,
 [dir="rtl"] .k-table td {
   text-align: right;
 }
 
-/* Form Inputs */
+/* ============================================================================
+   FORM INPUTS
+   ============================================================================ */
 .k-input {
   display: block;
   width: 100%;
@@ -99,7 +164,8 @@
   border-radius: var(--kinjo-radius-md);
   background-color: var(--kinjo-color-bg-surface);
   color: var(--kinjo-color-text-primary);
-  transition: border-color var(--kinjo-transition-fast), box-shadow var(--kinjo-transition-fast);
+  transition: border-color var(--kinjo-transition-fast),
+              box-shadow var(--kinjo-transition-fast);
 }
 .k-input:focus {
   outline: none;
@@ -107,14 +173,37 @@
   box-shadow: 0 0 0 2px var(--kinjo-color-ring);
 }
 
-/* Badges */
+.k-select {
+  display: block;
+  width: 100%;
+  padding: var(--kinjo-spacing-2) var(--kinjo-spacing-3);
+  font-size: var(--kinjo-font-size-sm);
+  border: 1px solid var(--kinjo-color-border);
+  border-radius: var(--kinjo-radius-md);
+  background-color: var(--kinjo-color-bg-surface);
+  color: var(--kinjo-color-text-primary);
+  cursor: pointer;
+  transition: border-color var(--kinjo-transition-fast),
+              box-shadow var(--kinjo-transition-fast);
+}
+.k-select:focus {
+  outline: none;
+  border-color: var(--kinjo-color-primary);
+  box-shadow: 0 0 0 2px var(--kinjo-color-ring);
+}
+
+/* ============================================================================
+   BADGES
+   ============================================================================ */
 .k-badge {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   padding: 0.125rem 0.5rem;
   font-size: var(--kinjo-font-size-xs);
   font-weight: var(--kinjo-font-weight-medium);
   border-radius: var(--kinjo-radius-full);
+  line-height: 1.5;
 }
 .k-badge-success { background-color: #d1fae5; color: #065f46; }
 .k-badge-warning { background-color: #fef3c7; color: #92400e; }
@@ -122,26 +211,96 @@
 .k-badge-info { background-color: #dbeafe; color: var(--kinjo-action); }
 
 /* ============================================================================
-   EXECUTIVE ACTIVITY FEED
+   SKELETON LOADERS
    ============================================================================ */
-.admin-dashboard-activity .admin-card-body {
-  padding: 24px;
+.k-skeleton {
+  background: linear-gradient(90deg,
+              var(--kinjo-color-bg-hover) 25%,
+              var(--kinjo-color-bg-active) 50%,
+              var(--kinjo-color-bg-hover) 75%);
+  background-size: 200% 100%;
+  animation: k-skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: var(--kinjo-radius-md);
 }
 
-.executive-activity-item {
+@keyframes k-skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.k-skeleton-text {
+  height: 1em;
+  margin-bottom: var(--kinjo-spacing-2);
+}
+.k-skeleton-text:last-child {
+  width: 60%;
+}
+
+.k-skeleton-title {
+  height: 1.5em;
+  width: 40%;
+  margin-bottom: var(--kinjo-spacing-3);
+}
+
+.k-skeleton-circle {
+  border-radius: 50%;
+}
+
+/* ============================================================================
+   EMPTY STATES
+   ============================================================================ */
+.k-empty-state {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--kinjo-color-border);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--kinjo-spacing-12) var(--kinjo-spacing-6);
+  color: var(--kinjo-color-text-muted);
 }
 
-.executive-activity-item:last-child {
+.k-empty-state-icon {
+  font-size: 3rem;
+  color: var(--kinjo-color-text-muted);
+  opacity: 0.5;
+  margin-bottom: var(--kinjo-spacing-4);
+}
+
+.k-empty-state-title {
+  font-size: var(--kinjo-font-size-lg);
+  font-weight: var(--kinjo-font-weight-semibold);
+  color: var(--kinjo-color-text-primary);
+  margin: 0 0 var(--kinjo-spacing-2);
+}
+
+.k-empty-state-description {
+  font-size: var(--kinjo-font-size-sm);
+  color: var(--kinjo-color-text-muted);
+  max-width: 40ch;
+  line-height: 1.6;
+}
+
+/* ============================================================================
+   ACTIVITY FEED
+   ============================================================================ */
+.admin-dashboard-activity .admin-card-body {
+  padding: var(--kinjo-spacing-5);
+}
+
+.activity-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kinjo-spacing-2);
+  padding: var(--kinjo-spacing-4) 0;
+  border-bottom: 1px solid var(--kinjo-color-border-subtle);
+}
+
+.activity-item:last-child {
   border-bottom: none;
   padding-bottom: 0;
 }
 
-.executive-activity-item:first-child {
+.activity-item:first-child {
   padding-top: 0;
 }
 
@@ -149,110 +308,102 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--kinjo-spacing-3);
 }
 
-.activity-event-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--kinjo-color-text-primary, #111827);
+.activity-title {
+  font-size: var(--kinjo-font-size-base);
+  font-weight: var(--kinjo-font-weight-semibold);
+  color: var(--kinjo-color-text-primary);
   margin: 0;
 }
 
-.activity-status-badge {
+.activity-status {
   display: inline-flex;
   align-items: center;
-  padding: 4px 8px;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: var(--kinjo-font-size-xs);
+  font-weight: var(--kinjo-font-weight-medium);
+  border-radius: var(--kinjo-radius-full);
   white-space: nowrap;
+  line-height: 1.5;
 }
-.activity-status-badge.badge-success { background-color: #D1FAE5; color: #065F46; }
-.activity-status-badge.badge-warning { background-color: #FEF3C7; color: #92400E; }
-.activity-status-badge.badge-danger  { background-color: #FEE2E2; color: #991B1B; }
-.activity-status-badge.badge-info    { background-color: #DBEAFE; color: var(--kinjo-action); }
-/* admin_endpoints.py's _activity_item_from_log sets status="failed" (not
-   "danger") for LOGIN_FAILED/ACCESS_DENIED/etc. — this class had no rule at
-   all, so a failed-login badge rendered with a transparent background and
-   no color coding whatsoever (verified: computed background was
-   rgba(0,0,0,0)), the exact opposite of what a security-relevant failure
-   status should look like next to a "ناجح"/"Success" success badge. */
-.activity-status-badge.badge-failed  { background-color: #FEE2E2; color: #991B1B; }
+.activity-status--success { background-color: #d1fae5; color: #065f46; }
+.activity-status--warning { background-color: #fef3c7; color: #92400e; }
+.activity-status--danger  { background-color: #fee2e2; color: #991b1b; }
+.activity-status--info    { background-color: #dbeafe; color: var(--kinjo-action); }
+.activity-status--failed  { background-color: #fee2e2; color: #991b1b; }
 
-.activity-meta-row {
+.activity-meta {
   display: flex;
   align-items: center;
-  gap: 16px;
-  font-size: 14px;
-  color: var(--kinjo-color-text-secondary, #4B5563);
+  gap: var(--kinjo-spacing-4);
+  font-size: var(--kinjo-font-size-sm);
+  color: var(--kinjo-color-text-secondary);
 }
 
-.activity-actor, .activity-time {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.activity-category-row {
-  margin-top: 4px;
-}
-
-.activity-category-badge {
+.activity-meta-item {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
-  color: #4B5563;
-  background-color: #F3F4F6;
-  padding: 2px 6px;
-  border-radius: 4px;
+}
+
+.activity-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--kinjo-font-size-xs);
+  color: var(--kinjo-color-text-secondary);
+  background-color: var(--kinjo-color-bg-hover);
+  padding: 2px 8px;
+  border-radius: var(--kinjo-radius-md);
 }
 
 /* ============================================================================
-   ENTERPRISE REFRESH BUTTON
+   REFRESH BUTTON
    ============================================================================ */
-.admin-btn-enterprise-refresh {
+.k-refresh-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   height: 40px;
-  padding: 0 16px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  background-color: #FFFFFF;
-  color: #374151;
-  border: 1px solid #D1D5DB;
+  padding: 0 var(--kinjo-spacing-4);
+  border-radius: var(--kinjo-radius-lg);
+  font-size: var(--kinjo-font-size-sm);
+  font-weight: var(--kinjo-font-weight-medium);
+  background-color: var(--kinjo-color-bg-surface);
+  color: var(--kinjo-color-text-secondary);
+  border: 1px solid var(--kinjo-color-border);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color var(--kinjo-transition-fast),
+              border-color var(--kinjo-transition-fast),
+              color var(--kinjo-transition-fast);
 }
 
-.admin-btn-enterprise-refresh:hover:not(:disabled) {
-  background-color: #F9FAFB;
-  border-color: #9CA3AF;
-  color: #111827;
+.k-refresh-btn:hover:not(:disabled) {
+  background-color: var(--kinjo-color-bg-hover);
+  border-color: var(--kinjo-color-border-hover);
+  color: var(--kinjo-color-text-primary);
 }
 
-.admin-btn-enterprise-refresh:disabled,
-.admin-btn-enterprise-refresh.is-loading {
-  opacity: 0.7;
+.k-refresh-btn:disabled,
+.k-refresh-btn.is-loading {
+  opacity: 0.6;
   cursor: not-allowed;
-  background-color: #F3F4F6;
 }
 
-.admin-btn-enterprise-refresh.is-success {
-  background-color: #DCFCE7;
-  color: #065F46;
-  border-color: #34D399;
+.k-refresh-btn.is-success {
+  background-color: #d1fae5;
+  color: #065f46;
+  border-color: #34d399;
 }
 
-.admin-btn-enterprise-refresh .refresh-icon.spin {
-  animation: spin 1s linear infinite;
+.k-refresh-btn .spin {
+  animation: k-spin 1s linear infinite;
 }
 
-@keyframes spin {
+@keyframes k-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }

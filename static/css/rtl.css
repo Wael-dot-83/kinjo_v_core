@@ -22,7 +22,7 @@
 }
 
 [dir="rtl"] .alert {
-  border-right: 4px solid;
+  border-right: 1px solid;
   border-left: none;
 }
 

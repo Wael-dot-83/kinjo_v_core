@@ -1,11 +1,9 @@
 /* static/css/admin_premium_theme.css */
-/* Premium, professional, and colorful layout overrides for KinJo Admin Shell */
+/* Premium, professional layout overrides for KinJo Admin Shell */
 
 /* ── Modern Colors & Gradients ───────────────────────────────────────────── */
 :root {
-  /* Bright, vibrant electric blue to sky blue gradient for the header */
-  --header-gradient: linear-gradient(135deg, var(--kinjo-action) 0%, #3B82F6 50%, #0284C7 100%);
-  --accent-rainbow: linear-gradient(90deg, #3B82F6 0%, #10B981 33%, #F59E0B 66%, #EF4444 100%);
+  --header-bg: var(--kinjo-action);
   --footer-bg: #FFFFFF;
   --footer-ink: #475569;
   --sidebar-active-pill: rgba(37, 99, 235, 0.1);
@@ -14,277 +12,231 @@
 /* ── Redesigned Header (.admin-header) ─────────────────────────────────────── */
 .admin-header {
   height: var(--admin-header-height, 64px);
-  background: var(--header-gradient) !important;
-  border-block-end: none !important;
-  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.15) !important;
+  background: var(--header-bg);
+  border-block-end: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
   position: relative;
-  padding: 0 1.5rem !important;
-}
-
-/* A colorful animated rainbow accent line at the bottom of the header */
-.admin-header::after {
-  content: '';
-  position: absolute;
-  inset-block-end: 0;
-  inset-inline-start: 0;
-  width: 100%;
-  height: 4px; /* Slightly thicker for brightness */
-  background: var(--accent-rainbow);
-  z-index: 10;
+  padding: 0 1.5rem;
 }
 
 /* Refine Header Controls & Action Buttons */
 .btn-header-action,
 .btn-header-user {
-  background: rgba(255, 255, 255, 0.12) !important;
-  border: 1px solid rgba(255, 255, 255, 0.25) !important;
-  color: #FFFFFF !important;
-  padding: 0.4rem 0.8rem !important;
-  border-radius: 8px !important;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-  font-weight: 600 !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  transition: background 200ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .btn-header-action:hover,
 .btn-header-user:hover {
-  background: rgba(255, 255, 255, 0.22) !important;
-  border-color: rgba(255, 255, 255, 0.4) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .btn-header-action i {
-  color: #FFFFFF !important;
+  color: #FFFFFF;
 }
 
-/* Gold/Rainbow Avatar lockup */
+/* Avatar lockup */
 .header-user-avatar {
-  background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%) !important; /* Bright coral-orange gradient */
-  color: #FFFFFF !important;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-  font-weight: 700 !important;
+  background: #FF6B6B;
+  color: #FFFFFF;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-weight: 700;
 }
 
 .header-user-name {
-  color: #FFFFFF !important;
-  font-size: 0.95rem !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  color: #FFFFFF;
+  font-size: 0.95rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .header-user-role {
-  color: #E0F2FE !important; /* Very light sky blue role label */
-  font-size: 0.8rem !important;
-  font-weight: 500 !important;
+  color: #E0F2FE;
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 /* ── Redesigned Navigation / Sidebar Menu (.admin-top-nav) ─────────────────── */
 /* The top menu acts as the horizontal "sidebar" */
 .admin-top-nav {
-  background: rgba(255, 255, 255, 0.9) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  border-block-end: 1px solid rgba(226, 232, 240, 0.8) !important;
-  padding: 0.25rem 0 !important;
+  background: #FFFFFF;
+  border-block-end: 1px solid rgba(226, 232, 240, 0.8);
+  padding: 0.25rem 0;
 }
 
 .top-menu {
-  gap: 0.5rem !important;
+  gap: 0.5rem;
 }
 
 /* Top menu items style */
 .top-menu-link {
-  border-radius: 8px !important;
-  border-bottom: 2px solid transparent !important;
-  padding: 10px 14px !important;
-  font-weight: 600 !important; /* Thicker for brightness/contrast */
-  color: #334155 !important; /* Slate 700 */
-  transition: all 150ms ease !important;
+  border-radius: 8px;
+  border-bottom: 2px solid transparent;
+  padding: 10px 14px;
+  font-weight: 600;
+  color: #334155;
+  transition: background-color 150ms ease, color 150ms ease;
 }
 
 .top-menu-link i {
-  color: #475569 !important;
-  transition: color 150ms ease !important;
+  color: #475569;
+  transition: color 150ms ease;
 }
 
 /* Hover state */
 .top-menu-link:hover,
 .top-menu-item:hover > .top-menu-link {
-  color: #1D4ED8 !important; /* Bright royal blue */
-  background-color: rgba(239, 246, 255, 0.8) !important; /* Soft blue tint */
+  color: #1D4ED8;
+  background-color: rgba(239, 246, 255, 0.8);
 }
 
 .top-menu-link:hover i {
-  color: var(--kinjo-action) !important;
+  color: var(--kinjo-action);
 }
 
-/* Active State with colorful underline indicator */
+/* Active State with underline indicator */
 .top-menu-link.active {
-  color: var(--kinjo-action) !important;
-  background-color: var(--sidebar-active-pill) !important;
-  border-bottom: 2px solid var(--kinjo-action) !important;
+  color: var(--kinjo-action);
+  background-color: var(--sidebar-active-pill);
+  border-bottom: 2px solid var(--kinjo-action);
 }
 
 .top-menu-link.active i {
-  color: var(--kinjo-action) !important;
+  color: var(--kinjo-action);
 }
 
 /* ── Premium Dropdown Menus ───────────────────────────────────────────────── */
 .top-menu-dropdown {
-  background: rgba(255, 255, 255, 0.98) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(226, 232, 240, 0.9) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  background: #FFFFFF;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   overflow: hidden;
-  padding: 6px 0 !important;
-}
-
-/* Top border indicator for dropdown cards */
-.top-menu-dropdown::before {
-  content: '';
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-start: 0;
-  width: 100%;
-  height: 3px;
-  background: var(--accent-rainbow);
+  padding: 6px 0;
 }
 
 .dropdown-item {
-  padding: 10px 16px !important;
-  color: #1E293B !important;
-  border-inline-start: 3px solid transparent !important;
-  font-weight: 500 !important;
+  padding: 10px 16px;
+  color: #1E293B;
+  font-weight: 500;
 }
 
 .dropdown-item i {
-  color: #475569 !important;
-  font-size: 1rem !important;
+  color: #475569;
+  font-size: 1rem;
 }
 
 .dropdown-item:hover {
-  background-color: rgba(239, 246, 255, 0.6) !important;
-  color: #1D4ED8 !important;
-  border-inline-start-color: #3B82F6 !important;
+  background-color: rgba(239, 246, 255, 0.6);
+  color: #1D4ED8;
 }
 
 .dropdown-item.active {
-  background-color: var(--sidebar-active-pill) !important;
-  color: var(--kinjo-action) !important;
-  border-inline-start-color: var(--kinjo-action) !important;
+  background-color: var(--sidebar-active-pill);
+  color: var(--kinjo-action);
+  font-weight: 600;
 }
 
 .dropdown-item.active i {
-  color: var(--kinjo-action) !important;
+  color: var(--kinjo-action);
 }
 
 .dropdown-group-label {
-  padding: 10px 16px 4px !important;
-  color: #64748B !important; /* Soft group labels */
-  font-size: 10px !important;
-  font-weight: 700 !important;
+  padding: 10px 16px 4px;
+  color: #64748B;
+  font-size: 10px;
+  font-weight: 700;
 }
 
 /* ── Redesigned Footer (.admin-shell-footer) ───────────────────────────────── */
 .admin-shell-footer {
-  background: var(--footer-bg) !important;
-  color: var(--footer-ink) !important;
-  border-top: none !important;
-  padding: 1.2rem 1.5rem !important;
-  position: relative;
-  font-weight: 600 !important;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03) !important;
-}
-
-/* Rainbow border at the top of the footer */
-.admin-shell-footer::before {
-  content: '';
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-start: 0;
-  width: 100%;
-  height: 3px; /* Slightly thicker */
-  background: var(--accent-rainbow);
+  background: var(--footer-bg);
+  color: var(--footer-ink);
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+  padding: 1.2rem 1.5rem;
+  font-weight: 600;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
 }
 
 .admin-shell-footer span {
-  font-size: 0.8rem !important;
+  font-size: 0.8rem;
 }
 
 .admin-shell-footer span:first-child {
-  color: #1E293B !important;
-  font-weight: 700 !important;
+  color: #1E293B;
+  font-weight: 700;
 }
 
 /* ── Bright Cards & UI Panels (.k-card) ───────────────────────────────────── */
 .k-card, .card {
-  background-color: #FFFFFF !important;
-  border: 1px solid rgba(226, 232, 240, 0.8) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
-  transition: transform 200ms ease, box-shadow 200ms ease !important;
-  position: relative;
-  overflow: hidden;
+  background-color: #FFFFFF;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: box-shadow 200ms ease;
 }
 
 .k-card:hover, .card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1), 0 4px 6px -2px rgba(37, 99, 235, 0.05) !important;
+  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1), 0 4px 6px -2px rgba(37, 99, 235, 0.05);
 }
 
 /* ── Primary Buttons (.k-btn-primary) ────────────────────────────────────── */
 .k-btn-primary, .btn-primary {
-  background-color: var(--kinjo-action) !important;
-  color: #FFFFFF !important;
-  border-radius: 8px !important;
-  font-weight: 600 !important;
-  border: none !important;
-  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2) !important;
-  transition: all 150ms ease !important;
+  background-color: var(--kinjo-action);
+  color: #FFFFFF;
+  border-radius: 8px;
+  font-weight: 600;
+  border: none;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+  transition: background-color 150ms ease, box-shadow 150ms ease;
 }
 
 .k-btn-primary:hover, .btn-primary:hover {
-  background-color: #1D4ED8 !important;
-  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3) !important;
-  transform: translateY(-1px);
+  background-color: #1D4ED8;
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
 }
 
 /* ── Forms and Inputs (.k-input) ────────────────────────────────────────── */
 .k-input, .form-control {
-  border-radius: 8px !important;
-  border: 1px solid #CBD5E1 !important;
-  background-color: #FFFFFF !important;
-  transition: border-color 150ms ease, box-shadow 150ms ease !important;
+  border-radius: 8px;
+  border: 1px solid #CBD5E1;
+  background-color: #FFFFFF;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .k-input:focus, .form-control:focus {
-  border-color: #3B82F6 !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 /* ── Bright Table Styling ────────────────────────────────────────────────── */
 .k-table-container, .table-responsive {
-  border: 1px solid rgba(226, 232, 240, 0.8) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03) !important;
-  background: #FFFFFF !important;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+  background: #FFFFFF;
   margin-bottom: 1.5rem;
 }
 
 .k-table th, .table th {
-  background-color: #F8FAFC !important;
-  color: #334155 !important;
-  font-weight: 700 !important;
-  border-bottom: 2px solid #E2E8F0 !important;
+  background-color: #F8FAFC;
+  color: #334155;
+  font-weight: 700;
+  border-bottom: 2px solid #E2E8F0;
 }
 
 .k-table td, .table td {
-  border-bottom: 1px solid #F1F5F9 !important;
+  border-bottom: 1px solid #F1F5F9;
 }
 
 /* RTL Support details */
 [dir="rtl"] .dropdown-item {
-  text-align: right !important;
+  text-align: right;
 }

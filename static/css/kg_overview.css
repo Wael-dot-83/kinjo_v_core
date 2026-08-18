@@ -481,7 +481,7 @@
   background: var(--ko-surface);
   border-radius: var(--ko-radius-sm);
   border: 1.5px solid var(--ko-border);
-  border-inline-start: 4px solid var(--sev-color);
+  border-inline-start: 1px solid var(--sev-color);
   padding: 1rem 1.25rem;
   display: flex;
   align-items: flex-start;
@@ -747,7 +747,7 @@
 /* ── 22. RTL overrides ──────────────────────────────────── */
 [dir="rtl"] .ko-table th,
 [dir="rtl"] .ko-table td { text-align: right; }
-[dir="rtl"] .ko-alert-item { border-inline-start: 4px solid var(--sev-color); border-inline-end: none; }
+[dir="rtl"] .ko-alert-item { border-inline-end: none; }
 
 /* ── 23. Table pagination ───────────────────────────────── */
 .ko-pg-btn {
