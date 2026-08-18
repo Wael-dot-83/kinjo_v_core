@@ -230,7 +230,17 @@ INLINE_SCRIPT = re.compile(r"<script\b(?![^>]*\bsrc=)[^>]*>(.*?)</script>", re.S
 # Inline script cannot be cached. The project versions static assets with ?v=
 # content hashes and serves them with a long max-age; bytes inlined into a
 # template get none of that and are re-downloaded on every page view.
-MAX_INLINE_SCRIPT_KB = 962
+# Raised 962 -> 963 for the render failsafe in admin_base.html and
+# manager_base.html. Both shells hide <html> until script clears it, and the
+# reveal used to sit at the end of a long IIFE: one throw or parse error and
+# the whole panel rendered blank, with the <noscript> fallback inert because
+# scripting was enabled. The guard costs ~340 bytes across the two shells.
+#
+# It is deliberately exempt from this budget's own remediation advice. Moving
+# it to a file under static/js would reintroduce the failure it exists to
+# prevent: an external script that fails to fetch or parse never runs, and the
+# page stays hidden. A failsafe cannot depend on the thing it is insuring.
+MAX_INLINE_SCRIPT_KB = 963
 
 
 def test_inline_script_weight_does_not_grow():
