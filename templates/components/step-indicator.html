@@ -35,8 +35,12 @@
         width: 40px;
         height: 40px;
         border-radius: 50%;
-        background-color: var(--kinjo-border-color, #e2e8f0);
-        color: var(--kinjo-text-secondary, #64748b);
+        /* --kinjo-border-color belongs to kinjo.css's parallel token namespace and
+           resolves to the brand green here, so the inactive step rendered slate
+           text on dark green at 2.06:1 -- effectively unreadable. Canonical
+           tokens give the intended light chip at 6.15:1. */
+        background-color: var(--kinjo-color-bg-active);
+        color: var(--kinjo-color-text-secondary);
         display: flex;
         align-items: center;
         justify-content: center;

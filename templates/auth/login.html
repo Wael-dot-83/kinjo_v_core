@@ -244,7 +244,8 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     margin-bottom: 0.4rem;
   }
   .auth-field label .req-star {
-    color: #ef4444;
+    /* 3.76:1 on white as 14px text; the -text sibling measures 4.83:1. */
+    color: var(--kinjo-color-danger-text);
     margin-inline-start: 0.2rem;
   }
 

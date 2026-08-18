@@ -23,6 +23,11 @@
   --kinjo-color-success: #10b981;
   --kinjo-color-warning: #f59e0b; /* Adjusted for better contrast on light backgrounds */
   --kinjo-color-danger: #ef4444;
+  /* --kinjo-color-danger is tuned as a FILL (badges, borders, icon chips). As
+     small text on white it measures 3.76:1, under the 4.5 floor, so text that
+     must be read -- required-field markers, inline validation -- uses this
+     darker sibling at 4.83:1. Same hue, same meaning, legible. */
+  --kinjo-color-danger-text: #dc2626;
   --kinjo-color-info: #3b82f6;
   
   /* Page canvas — a warm off-white. The previous #f8fafc was blue-tinted (its blue
