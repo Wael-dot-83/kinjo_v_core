@@ -12,6 +12,7 @@ reason in the commit message.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from collections import Counter
@@ -287,6 +288,41 @@ def test_one_cache_key_per_asset():
     assert not split, "assets referenced under more than one cache key: " + repr(split)
 
 
+def canonical_asset_hash(path):
+    """The release identity of a static asset: sha256 of its COMMITTED bytes.
+
+    Every blob in static/ is stored LF, and this repo is checked out with
+    core.autocrlf=true on Windows, so the working tree carries CRLF while the
+    commit does not. Hashing the raw working-tree bytes therefore produced a
+    different answer on a Windows clone than on a Linux one for identical
+    committed content -- the defect fix/platform-independent-cache-keys
+    (cac8d1a) is about.
+
+    Normalising CRLF to LF reproduces the committed blob byte-for-byte for all
+    73 versioned assets (verified), so this is the canonical identity without
+    the test needing to shell out to git.
+    """
+    return hashlib.sha256(
+        path.read_bytes().replace(bytes([13, 10]), bytes([10]))
+    ).hexdigest()[:12]
+
+
+def test_asset_hash_is_independent_of_checkout_line_endings(tmp_path):
+    """Control: identical committed content must yield one identity.
+
+    Simulates the same blob checked out with core.autocrlf=true (CRLF) and
+    false (LF). A hash that disagrees between them cannot be a release
+    identity, which is exactly how this went wrong before."""
+    import hashlib as _h
+    content = bytes([10]).join([b"a{color:#fff}", b"b{color:#000}", b""])
+    lf = tmp_path / "lf.css"; lf.write_bytes(content)
+    crlf = tmp_path / "crlf.css"; crlf.write_bytes(content.replace(bytes([10]), bytes([13, 10])))
+    assert lf.read_bytes() != crlf.read_bytes(), 'fixture must actually differ on disk'
+    assert canonical_asset_hash(lf) == canonical_asset_hash(crlf)
+    # and it must equal the committed (LF) content's hash
+    assert canonical_asset_hash(lf) == _h.sha256(content).hexdigest()[:12]
+
+
 def test_content_hash_cache_keys_match_the_file():
     """A ?v=<12 hex> key is a content hash and must match the bytes on disk.
 
@@ -300,7 +336,7 @@ def test_content_hash_cache_keys_match_the_file():
         path = ROOT / "static" / asset
         if not path.exists():
             continue
-        actual = hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+        actual = canonical_asset_hash(path)
         for version, tpl in pairs:
             if re.fullmatch(r"[0-9a-f]{12}", version) and version != actual:
                 stale.append(f"{asset} in {tpl}: references {version}, content is {actual}")

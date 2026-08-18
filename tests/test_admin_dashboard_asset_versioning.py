@@ -15,7 +15,10 @@ ROOT = Path(__file__).resolve().parent.parent
 def _short_sha256(rel_path: str) -> str:
     path = ROOT / rel_path
     assert path.exists(), f"Static asset {path} does not exist"
-    return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+    # Canonical (committed) bytes -- see test_design_system_budgets.canonical_asset_hash.
+    return hashlib.sha256(
+        path.read_bytes().replace(bytes([13, 10]), bytes([10]))
+    ).hexdigest()[:12]
 
 
 def test_admin_dashboard_static_assets_match_content_sha256():

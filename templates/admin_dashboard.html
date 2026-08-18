@@ -1,8 +1,8 @@
 {% extends "admin_base.html" %} {% block title %} {% if ui_lang == 'en' %}KinJo Admin{% else %}إدارة KinJo{% endif %} — {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %} {% endblock %}
 {% block extra_head %} {{ super() }}
 <link rel="stylesheet" href="/static/vendor/uswds/css/uswds.min.css" />
-<link rel="stylesheet" href="/static/css/agency_reports.css?v=90b1fe2bcaa9" />
-<link rel="stylesheet" href="/static/css/dashboard-enhanced.css?v=cb0656ea6566" />
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=390f77123ce9" />
+<link rel="stylesheet" href="/static/css/dashboard-enhanced.css?v=aee73b9bfba3" />
 <style>
   /* USWDS ships a Latin-only type stack (Source Sans Pro Web) and applies it to
    .usa-prose / .usa-summary-box. It loads after kinjo.css, so it beat the Arabic
@@ -675,7 +675,7 @@
   window.KINJO_LANG = "{{ ui_lang }}";
 </script>
 <script src="/static/js/chart_utils.js?v=2.1"></script>
-<script src="/static/js/admin_dashboard.js?v=c77935167274"></script>
+<script src="/static/js/admin_dashboard.js?v=5ef4a2883bd6"></script>
 <script src="/static/js/admin_activity_filters.js?v=1.0"></script>
 <script src="/static/js/admin_agency_reports_dashboard_summary.js?v=1.0"></script>
 {% endblock %}
