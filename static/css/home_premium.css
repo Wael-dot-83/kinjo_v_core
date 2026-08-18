@@ -278,8 +278,6 @@
   background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(226, 232, 240, 0.7);
   box-shadow: 0 15px 30px rgba(15, 23, 42, 0.04);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
 }
 
 .kinjo-home-panel .card {
@@ -545,8 +543,6 @@
   padding: 1.75rem 0;
   background: rgba(255, 255, 255, 0.7);
   border-block: 1px solid rgba(226, 232, 240, 0.8);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 
 .logos-marquee {
@@ -613,8 +609,6 @@
 /* ── Super Professional Header Override ───────────────────────────────────── */
 .kinjo-navbar {
   background: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   border-bottom: 2px solid transparent !important;
   border-image: linear-gradient(90deg, #3B82F6, #10B981, #F59E0B, #EF4444) 1 !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;

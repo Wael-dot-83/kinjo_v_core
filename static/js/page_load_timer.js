@@ -98,8 +98,7 @@
         font-weight: 600;
         line-height: 1;
         box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
-        backdrop-filter: blur(10px);
-        transition: background-color 0.2s ease, box-shadow 0.2s ease, opacity 0.5s ease;
+transition: background-color 0.2s ease, box-shadow 0.2s ease, opacity 0.5s ease;
         pointer-events: none;
         opacity: 1;
       }

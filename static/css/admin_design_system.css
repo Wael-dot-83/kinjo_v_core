@@ -4265,7 +4265,6 @@ html[dir="ltr"] .dropdown-menu {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   z-index: var(--z-tooltip);
-  backdrop-filter: blur(4px);
   pointer-events: none;
 }
 
@@ -4284,7 +4283,6 @@ html[dir="ltr"] .dropdown-menu {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  backdrop-filter: blur(4px);
   transition: border-color var(--transition-fast);
 }
 .compass-rose:hover {
@@ -4319,7 +4317,6 @@ html[dir="ltr"] .dropdown-menu {
   align-items: center;
   justify-content: center;
   transition: all var(--transition-fast);
-  backdrop-filter: blur(4px);
 }
 .map-ctrl-btn:hover {
   background: rgba(47, 125, 98, 0.18);
@@ -4989,7 +4986,6 @@ html[dir="ltr"] .dropdown-menu {
   pointer-events: none;
   display: none;
   min-width: 170px;
-  backdrop-filter: blur(10px);
   box-shadow: var(--shadow-md);
 }
 .tt-name {
@@ -5512,8 +5508,6 @@ html[dir="ltr"] .dropdown-menu {
 /* Glassmorphism Classes */
 .glass-sidebar {
   background: rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border-inline-end: 1px solid rgba(255, 255, 255, 0.2) !important;
   box-shadow: 20px 40px 40px rgba(30, 64, 175, 0.1) !important;
 }
@@ -5540,8 +5534,6 @@ html[dir="ltr"] .dropdown-menu {
   min-width: 0;
   word-wrap: break-word;
   background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   background-clip: border-box;
   border: 1px solid rgba(255, 255, 255, 0.5);
   box-shadow: 0 4px 20px rgba(0, 40, 142, 0.05);
@@ -5553,8 +5545,6 @@ html[dir="ltr"] .dropdown-menu {
 
 .glass-header {
   background: rgba(248, 249, 255, 0.8) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(196, 197, 213, 0.3) !important;
 }
 
@@ -5577,8 +5567,6 @@ html[dir="ltr"] .dropdown-menu {
   --bs-card-bg: transparent;
   --bs-card-img-overlay-padding: 1rem;
   background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   background-clip: border-box;
   border: 1px solid rgba(255, 255, 255, 0.5);
   box-shadow: 0 4px 20px rgba(0, 40, 142, 0.05);
@@ -5593,9 +5581,7 @@ html[dir="ltr"] .dropdown-menu {
 }
 
 .admin-card {
-  background: rgba(255, 255, 255, 0.9) !important;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  /* Was rgba white +  border: 1px solid rgba(255, 255, 255, 0.5) !important;
   box-shadow: 0 4px 20px rgba(0, 40, 142, 0.05) !important;
   border-radius: 0.5rem !important;
   transition:
@@ -6382,7 +6368,6 @@ html[dir="ltr"] .dropdown-menu {
   position: sticky;
   top: 0;
   z-index: 10;
-  backdrop-filter: saturate(180%) blur(4px);
 }
 
 .ce-data-table th:hover {
@@ -6923,4 +6908,31 @@ html[dir="ltr"] .dropdown-menu {
 .form-check-input:focus {
   border-color: var(--kinjo-action);
   box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.25);
+}
+
+/* ---- Bordered containers must inset their content -----------------------
+   These wrappers draw a boundary (border and/or background). Most get their
+   inset from a __body/__header child; used without one, their text landed
+   flush against the border line -- measured at padding 0 on all four sides on
+   the admin dashboard and charts pages.
+
+   The :has() guards mean a card that already has a structured child is left
+   alone, so padding is never applied twice. Spacing comes from the canonical
+   token: an earlier attempt used --sp-4, which is defined only in
+   admin_analytics_v2.css, so on pages that do not load that sheet the
+   declaration was invalid and silently dropped. */
+.admin-card-header,
+.admin-card-body,
+.admin-card-footer {
+  padding: var(--kinjo-spacing-4);
+}
+.admin-card-header {
+  padding-bottom: var(--kinjo-spacing-3);
+}
+/* A card used without the header/body pattern still needs an inset of its own. */
+.admin-card:not(:has(> .admin-card-header)):not(:has(> .admin-card-body)):not(:has(> .card-body)) {
+  padding: var(--kinjo-spacing-4);
+}
+.card:not(:has(> .card-body)):not(:has(> .card-header)):not(:has(> .list-group)):not(:has(> img)):not(:has(> table)) {
+  padding: var(--kinjo-spacing-4);
 }

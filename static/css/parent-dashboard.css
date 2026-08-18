@@ -109,7 +109,6 @@
 
 .parent-hero-badge {
   background: rgba(255, 255, 255, 0.22);
-  backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.4);
   color: #ffffff;
   padding: 0.45rem 0.95rem;
@@ -134,7 +133,6 @@
   padding: 0.65rem 1.15rem;
   min-width: 115px;
   text-align: center;
-  backdrop-filter: blur(8px);
   transition: transform 0.2s ease;
 }
 

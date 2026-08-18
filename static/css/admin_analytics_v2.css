@@ -522,6 +522,15 @@
   border: 1px solid var(--slate-200);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-sm);
+  /* Cards that use the __header/__body pattern get their inset from those
+     children. Cards that hold content directly had none, so their text sat
+     flush against the border. This gives those an inset and stands down for
+     the structured variant so padding is never applied twice. */
+  padding: var(--kinjo-spacing-4);
+}
+.az-card:has(> .az-card__header),
+.az-card:has(> .az-card__body) {
+  padding: 0;
 }
 .az-card__header {
   display: flex;
@@ -545,7 +554,6 @@
 }
 .reg-entity-card .az-card__header {
   background: rgba(248, 250, 252, 0.6);
-  backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(0, 0, 0, 0.03);
   padding: var(--sp-3) var(--sp-4);
 }
@@ -846,7 +854,6 @@
   position: sticky;
   top: 0;
   background: rgba(248, 250, 252, 0.9);
-  backdrop-filter: blur(4px);
   border-bottom: 1px solid var(--slate-200);
   padding: var(--sp-4);
   font: 600 0.8125rem/1 var(--font-ar);
@@ -1040,7 +1047,6 @@
   gap: var(--sp-3);
   padding: var(--sp-3) var(--sp-4);
   background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(4px);
   border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: var(--r-md);
   transition:

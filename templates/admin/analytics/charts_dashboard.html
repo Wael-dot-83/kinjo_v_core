@@ -626,16 +626,11 @@ block extra_head %}
   /* ── Glass Card Effect ─────────────────────────────────────────────────── */
   .ce-glass-card {
     background: var(--kinjo-color-bg-surface, #fff);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(226, 232, 240, 0.6);
     border-radius: var(--r-lg);
     box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
   }
-  @supports not (backdrop-filter: blur(8px)) {
-    .ce-glass-card {
-      background: var(--kinjo-color-bg-surface, #fff);
-    }
+  @supports not (    }
   }
 
   /* ── Collapsible Sidebar Toggle ────────────────────────────────────────── */

@@ -321,7 +321,9 @@ function updateGovLabels(govs) {
     const labelDiv = document.createElement("div");
     labelDiv.textContent = gov.name_ar || gov.name_en || '';
     labelDiv.style.color = '#ffffff';
-    labelDiv.style.fontSize = '11px';
+    // 12px floor: these are Arabic governorate names, and Arabic loses its
+    // dots and diacritics before Latin loses anything at small sizes.
+    labelDiv.style.fontSize = '12px';
     labelDiv.style.fontWeight = 'bold';
     labelDiv.style.fontFamily = 'system-ui, sans-serif';
     labelDiv.style.textShadow = '0px 1px 3px rgba(0,0,0,0.8)';

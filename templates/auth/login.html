@@ -2,6 +2,10 @@
 KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% block body_class
 %}auth-page{% endblock %} {% block extra_css %}
 <style>
+/* impeccable-disable dark-glow -- the 0 0 0 3px shadows in this file are focus
+   rings, not decoration. They sit on :focus and pair with `outline: none`, so
+   removing them would leave keyboard users with no focus indicator at all.
+   Their alpha was raised to 0.35 so the ring is actually visible. */
   /* ============================================================================
    Auth Layout — Two-panel design
    Desktop: brand panel (start) + form panel (end)
@@ -341,7 +345,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     outline: none;
     border-color: #ff9c6c;
     background: #fff;
-    box-shadow: 0 0 0 3px rgba(255, 156, 108, 0.18);
+    box-shadow: 0 0 0 3px rgba(255, 156, 108, 0.35);
   }
   .af-control.af-has-toggle {
     padding-inline-end: 2.75rem;
@@ -351,14 +355,14 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     background: #f0fff5;
   }
   .af-control.af-valid:focus {
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35);
   }
   .af-control.af-invalid {
     border-color: #f97373;
     background: #fff7f7;
   }
   .af-control.af-invalid:focus {
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.35);
   }
 
   .af-hint {
@@ -692,7 +696,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     .af-control:focus {
       background: #1e293b;
       border-color: #2f7d62;
-      box-shadow: 0 0 0 3px rgba(31, 94, 71, 0.15);
+      box-shadow: 0 0 0 3px rgba(31, 94, 71, 0.35);
     }
     .af-control.af-valid {
       background: #071f14;

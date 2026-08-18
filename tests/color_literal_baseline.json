@@ -48,7 +48,7 @@
     "templates/403.html": 3,
     "templates/500.html": 12,
     "templates/admin/agency_reports/report.html": 8,
-    "templates/admin/analytics/charts_dashboard.html": 58,
+    "templates/admin/analytics/charts_dashboard.html": 57,
     "templates/admin/analytics/dashboard.html": 3,
     "templates/admin/analytics/explorer.html": 21,
     "templates/admin/analytics/incident_report_detail.html": 6,
