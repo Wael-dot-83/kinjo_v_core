@@ -72,10 +72,32 @@ INTENT_KNOWLEDGE_BASE = [
     {
         "intent": "admin_kpi_overview",
         "target_role": "admin",
-        "keywords_ar": ["مؤشرات الاداء", "مؤشرات الأداء", "لوحة التحكم", "احصائيات النظام", "نظرة عامة", "kpi", "لوحة الادارة", "احصائيات المنصة", "معدل الاشغال"],
-        "keywords_en": ["kpi", "system metrics", "overview", "admin dashboard", "analytics summary", "executive dashboard", "occupancy rate", "platform stats"],
-        "reply_ar": "لوحة المؤشرات والتحليلات الإدارية الشاملة لـ KinJo:\n\n• متابعة إجمالي الحضانات المرخصة، الأطفال المسجلين، والكادر التعليمي المعتمد.\n• مراقبة معدلات الإشغال ونسب الامتثال للمعايير الوطنية.\n• رصد مؤشرات الأداء الحيوية (KPIs) والتنبيهات الفورية عبر المحافظات.",
-        "reply_en": "Comprehensive Executive & System KPI Analytics for KinJo:\n\n• Monitor total accredited nurseries, enrolled children, and certified staff.\n• Real-time occupancy tracking and national regulatory compliance scores.\n• High-level KPI breakdown with instant cross-governorate operational alerts.",
+        "keywords_ar": ["مؤشرات الاداء", "مؤشرات الأداء", "لوحة التحكم", "احصائيات النظام", "نظرة عامة", "kpi", "لوحة الادارة", "احصائيات المنصة", "معدل الاشغال", "الارقام العامة"],
+        "keywords_en": ["kpi", "system metrics", "overview", "admin dashboard", "analytics summary", "executive dashboard", "occupancy rate", "platform stats", "general figures"],
+        "reply_ar": (
+            "📊 **لوحة المؤشرات والتحليلات الإدارية الشاملة لمنصة KinJo:**\n\n"
+            "1. **مؤشرات الحجم والسعة:**\n"
+            "   • إجمالي الحضانات المرخصة والمسجلة عبر المحافظات الـ 12.\n"
+            "   • عدد الأطفال الفعليين المسجلين ونسبة الإشغال الإجمالية من الطاقة الاستيعابية المرخصة.\n"
+            "   • الكادر التربوي المعتمد ونسب التوزيع الإقليمي.\n\n"
+            "2. **مؤشرات الامتثال والرقابة:**\n"
+            "   • مؤشر الامتثال لنسب المربيات للأطفال (Staff-to-Child Compliance Index).\n"
+            "   • الحضانات التي تقترب من موعد تجديد الترخيص السنوي (أقل من 30 يوماً).\n"
+            "   • بلاغات السلامة المفتوحة وتوزيعها حسب مستويات الخطورة (P1 / P2 / P3).\n\n"
+            "3. **التوزيع الجغرافي:** استعراض الخريطة الحرارية (Heatmap) لتحديد المناطق ذات الطلب العالي أو نقص التغطية في الحضانات."
+        ),
+        "reply_en": (
+            "📊 **Comprehensive KinJo Executive & System KPI Analytics:**\n\n"
+            "1. **Capacity & Volume Metrics:**\n"
+            "   • Total accredited kindergartens across Jordan's 12 governorates.\n"
+            "   • Active enrolled children and aggregate capacity utilization rate.\n"
+            "   • Certified educators headcount and regional staffing ratios.\n\n"
+            "2. **Governance & Compliance Indicators:**\n"
+            "   • Statutory staff-to-child ratio compliance index.\n"
+            "   • Nurseries pending annual license renewals (within 30 days).\n"
+            "   • Open safety incidents categorized by severity (P1 Critical, P2 Moderate, P3 Minor).\n\n"
+            "3. **Geographic Distribution:** Interactive Heatmap analytics identifying high-density childcare demand zones and underserved districts."
+        ),
         "actions": [
             {"label_ar": "لوحة مؤشرات الأداء الإدارية", "label_en": "Admin KPI Dashboard", "url": "/admin/dashboard", "icon": "bi-speedometer2"},
             {"label_ar": "مستكشف التحليلات المتقدم", "label_en": "Analytics Explorer", "url": "/admin/kpi", "icon": "bi-bar-chart-line-fill"},
@@ -87,10 +109,28 @@ INTENT_KNOWLEDGE_BASE = [
     {
         "intent": "admin_user_directory",
         "target_role": "admin",
-        "keywords_ar": ["إدارة المستخدمين", "ادارة المستخدمين", "دليل المستخدمين", "صلاحيات", "إضافة مستخدم", "تعديل مستخدم", "انتحال", "دخول بصفة", "استيراد مستخدمين", "mfa"],
-        "keywords_en": ["user directory", "manage users", "user access", "add user", "create user", "user roles", "impersonate user", "controlled access", "import users", "mfa"],
-        "reply_ar": "إدارة المستخدمين والصلاحيات المتقدمة في المنصة:\n\n1. دليل المستخدمين: استعراض وتعديل وتفعيل حسابات (أولياء الأمور، المشرفين، مدراء الحضانات).\n2. الاستيراد الجماعي: رفع وتعيين المستخدمين دفعة واحدة عبر ملفات منظمة.\n3. الدخول المقيّد بصفة مستخدم (Controlled User Access): لأغراض الدعم الفني والتدقيق مع توثيق مشفر في سجلات النظام.",
-        "reply_en": "Advanced User Directory & Access Management:\n\n1. User Registry: View, configure, and activate accounts (Parents, Supervisors, Nursery Managers, Auditors).\n2. Bulk Import: Batch onboard and assign users through standardized templates.\n3. Controlled User Access (Impersonation): Assist users with cryptographically signed audit trails.",
+        "keywords_ar": ["إدارة المستخدمين", "ادارة المستخدمين", "دليل المستخدمين", "صلاحيات", "إضافة مستخدم", "تعديل مستخدم", "انتحال", "دخول بصفة", "استيراد مستخدمين", "mfa", "التحقق بخطوتين"],
+        "keywords_en": ["user directory", "manage users", "user access", "add user", "create user", "user roles", "impersonate user", "controlled access", "import users", "mfa", "two factor"],
+        "reply_ar": (
+            "👥 **دليل إدارة المستخدمين والأمان المؤسسي:**\n\n"
+            "1. **هيكلية الصلاحيات المعتمدة (RBAC):**\n"
+            "   • **مدير النظام (ADMIN):** كامل صلاحيات الحوكمة والإعدادات والتقارير الوطنية وسجلات التدقيق.\n"
+            "   • **مدير الحضانة (MANAGER):** إدارة قبول الطلاب، توزيع الكادر والشعب، وسجلات السلامة لمنشأته فقط.\n"
+            "   • **مشرف تربوي / مدقق (SUPERVISOR):** الاطلاع على السجلات، تدقيق الحضور، وتعبئة تقارير التفتيش.\n"
+            "   • **ولي أمر (PARENT):** الوصول لملف أطفاله، التقارير اليومية، الفواتير، والتواصل.\n\n"
+            "2. **الاستيراد الجماعي:** رفع ملفات Excel/CSV منظمة لإنشاء الحسابات وتعيين الأدوار مع إرسال بيانات الدخول الآمنة.\n"
+            "3. **الدخول المقيّد بصفة مستخدم (Controlled Access):** تفعيل جلسة دعم فني مؤقتة بصفة المستخدم مع تسجيل غير قابل للتعديل لجميع العمليات في سجل التدقيق الأمني."
+        ),
+        "reply_en": (
+            "👥 **User Directory, Roles & Security Governance:**\n\n"
+            "1. **Role-Based Access Control (RBAC):**\n"
+            "   • **System Admin (ADMIN):** Full governance, national analytics, audit logs, and system settings.\n"
+            "   • **Nursery Manager (MANAGER):** Admissions pipeline, staff & section assignment, and facility logs.\n"
+            "   • **Supervisor / Auditor (SUPERVISOR):** Attendance auditing, inspection checklists, and QA evaluations.\n"
+            "   • **Parent / Guardian (PARENT):** Child portfolio, daily reports, digital invoices, and messaging.\n\n"
+            "2. **Batch Onboarding:** Bulk import users via standardized Excel/CSV templates with auto-generated credentials.\n"
+            "3. **Controlled User Access (Impersonation):** Authenticated temporary support sessions with cryptographically signed audit logs."
+        ),
         "actions": [
             {"label_ar": "دليل المستخدمين والصلاحيات", "label_en": "User Directory", "url": "/admin/users", "icon": "bi-people-fill"},
             {"label_ar": "استيراد المستخدمين", "label_en": "Import Users", "url": "/admin/users/import", "icon": "bi-person-up"},
@@ -102,10 +142,28 @@ INTENT_KNOWLEDGE_BASE = [
     {
         "intent": "admin_governance_and_audit",
         "target_role": "admin",
-        "keywords_ar": ["سجلات التدقيق", "سجل الحركات", "تقارير الحوكمة", "تقارير الوزارة", "التنمية الاجتماعية", "وزارة التربية", "سجل الامتثال", "تصدير التقارير الحكومية", "سجل النشاط"],
+        "keywords_ar": ["سجلات التدقيق", "سجل الحركات", "تقارير الحوكمة", "تقارير الوزارة", "التنمية الاجتماعية", "وزارة التربية", "سجل الامتثال", "تصدير التقارير الحكومية", "سجل النشاط", "audit logs"],
         "keywords_en": ["audit logs", "audit trail", "governance reports", "ministry reports", "mosd report", "moe report", "compliance exports", "agency reports", "audit history"],
-        "reply_ar": "منظومة الحوكمة وسجلات التدقيق الأمني المعتمدة:\n\n• سجلات تدقيق غير قابلة للتعديل ترصد كافة العمليات الحساسة، الدخول، وتغييرات الصلاحيات.\n• تقارير الحوكمة الرسمية وتنبيهات الامتثال المعتمدة.\n• تصدير التقارير الإحصائية المعتمدة لوزارة التنمية الاجتماعية ووزارة التربية والتعليم.",
-        "reply_en": "Certified Governance & Security Audit Trails:\n\n• Immutable audit logs tracking all administrative events, authentication logs, and mutations.\n• Official governance filings, compliance reminders, and regulatory audit reports.\n• Standardized compliance exports for the Ministry of Social Development and Ministry of Education.",
+        "reply_ar": (
+            "📜 **سجلات التدقيق الأمني وتقارير الحوكمة الوطنية:**\n\n"
+            "1. **سجل التدقيق الشامل (Security Audit Trail):**\n"
+            "   • توثيق زمني مشفر لكافة العمليات: عمليات الدخول، تعديل الصلاحيات، تصدير البيانات، وتغييرات السجلات.\n"
+            "   • إمكانية الفلترة حسب: اسم المستخدم، نوع العملية، عنوان IP، والفترة الزمنية.\n\n"
+            "2. **التقارير الحكومية المعتمدة لوزارة التنمية الاجتماعية (MoSD):**\n"
+            "   • التقرير الإحصائي الشهري للحضور والنسب القانونية.\n"
+            "   • تقرير التفتيش الميداني وسجل المخالفات الموثقة والإجراءات التصحيحية.\n\n"
+            "3. **التصدير الرقمي:** تصدير حزم البيانات بصيغ Excel وPDF المعتمدة مع ختم التحقق الإلكتروني."
+        ),
+        "reply_en": (
+            "📜 **Security Audit Trails & National Governance Reporting:**\n\n"
+            "1. **Comprehensive Audit Logs:**\n"
+            "   • Immutable event tracking for: Authentication attempts, privilege changes, data exports, and mutations.\n"
+            "   • Multi-criteria search filters: Actor ID, Action Category, Client IP, and Date Interval.\n\n"
+            "2. **Official MoSD & MoE Compliance Packages:**\n"
+            "   • Monthly statistical attendance and statutory ratio compliance exports.\n"
+            "   • Field inspection reports, logged violations, and corrective action histories.\n\n"
+            "3. **Automated Exports:** Verified exports in Excel & PDF with digital compliance seals."
+        ),
         "actions": [
             {"label_ar": "سجلات التدقيق الأمني", "label_en": "Security Audit Logs", "url": "/admin/audit-logs", "icon": "bi-shield-check"},
             {"label_ar": "تقارير الحوكمة والامتثال", "label_en": "Governance Reports", "url": "/admin/governance-reports", "icon": "bi-file-earmark-bar-graph"},
@@ -117,10 +175,24 @@ INTENT_KNOWLEDGE_BASE = [
     {
         "intent": "admin_safety_and_incidents",
         "target_role": "admin",
-        "keywords_ar": ["تحليلات الحوادث", "سجل السلامة", "الحوادث", "إشعارات الطوارئ", "تقارير السلامة", "البلاغات", "بلاغ طارئ"],
-        "keywords_en": ["incident analytics", "safety reports", "incidents", "emergency alerts", "safety log", "incident logs", "emergency notifications"],
-        "reply_ar": "منظومة تحليلات السلامة وإدارة الحوادث المركزية:\n\n• الرصد اللحظي للبلاغات والحوادث المسجلة من كافة الحضانات عبر المملكة.\n• تصنيف درجات الخطورة ومتابعة الإجراءات التصحيحية المتخذة من الكوادر والمشرفين.\n• تحليلات السلامة المتقدمة لتقليل المخاطر ورفع جودة الرعاية.",
-        "reply_en": "Centralized Safety Intelligence & Incident Management:\n\n• Real-time monitoring of all incidents and emergency notices logged by nurseries nationwide.\n• Severity classification and tracking of immediate corrective interventions.\n• Advanced safety analytics for proactive risk mitigation and quality assurance.",
+        "keywords_ar": ["تحليلات الحوادث", "سجل السلامة", "الحوادث", "إشعارات الطوارئ", "تقارير السلامة", "البلاغات", "بلاغ طارئ", "مستويات الخطورة"],
+        "keywords_en": ["incident analytics", "safety reports", "incidents", "emergency alerts", "safety log", "incident logs", "emergency notifications", "severity levels"],
+        "reply_ar": (
+            "🚨 **منظومة إدارة السلامة وتحليلات الحوادث المركزية:**\n\n"
+            "1. **تصنيف درجات الخطورة وسرعة الاستجابة (SLA):**\n"
+            "   • **P1 - طارئ حرج (Critical):** حالات الإسعاف أو النقل الطبي أو الحوادث الجسيمة — إشعار فوري وتدخل خلال 60 دقيقة.\n"
+            "   • **P2 - متوسط (Moderate):** إصابات طفيفة أو أعراض حرارة مفاجئة — متابعة وتوثيق خلال 4 ساعات.\n"
+            "   • **P3 - ملاحظة سلامة (Minor/Observation):** كدمات بسيطة أو خدوش لعب — توثيق يومي وإشعار ولي الأمر.\n\n"
+            "2. **التحليلات الوقائية:** تحليل أسباب الحوادث حسب البيئة (ألعاب خارجية، فصول، وجبات) لتقديم توصيات وقائية للحضانات."
+        ),
+        "reply_en": (
+            "🚨 **Centralized Safety & Incident Intelligence Protocol:**\n\n"
+            "1. **Severity Tiers & Resolution SLAs:**\n"
+            "   • **P1 - Critical Emergency:** Emergency response, hospital transfer, severe incidents — instant alert & 1-hour SLA.\n"
+            "   • **P2 - Moderate:** Minor injuries, sudden fever spikes requiring clinic review — 4-hour review SLA.\n"
+            "   • **P3 - Minor / Observation:** Minor playground scrapes, behavioral observation — daily logged record.\n\n"
+            "2. **Preventive Analytics:** Incident clustering analysis by facility zone (outdoor playground, dining area, classrooms) to drive preventative safety guidelines."
+        ),
         "actions": [
             {"label_ar": "سجل بلاغات الحوادث", "label_en": "Incident Reports Log", "url": "/admin/reports/incidents", "icon": "bi-heart-pulse-fill"},
             {"label_ar": "تحليلات السلامة والحوادث", "label_en": "Safety Analytics", "url": "/admin/safety-analytics", "icon": "bi-pie-chart-fill"}
@@ -133,8 +205,18 @@ INTENT_KNOWLEDGE_BASE = [
         "target_role": "admin",
         "keywords_ar": ["إدارة الحضانات", "ادارة الحضانات", "تراخيص الحضانات", "اعتماد الروضات", "استيراد الحضانات", "خريطة الحضانات", "قائمة الحضانات", "تصنيف الحضانات"],
         "keywords_en": ["manage kindergartens", "nursery licensing", "accreditation", "import nurseries", "nursery map", "nursery directory", "kg classification"],
-        "reply_ar": "إدارة الحضانات والتراخيص والاعتماد الوطني:\n\n• مراجعة واعتماد ملفات الحضانات والتراخيص الرسمية وتحديث السعات الاستيعابية.\n• استيراد بيانات الحضانات ومطابقتها مع السجلات الجغرافية والرسمية.\n• تصنيف الحضانات وتقييم معايير الجودة والمقارنات المعيارية.",
-        "reply_en": "National Nursery Licensing & Institutional Governance:\n\n• Review and verify kindergarten licensing dossiers, approvals, and capacity allocations.\n• Batch import and synchronize nursery GIS records and official registration numbers.\n• Nursery classification, quality benchmark comparisons, and inspection history.",
+        "reply_ar": (
+            "🏫 **إدارة وتصنيف الحضانات الوطنية:**\n\n"
+            "1. **التراخيص والاعتماد:** مراجعة الوثائق الهندسية وتصاريح الدفاع المدني وشهادات وزارة التنمية لترخيص الحضانات أو تجديدها.\n"
+            "2. **السعة والاستيعاب:** اعتماد السعة القصوى لكل حضانة بناءً على معيار 2 متر مربع لكل طفل في الفضاء الداخلي.\n"
+            "3. **التصنيف المعياري:** تقييم جودة الخدمات، مؤهلات الكادر، وسجلات السلامة لمنح مراتب الجودة والاعتماد الوطني."
+        ),
+        "reply_en": (
+            "🏫 **National Kindergarten Licensing & Accreditation:**\n\n"
+            "1. **Licensing Dossiers:** Review building blueprints, Civil Defense clearances, and MoSD operational approvals.\n"
+            "2. **Capacity Validation:** Calculate approved student capacity based on the statutory minimum of 2.0 sq.m indoor space per child.\n"
+            "3. **Institutional Quality Ranking:** Benchmark nurseries based on staff qualifications, health compliance, and inspection scores."
+        ),
         "actions": [
             {"label_ar": "سجل الحضانات الشامل", "label_en": "Kindergartens Directory", "url": "/admin/kindergartens", "icon": "bi-building-gear"},
             {"label_ar": "استيراد الحضانات", "label_en": "Import Kindergartens", "url": "/admin/import/kindergartens", "icon": "bi-cloud-arrow-up-fill"},
@@ -150,10 +232,44 @@ INTENT_KNOWLEDGE_BASE = [
     {
         "intent": "enrollment",
         "target_role": "parent",
-        "keywords_ar": ["تسجيل", "قبول", "تسجيل طفل", "طلب تسجيل", "كيف اسجل", "تسجيل روضة", "شروط القبول", "الأوراق المطلوبة", "المستندات المطلوبة", "وثائق التسجيل", "العمر المقبول", "سن القبول"],
-        "keywords_en": ["enroll", "enrollment", "register", "admission", "apply", "register child", "documents required", "required papers", "accepted age", "age criteria"],
-        "reply_ar": "لتقديم طلب تسجيل طفلك في أي حضانة معتمدة عبر KinJo:\n\n1. استعرض دليل الحضانات واختر الحضانة الأنسب لموقعك.\n2. اضغط 'تقديم طلب تسجيل' وأدخل بيانات الطفل والولي.\n3. أرفق الوثائق الرسمية: شهادة الميلاد، دفتر العائلة، بطاقة المطاعيم، وتقرير الفحص الطبي.\n\nتصلك إشعارات فورية بحالة تدقيق الطلب واعتماده من إدارة الحضانة.",
-        "reply_en": "To apply for child enrollment in any accredited nursery via KinJo:\n\n1. Browse the nursery directory and choose the most suitable kindergarten.\n2. Click 'Apply for Enrollment' and enter the child and guardian details.\n3. Upload official documents: Birth certificate, Family book, Immunization record, and General health examination.\n\nYou will receive real-time notifications on application verification and admission.",
+        "keywords_ar": ["تسجيل", "قبول", "تسجيل طفل", "طلب تسجيل", "كيف اسجل", "تسجيل روضة", "شروط القبول", "الأوراق المطلوبة", "المستندات المطلوبة", "وثائق التسجيل", "العمر المقبول", "سن القبول", "شروط التسجيل"],
+        "keywords_en": ["enroll", "enrollment", "register", "admission", "apply", "register child", "documents required", "required papers", "accepted age", "age criteria", "admission requirements"],
+        "reply_ar": (
+            "📝 **الدليل الشامل لإجراءات تسجيل وقبول الأطفال في الحضانات المعتمدة:**\n\n"
+            "1. **المستندات والوثائق الرسمية المطلوبة:**\n"
+            "   • صورة مصدقة عن شهادة ميلاد الطفل متضمنة الرقم الوطني.\n"
+            "   • صورة عن دفتر العائلة (صفحة الوالدين والطفل).\n"
+            "   • صورة مصدقة عن بطاقة التطعيمات الوطنية الصادرة من وزارة الصحة.\n"
+            "   • تقرير الفحص الطبي العام وشهادة خلو من الأمراض السارية من طبيب معتمد.\n"
+            "   • 4 صور شخصية حديثة للطفل، وصور هويات الأشخاص المخولين بالاستلام.\n\n"
+            "2. **الفئات العمرية المعتمدة في الحضانات:**\n"
+            "   • **قسم الرضع (Infants):** من عمر 70 يوماً حتى 12 شهراً.\n"
+            "   • **قسم الفطام والمشي (Toddlers):** من عمر 1 سنة حتى سنتين.\n"
+            "   • **الطفولة المبكرة (Preschool):** من عمر سنتين حتى 3 سنوات و8 أشهر.\n"
+            "   • **مرحلة رياض الأطفال (KG1/KG2):** من 3.8 سنوات حتى 5.8 سنوات.\n\n"
+            "3. **خطوات تقديم الطلب الإلكتروني:**\n"
+            "   ① اختر الحضانة من دليل الحضانات المرخصة.\n"
+            "   ② عبئ نموذج التسجيل الرقمي وأرفق الوثائق.\n"
+            "   ③ تتلقى إشعاراً فورياً بتدقيق الطلب من إدارة الحضانة والاعتماد النهائي."
+        ),
+        "reply_en": (
+            "📝 **Comprehensive Guide to Child Enrollment & Admission:**\n\n"
+            "1. **Mandatory Required Documents:**\n"
+            "   • Certified copy of Child's Birth Certificate (with National ID Number).\n"
+            "   • Copy of Family Book (Parent and child pages).\n"
+            "   • Official Immunization Record certified by the Ministry of Health.\n"
+            "   • General Health & Fitness Assessment from a licensed physician.\n"
+            "   • 4 recent passport photos, and IDs of authorized pickup contacts.\n\n"
+            "2. **Statutory Age Brackets:**\n"
+            "   • **Infant Care:** 70 days to 12 months.\n"
+            "   • **Toddlers:** 1 year to 2 years.\n"
+            "   • **Early Childhood (Preschool):** 2 years to 3.8 years.\n"
+            "   • **Kindergarten (KG1/KG2):** 3.8 years to 5.8 years.\n\n"
+            "3. **Digital Application Workflow:**\n"
+            "   ① Select accredited kindergarten from the directory.\n"
+            "   ② Complete online enrollment profile and attach documents.\n"
+            "   ③ Receive instant notifications upon document verification and admission approval."
+        ),
         "actions": [
             {"label_ar": "بدء طلب تسجيل إلكتروني", "label_en": "Start Digital Application", "url": "/enrollment/apply", "icon": "bi-person-plus-fill"},
             {"label_ar": "دليل الحضانات المرخصة", "label_en": "Licensed Nurseries", "url": "/kindergartens", "icon": "bi-building"},
@@ -167,8 +283,28 @@ INTENT_KNOWLEDGE_BASE = [
         "target_role": "parent",
         "keywords_ar": ["تقرير يومي", "تقارير يومية", "التقارير اليومية", "التقرير اليومي", "متابعة الطفل", "وجبات", "حضور الطفل", "غياب", "نوم", "قيلولة", "نشاطات الطفل", "سلوك الطفل", "ملاحظات المعلمة"],
         "keywords_en": ["daily report", "daily reports", "child tracking", "meals", "child attendance", "nap time", "activities", "child behavior", "teacher notes"],
-        "reply_ar": "تتيح لك منصة KinJo الاطلاع لحظياً على سجل يوم طفلك في الحضانة:\n\n• مواعيد تسجيل الحضور والانصراف بدقة.\n• تفاصيل وجبات الإفطار والغداء والكميات المتناولة.\n• فترات القيلولة والراحة وساعات النوم.\n• الأنشطة التعليمية والحركية والمهارات المكتسبة.\n• الملاحظات اليومية المباشرة من المربية أو المعلمة.",
-        "reply_en": "KinJo enables you to monitor your child's daily nursery journey in real-time:\n\n• Accurate check-in and check-out timestamps.\n• Meals & nutrition intake breakdown (breakfast, lunch, snacks).\n• Nap times and rest duration.\n• Learning, sensory, and motor activities completed.\n• Direct daily observations and notes from educators.",
+        "reply_ar": (
+            "📋 **تفاصيل ومكونات التقرير اليومي المباشر لطفلك:**\n\n"
+            "1. **سجل الحضور والانصراف الذكي:**\n"
+            "   • توثيق وقت وصول الطفل ومغادرته مع تحديد هوية الشخص المستلم بدقة.\n\n"
+            "2. **سجل التغذية والوجبات:**\n"
+            "   • **الإفطار (8:30 - 9:30 ص):** المكونات والكمية المتناولة (كاملة / نصف / قليلة).\n"
+            "   • **الغداء (12:00 - 1:00 م):** الوجبة الرئيسية وتفاصيل السوائل.\n"
+            "   • **الوجبة الخفيفة (3:00 م):** فواكه طازجة أو سناكات صحية.\n\n"
+            "3. **فترات النوم والقيلولة:** وقت البدء والاستيقاظ وجودة النوم (هادئ / متقطع).\n\n"
+            "4. **الأنشطة التربوية والمهارات:** الأنشطة الحركية، التعبير الفني، الألعاب الإدراكية، وملاحظات المعلمة التربوية المباشرة."
+        ),
+        "reply_en": (
+            "📋 **Real-Time Daily Care Report Breakdown:**\n\n"
+            "1. **Smart Check-in & Attendance:**\n"
+            "   • Exact timestamped check-in and pickup verification with authorized contact logging.\n\n"
+            "2. **Meals & Nutrition Intake:**\n"
+            "   • **Breakfast (8:30 - 9:30 AM):** Meal breakdown and intake level (Full / Half / Little / Refused).\n"
+            "   • **Lunch (12:00 - 1:00 PM):** Hot meal, side vegetables, and hydration tracking.\n"
+            "   • **Afternoon Snack (3:00 PM):** Fresh fruits and healthy snacks.\n\n"
+            "3. **Naps & Rest Time:** Sleep start/end timestamps and rest quality (Restful / Restless).\n\n"
+            "4. **Learning & Developmental Activities:** Motor skills, sensory play, language development, and educator's personal daily notes."
+        ),
         "actions": [
             {"label_ar": "التقارير اليومية لطفلي", "label_en": "Child Daily Reports", "url": "/parent/dashboard", "icon": "bi-journal-check"},
             {"label_ar": "سجل الحضور والانصراف", "label_en": "Attendance Log", "url": "/parent/children", "icon": "bi-calendar-check"}
@@ -179,10 +315,34 @@ INTENT_KNOWLEDGE_BASE = [
     {
         "intent": "health_and_vaccines",
         "target_role": "parent",
-        "keywords_ar": ["تطعيمات", "لقاحات", "صحة الطفل", "جدول التطعيمات", "حساسية طعام", "حساسية دواء", "طوارئ طبية", "ملف صحي", "وزارة الصحة", "طبيب الحضانة"],
-        "keywords_en": ["vaccine", "vaccination", "child health", "immunization schedule", "food allergy", "medical emergency", "health profile", "ministry of health"],
-        "reply_ar": "تلتزم منصة KinJo بالبرنامج الوطني للتطعيم المعتمد من وزارة الصحة الأردنية:\n\n• يمكنك رفع وتحديث بطاقة التطعيمات لطفلك إلكترونياً.\n• توثيق أي حساسية غذائية (كالقمح، الحليب، المكسرات) أو حساسية دوائية لإشعار الكادر فوراً.\n• تفعيل بروتوكول الرعاية الطبية وإشعارات الطوارئ المسجلة للحضانة.",
-        "reply_en": "KinJo complies with Jordan's National Immunization Program (Ministry of Health):\n\n• Upload and maintain your child's digital immunization card.\n• Record food allergies (e.g. dairy, gluten, nuts) or medication notes to alert staff instantly.\n• Enable emergency health protocols and authorized emergency contacts.",
+        "keywords_ar": ["تطعيمات", "لقاحات", "صحة الطفل", "جدول التطعيمات", "حساسية طعام", "حساسية دواء", "طوارئ طبية", "ملف صحي", "وزارة الصحة", "طبيب الحضانة", "البرنامج الوطني للتطعيم"],
+        "keywords_en": ["vaccine", "vaccination", "child health", "immunization schedule", "food allergy", "medical emergency", "health profile", "ministry of health", "national immunization"],
+        "reply_ar": (
+            "💉 **البرنامج الوطني للتطعيم والبروتوكول الصحي المعتمد:**\n\n"
+            "1. **جدول المطاعيم الوطنية الإلزامية (وزارة الصحة الأردنية):**\n"
+            "   • **عند الولادة:** مطعوم السل (BCG).\n"
+            "   • **عمر 2، 3، 4 أشهر:** المطعوم السداسي (شلل، كزاز، دفتيريا، سعال ديكي، كبد ب، مستدمية نزلية) + المكورات الرئوية والروتا.\n"
+            "   • **عمر 9 أشهر:** مطعوم الحصبة المنفردة.\n"
+            "   • **عمر 12 شهراً:** مطعوم الحصبة والحصبة الألمانية والنكاف (MMR).\n"
+            "   • **عمر 18 شهراً:** الجرعة الداعمة للمطعوم الرباعي وشلل الأطفال وMMR.\n\n"
+            "2. **بروتوكول الحساسية والأدوية:**\n"
+            "   • توثيق أي حساسية غذائية (قمح/جلوتين، حليب/لاكتوز، مكسرات، بيض) مع وضع شارة تنبيهية على مقعد ووجبة الطفل.\n"
+            "   • لا يتم إعطاء أي دواء إلا بموجب وصفة طبية ونموذج تفويض خطي موقع من الولي.\n"
+            "   • في حال ارتفاع الحرارة فوق 38°م: يتم عزل الطفل في غرفة الرعاية وإشعار الولي فوراً."
+        ),
+        "reply_en": (
+            "💉 **National Immunization & Medical Safety Protocol:**\n\n"
+            "1. **Jordan Mandatory Vaccination Schedule (Ministry of Health):**\n"
+            "   • **At Birth:** BCG (Tuberculosis).\n"
+            "   • **Months 2, 3, 4:** Hexavalent (Polio, DTaP, Hep B, Hib) + Pneumococcal & Rotavirus.\n"
+            "   • **Month 9:** Measles vaccine.\n"
+            "   • **Month 12:** MMR (Measles, Mumps, Rubella).\n"
+            "   • **Month 18:** DTaP, Polio & MMR Boosters.\n\n"
+            "2. **Allergy & Medication Protocols:**\n"
+            "   • Food allergies (Gluten, Lactose, Nuts, Eggs) are color-tagged on classroom rosters and meal plates.\n"
+            "   • Prescription medications require a signed parental medical administration form.\n"
+            "   • Fever > 38°C policy: Child is cared for in the clinic isolation area with immediate guardian notification."
+        ),
         "actions": [
             {"label_ar": "تحديث الملف الصحي والمطاعيم", "label_en": "Update Health & Vaccines", "url": "/parent/children", "icon": "bi-shield-plus"},
             {"label_ar": "الجدول الوطني للتطعيم", "label_en": "Immunization Guide", "url": "/services#parents", "icon": "bi-file-medical"}
@@ -193,10 +353,28 @@ INTENT_KNOWLEDGE_BASE = [
     {
         "intent": "fees_and_payment",
         "target_role": "parent",
-        "keywords_ar": ["رسوم", "اقساط", "دفع", "سعر الحضانة", "طرق الدفع", "فواتير", "دعم حكومي", "برنامج دعم الحضانات"],
-        "keywords_en": ["fees", "tuition", "payment", "nursery price", "payment methods", "invoices", "subsidies", "government support"],
-        "reply_ar": "تتيح المنصة الشفافية الكاملة في الرسوم والأقساط:\n\n• الاطلاع على جدول الأقساط الشهرية ورسوم التسجيل المعتمدة لكل حضانة.\n• إصدار إيصالات الدفع الإلكترونية وسجل الفواتير المعتمد.\n• الاستعلام عن برامج دعم الأمهات العاملات ورعاية الطفولة المبكرة.",
-        "reply_en": "The platform provides full financial transparency:\n\n• View approved monthly tuition and registration fee breakdowns for each nursery.\n• Digital payment receipts and accredited invoice history.\n• Inquire about working mother support programs and early childhood subsidies.",
+        "keywords_ar": ["رسوم", "اقساط", "دفع", "سعر الحضانة", "طرق الدفع", "فواتير", "دعم حكومي", "برنامج دعم الحضانات", "الضمان الاجتماعي", "برنامج رعاية"],
+        "keywords_en": ["fees", "tuition", "payment", "nursery price", "payment methods", "invoices", "subsidies", "government support", "social security", "daman care"],
+        "reply_ar": (
+            "💳 **الرسوم الدراسية وطرق الدفع وبرامج الدعم الحكومي:**\n\n"
+            "1. **هيكل الرسوم والخدمات:**\n"
+            "   • **رسوم التسجيل السنوية:** تشمل التأمين والملف الصحي والأنشطة العامة.\n"
+            "   • **القسط الشهري:** يختلف حسب الفئة العمرية (الرضع، الفطام، الروضة) وساعات الدوام (جزئي أو كامل).\n"
+            "   • **الخدمات الإضافية:** وجبات الغذاء، المواصلات الآمنة، وساعات الرعاية المسائية.\n\n"
+            "2. **برامج الدعم الحكومي للأمهات العاملات:**\n"
+            "   • **برنامج 'رعاية' (المؤسسة العامة للضمان الاجتماعي):** يساهم في تغطية جزء من رسوم الحضانة للأمهات العاملات المشتركات في تأمين الأمومة.\n\n"
+            "3. **الفواتير والإيصالات الرقمية:** إصدار فواتير إلكترونية معتمدة وإيصالات دفع فورية برمز استجابة سريعة (QR Code)."
+        ),
+        "reply_en": (
+            "💳 **Tuition Fees, Payment Methods & Subsidies:**\n\n"
+            "1. **Fee Structure:**\n"
+            "   • **Annual Registration:** Covers health file administration, safety insurance, and educational supplies.\n"
+            "   • **Monthly Tuition:** Tiered by age group (Infant, Toddler, Preschool) and schedule (Half-day / Full-day).\n"
+            "   • **Optional Services:** Nutritional meal plans, monitored GPS transport, and extended evening care.\n\n"
+            "2. **Government Subsidies for Working Mothers:**\n"
+            "   • **'Ri'aya' Early Childhood Subsidy (Social Security Corporation):** Direct financial assistance covering nursery fees for eligible insured working mothers.\n\n"
+            "3. **Digital Invoices & Receipts:** Automated verifiable invoices and digital payment receipts with QR codes."
+        ),
         "actions": [
             {"label_ar": "سجل الفواتير والمدفوعات", "label_en": "Invoices & Payments", "url": "/parent/dashboard", "icon": "bi-receipt"},
             {"label_ar": "استعراض الحضانات والأسعار", "label_en": "Compare Nurseries", "url": "/kindergartens", "icon": "bi-cash-coin"}
@@ -211,10 +389,30 @@ INTENT_KNOWLEDGE_BASE = [
     {
         "intent": "manager_operations",
         "target_role": "manager",
-        "keywords_ar": ["إدارة الحضانة", "لوحة الإدارة", "تسجيل حضور الكادر", "توزيع الفصول", "شعب الحضانة", "السعة الاستيعابية", "قبول الطلاب", "إدارة التسجيل", "إدارة الموظفين", "المربيات"],
-        "keywords_en": ["nursery management", "manager dashboard", "staff attendance", "classroom allocation", "nursery sections", "capacity", "admissions pipeline", "manage registration", "manage staff"],
-        "reply_ar": "توفر لوحة إدارة الحضانة في KinJo تحكماً شاملاً في العمليات اليومية:\n\n1. مسار التسجيل: تدقيق طلبات القبول واعتماد تسجيل الأطفال وإسنادهم للشعب المناسبة.\n2. إدارة الفصول: متابعة السعة الاستيعابية والنسبة القانونية لكل مربية وفق تعليمات الوزارة.\n3. الكادر التعليمي: متابعة حضور الموظفين، سجل المؤهلات والشهادات، وساعات العمل.\n4. الحوادث والسلامة: توثيق أي طارئ أو حادث في سجل السلامة الرسمي فوراً.",
-        "reply_en": "The KinJo Kindergarten Operations Dashboard delivers complete control over daily facility workflows:\n\n1. Admissions Pipeline: Review incoming enrollments, accept students, and assign classrooms.\n2. Capacity & Ratios: Monitor real-time classroom capacity and legally mandated teacher-to-child ratios.\n3. Staff Management: Track staff attendance, qualification certifications, and working shifts.\n4. Health & Safety: Instantly document incidents or medical logs in the official safety log.",
+        "keywords_ar": ["إدارة الحضانة", "لوحة الإدارة", "تسجيل حضور الكادر", "توزيع الفصول", "شعب الحضانة", "السعة الاستيعابية", "قبول الطلاب", "إدارة التسجيل", "إدارة الموظفين", "المربيات", "النسب القانونية للمربيات"],
+        "keywords_en": ["nursery management", "manager dashboard", "staff attendance", "classroom allocation", "nursery sections", "capacity", "admissions pipeline", "manage registration", "manage staff", "legal staff ratio"],
+        "reply_ar": (
+            "🏢 **دليل العمليات وإدارة الحضانة وفق المعايير الرسمية:**\n\n"
+            "1. **النسب القانونية الإلزامية للمربيات (وزارة التنمية الاجتماعية):**\n"
+            "   • **قسم الرضع (أقل من سنة):** مربية واحدة مؤهلة لكل **6 أطفال** (1:6).\n"
+            "   • **قسم الفطام (1 - 2 سنة):** مربية واحدة مؤهلة لكل **8 أطفال** (1:8).\n"
+            "   • **قسم الطفولة المبكرة (2 - 4 سنوات):** معلمة مؤهلة لكل **10 أطفال** (1:10).\n\n"
+            "2. **معايير المساحة والسلامة:**\n"
+            "   • الحد الأدنى للمساحة الداخلية الصافية: **2 متر مربع لكل طفل**، بالإضافة لمساحة لعب خارجية آمنة ومظللة.\n\n"
+            "3. **إدارة مسار التسجيل والقبول:** تدقيق المستندات الرسمية، مطابقة السعة، وتوزيع الأطفال على الشعب المعتمدة.\n"
+            "4. **إدارة الكادر:** متابعة الحضور والشهادات الصحية الدورية وتوثيق الحوادث في السجل الرسمي فوراً."
+        ),
+        "reply_en": (
+            "🏢 **Kindergarten Operational Management & Statutory Standards:**\n\n"
+            "1. **Mandatory Educator-to-Child Ratios (MoSD Regulations):**\n"
+            "   • **Infant Care (< 1 year):** 1 certified caregiver per **6 infants** (1:6).\n"
+            "   • **Toddlers (1 - 2 years):** 1 certified caregiver per **8 children** (1:8).\n"
+            "   • **Preschool (2 - 4 years):** 1 qualified teacher per **10 children** (1:10).\n\n"
+            "2. **Physical Facility Requirements:**\n"
+            "   • Minimum net indoor activity area: **2.0 square meters per child**, plus secure shaded outdoor playground.\n\n"
+            "3. **Admissions Pipeline:** Verify digital dossiers, validate classroom headcounts, and assign sections.\n"
+            "4. **Staff Management:** Attendance tracking, semi-annual health check verifications, and instant safety logging."
+        ),
         "actions": [
             {"label_ar": "لوحة تحكم إدارة الحضانة", "label_en": "Operations Dashboard", "url": "/dashboard", "icon": "bi-kanban-fill"},
             {"label_ar": "إدارة طلبات التسجيل", "label_en": "Manage Admissions", "url": "/kindergartens", "icon": "bi-people-fill"},
@@ -226,10 +424,22 @@ INTENT_KNOWLEDGE_BASE = [
     {
         "intent": "manager_licensing_compliance",
         "target_role": "manager",
-        "keywords_ar": ["ترخيص الحضانة", "تجديد الترخيص", "معايير وزارة التنمية", "معايير وزارة التربية", "شروط السلامة العامة", "فحص الدفاع المدني", "الامتثال", "تفتيش الحضانة"],
-        "keywords_en": ["nursery license", "license renewal", "mosd standards", "moe standards", "safety compliance", "civil defense check", "inspection readiness"],
-        "reply_ar": "دليل الامتثال والتراخيص الرسمية للحضانات:\n\n• التحقق من استيفاء معايير المساحة (مترين مربعين لكل طفل على الأقل).\n• توفير شهادات خلو أمراض وتصاريح أمنية لكافة العاملات.\n• استيفاء متطلبات الدفاع المدني ومخارج الطوارئ والإسعافات الأولية.\n• حفظ السجلات اليومية والتقارير المالية والتربوية جاهزة للتدقيق الميداني.",
-        "reply_en": "Official Nursery Licensing & Regulatory Compliance Guide:\n\n• Ensure required space allocations (minimum 2 sq.m per child indoors).\n• Maintain valid health certificates and background clearances for all staff.\n• Fulfill Civil Defense safety standards, emergency exits, and certified first aid.\n• Keep standardized digital attendance, health, and audit logs ready for ministry inspectors.",
+        "keywords_ar": ["ترخيص الحضانة", "تجديد الترخيص", "معايير وزارة التنمية", "معايير وزارة التربية", "شروط السلامة العامة", "فحص الدفاع المدني", "الامتثال", "تفتيش الحضانة", "اشتراطات الترخيص"],
+        "keywords_en": ["nursery license", "license renewal", "mosd standards", "moe standards", "safety compliance", "civil defense check", "inspection readiness", "licensing requirements"],
+        "reply_ar": (
+            "📑 **قائمة متطلبات تجديد الترخيص والامتثال المؤسسي:**\n\n"
+            "1. **موافقة الدفاع المدني الأردني:** صيانة طفايات الحريق، أجهزة كشف الدخان، مخارج الطوارئ الواضحة، وتغطية المقابس الكهربائية.\n"
+            "2. **الشهادات الصحية والتصاريح:** شهادات خلو أمراض سارية المفعول (تجدد كل 6 أشهر) لجميع العاملات والمربيات ومقدمي الطعام.\n"
+            "3. **السجلات الرقمية:** الحفاظ على سجل حضور يومي وسجلات تغذية وطوارئ محدثة وجاهزة للتدقيق التفتيشي.\n"
+            "4. **التأمين الإلزامي:** وثيقة تأمين سارية ضد الحوادث والمسؤولية المدنية لكافة الأطفال المسجلين."
+        ),
+        "reply_en": (
+            "📑 **Institutional Licensing Renewal & Compliance Checklist:**\n\n"
+            "1. **Civil Defense Safety Clearance:** Fire extinguishers, smoke alarms, unobstructed emergency exits, child-proof electrical covers.\n"
+            "2. **Staff Health Certificates:** Valid disease-free health certificates (renewed every 6 months) for all educators and staff.\n"
+            "3. **Digital Compliance Ledgers:** Daily attendance logs, nutritional intake, and incident logs ready for ministry audits.\n"
+            "4. **Mandatory Insurance:** Active third-party liability and accidental insurance policy for all enrolled children."
+        ),
         "actions": [
             {"label_ar": "دليل معايير التراخيص والامتثال", "label_en": "Licensing Standards Guide", "url": "/services#managers", "icon": "bi-shield-check"},
             {"label_ar": "تصدير سجلات الامتثال الرسمية", "label_en": "Export Audit Logs", "url": "/dashboard", "icon": "bi-file-earmark-spreadsheet"}
@@ -244,10 +454,30 @@ INTENT_KNOWLEDGE_BASE = [
     {
         "intent": "supervisor_qa_audit",
         "target_role": "supervisor",
-        "keywords_ar": ["إشراف تربوي", "مشرف", "تدقيق الحضور", "تفتيش", "زيارة تفتيشية", "مطابقة السجلات", "تقرير المشرف", "تقييم الجودة", "نسبة الأطفال للمربيات", "مخالفات", "تقارير الوزارة"],
-        "keywords_en": ["educational supervision", "supervisor", "attendance audit", "inspection", "audit visit", "record matching", "supervisor report", "quality assessment", "child to staff ratio", "violations"],
-        "reply_ar": "أدوات منظومة الإشراف والتدقيق التربوي المعتمدة:\n\n1. التدقيق الفوري: مطابقة الحضور الفعلي المسجل في الحضانة مع السجلات الموثقة بالبوابة.\n2. مراجعة النسب القانونية: التأكد من عدم تجاوز السعة الاستيعابية المرخصة ونسب المربيات للأطفال.\n3. التفتيش الميداني: تعبئة قائمة التحقق الإلكترونية وتوثيق الملاحظات والتوصيات رقمياً.\n4. التصدير الحكومي: إصدار تقارير التفتيش والمؤشرات الإحصائية المعتمدة لوزارة التنمية الاجتماعية.",
-        "reply_en": "Official Supervision & Quality Assurance Audit Toolkit:\n\n1. Real-Time Attendance Audit: Verify live recorded classroom attendance against the digital ledger.\n2. Ratio Compliance: Ensure capacity limits and legal staff-to-child ratios are strictly respected.\n3. Digital Inspection Checklist: Fill out standardized mobile audit forms and attach inspection observations.\n4. Ministry Reporting: Generate signed digital audit packages and compliance reports for MoSD/MoE.",
+        "keywords_ar": ["إشراف تربوي", "مشرف", "تدقيق الحضور", "تفتيش", "زيارة تفتيشية", "مطابقة السجلات", "تقرير المشرف", "تقييم الجودة", "نسبة الأطفال للمربيات", "مخالفات", "تقارير الوزارة", "نموذج التفتيش"],
+        "keywords_en": ["educational supervision", "supervisor", "attendance audit", "inspection", "audit visit", "record matching", "supervisor report", "quality assessment", "child to staff ratio", "violations", "inspection form"],
+        "reply_ar": (
+            "🔍 **دليل الرقابة والتفتيش التربوي المعتمد للمشرفين:**\n\n"
+            "1. **بروتوكول التدقيق الميداني:**\n"
+            "   • مطابقة الحضور الفعلي للأطفال مع السجلات الرقمية اللحظية في البوابة.\n"
+            "   • تدقيق نسب المربيات للأطفال والتأكد من عدم وجود اكتظاظ يتجاوز الطاقة الاستيعابية المرخصة.\n\n"
+            "2. **قائمة التحقق الإلكترونية (40 معيار جودة):**\n"
+            "   • النظافة والتعقيم، التهوية الطبيعية، وجود حقيبة إسعافات أولية متكاملة غير منتهية الصلاحية.\n"
+            "   • ملائمة الأنشطة التربوية للفئات العمرية وتوفر الوسائل التعليمية المعتمدة.\n\n"
+            "3. **التوثيق وإصدار التقارير:**\n"
+            "   • تسجيل الملاحظات والتوصيات والمخالفات رقمياً وإرسالها فوراً لمديرية التنمية الاجتماعية المختصة."
+        ),
+        "reply_en": (
+            "🔍 **Educational Supervision & Quality Assurance Field Guide:**\n\n"
+            "1. **On-Site Audit Protocol:**\n"
+            "   • Physical child headcount reconciliation against live platform digital ledgers.\n"
+            "   • Verification of legal staff-to-child ratios with automatic flagging of overcrowding violations.\n\n"
+            "2. **Digital Inspection Checklist (40-Point Rubric):**\n"
+            "   • Sanitation & hygiene, natural ventilation, compliant unexpired first-aid kits.\n"
+            "   • Age-appropriate curricula, developmental materials, and safe play equipment.\n\n"
+            "3. **Official Reporting:**\n"
+            "   • Instant digital recording of observations, corrective actions, and violation packages for MoSD directorates."
+        ),
         "actions": [
             {"label_ar": "بوابة المشرفين والمدققين", "label_en": "Supervisor QA Portal", "url": "/services#supervisors", "icon": "bi-clipboard2-check-fill"},
             {"label_ar": "تصدير التقارير الإحصائية المعتمدة", "label_en": "Export National Reports", "url": "/dashboard", "icon": "bi-file-earmark-bar-graph"}
