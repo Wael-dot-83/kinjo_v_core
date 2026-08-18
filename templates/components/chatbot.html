@@ -4,7 +4,7 @@
   .chatbot-user-msg-avatar { border: 1.5px solid #002f6c !important; }
 </style>
 
-<div id="kinjo-chatbot-widget" class="kinjo-chatbot-widget" data-ui-lang="{{ ui_lang | default('ar') }}">
+<div id="kinjo-chatbot-widget" class="kinjo-chatbot-widget" data-ui-lang="{{ ui_lang | default('ar') }}" data-user-role="{% if current_user and current_user.role %}{{ current_user.role.value | lower }}{% else %}general{% endif %}" data-is-admin="{% if current_user and current_user.role.value == 'ADMIN' %}true{% else %}false{% endif %}">
   
   <!-- Floating Launcher Button -->
   <button
@@ -52,7 +52,11 @@
             </span>
           </div>
           <span class="chatbot-subtitle" id="chatbot-subtitle-text">
-            {% if ui_lang == 'en' %}National Kindergarten Support System{% else %}المنظومة الوطنية لدعم الحضانات{% endif %}
+            {% if current_user and current_user.role.value == 'ADMIN' %}
+              {% if ui_lang == 'en' %}KinJo Executive Governance AI{% else %}المساعد الإداري الذكي والحوكمة{% endif %}
+            {% else %}
+              {% if ui_lang == 'en' %}National Kindergarten Support System{% else %}المنظومة الوطنية لدعم الحضانات{% endif %}
+            {% endif %}
           </span>
         </div>
       </div>
@@ -86,6 +90,15 @@
         <span class="lang-en-content">Role:</span>
         <span class="lang-ar-content">أنا:</span>
       </span>
+      {% if current_user and current_user.role.value == 'ADMIN' %}
+      <div class="chatbot-role-pills">
+        <button type="button" class="chatbot-role-pill is-active" data-role="admin" title="مدير النظام / System Admin">
+          <span class="chatbot-role-icon">🛡️</span>
+          <span class="lang-en-content">Administrator</span>
+          <span class="lang-ar-content">مدير النظام</span>
+        </button>
+      </div>
+      {% else %}
       <div class="chatbot-role-pills">
         <button type="button" class="chatbot-role-pill is-active" data-role="parent" title="ولي أمر / Parent">
           <span class="chatbot-role-icon">👨‍👩‍👧</span>
@@ -108,6 +121,7 @@
           <span class="lang-ar-content">زائر</span>
         </button>
       </div>
+      {% endif %}
     </div>
 
     <!-- Messages Container -->

@@ -129,3 +129,92 @@ def test_assistant_chat_oversized_message(client):
         json={"message": "A" * 1001, "lang": "en"},
     )
     assert response.status_code == 422
+
+
+def test_assistant_chat_admin_guardrail_arabic(client):
+    """Verify non-admin asking admin questions receives a security refusal."""
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "أين أجد لوحة تحكم الأدمن وسجلات التدقيق؟", "lang": "ar", "role": "parent"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent"] == "admin_security_restricted"
+    assert "العمليات الإدارية وحوكمة النظام مقتصرة على مدراء النظام" in data["reply"]
+    assert any("/services" in a["url"] for a in data["actions"])
+
+
+def test_assistant_chat_admin_guardrail_english(client):
+    """Verify non-admin asking about admin panel or impersonation receives restricted response."""
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "How do I access admin dashboard or impersonate users?", "lang": "en", "role": "general"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent"] == "admin_security_restricted"
+    assert "Access Restricted" in data["reply"]
+
+
+def test_assistant_chat_admin_role_escalation_blocked(client):
+    """Verify unauthenticated user cannot claim admin role."""
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "مرحباً", "lang": "ar", "role": "admin"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent"] == "admin_security_restricted"
+
+
+def test_assistant_chat_authenticated_admin_kpis(client):
+    """Verify authenticated admin gets admin-specific responses."""
+    import models
+    from dependencies import get_current_user_optional
+
+    mock_admin = models.User(
+        id=1,
+        username="admin_test",
+        role=models.UserRole.ADMIN,
+        status=models.UserStatus.ACTIVE,
+    )
+    app.dependency_overrides[get_current_user_optional] = lambda: mock_admin
+
+    try:
+        response = client.post(
+            "/api/assistant/chat",
+            json={"message": "ما هي مؤشرات الأداء الحالية ولوحة التحكم؟", "lang": "ar", "role": "admin"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["intent"] == "admin_kpi_overview"
+        assert any(a["url"] == "/admin/dashboard" for a in data["actions"])
+    finally:
+        app.dependency_overrides.pop(get_current_user_optional, None)
+
+
+def test_assistant_chat_authenticated_admin_user_directory(client):
+    """Verify authenticated admin can query user directory & access tools in English."""
+    import models
+    from dependencies import get_current_user_optional
+
+    mock_admin = models.User(
+        id=1,
+        username="admin_test",
+        role=models.UserRole.ADMIN,
+        status=models.UserStatus.ACTIVE,
+    )
+    app.dependency_overrides[get_current_user_optional] = lambda: mock_admin
+
+    try:
+        response = client.post(
+            "/api/assistant/chat",
+            json={"message": "How do I manage the user directory and controlled access?", "lang": "en", "role": "admin"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["intent"] == "admin_user_directory"
+        assert any("/admin/users" in a["url"] for a in data["actions"])
+    finally:
+        app.dependency_overrides.pop(get_current_user_optional, None)
+

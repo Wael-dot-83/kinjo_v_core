@@ -81,20 +81,21 @@
       </script>
 
       <!-- KinJo Admin Design System -->
-      <link rel="stylesheet" href="/static/css/admin_design_system.css?v=eab02d09b4ef" />
-      <link rel="stylesheet" href="/static/css/top-menu.css?v=cd3be6e9f5ff" />
+      <link rel="stylesheet" href="/static/css/admin_design_system.css?v=82a053ba1f22" />
+      <link rel="stylesheet" href="/static/css/top-menu.css?v=ebcf80ffa5ae" />
       <link rel="stylesheet" href="/static/css/design-tokens.css?v=3e1c124bd60a" />
       <link rel="stylesheet" href="/static/css/layout.css?v=1.3" />
-      <link rel="stylesheet" href="/static/css/components.css?v=341a32c0267e" />
+      <link rel="stylesheet" href="/static/css/components.css?v=d6b335acb2e0" />
       <link rel="stylesheet" href="/static/css/utilities.css?v=1" />
-      <link rel="stylesheet" href="/static/css/admin_premium_theme.css?v=0a5190778886" />
+      <link rel="stylesheet" href="/static/css/admin_premium_theme.css?v=e8992cf5cb1d" />
 
       <!-- Legacy compatibility -->
-      <link rel="stylesheet" href="/static/css/kinjo.css?v=8687d9fa67e3" />
+      <link rel="stylesheet" href="/static/css/kinjo.css?v=f2fe92eb6e98" />
       {% if ui_dir == 'rtl' %}
       <link rel="stylesheet" href="/static/css/rtl.css?v=1.1" />
       {% endif %}
       <link rel="stylesheet" href="/static/css/dark-mode.css?v=9b3e7958451c" />
+      <link rel="stylesheet" href="/static/css/chatbot.css?v=9202a5752be2" />
 
       <!-- SweetAlert2 (self-hosted v11.14.5) -->
       <link
@@ -1121,5 +1122,9 @@
           document.documentElement.style.visibility = "";
         })();
       </script>
+
+      <!-- KinJo Floating Admin AI Assistant Widget -->
+      {% include "components/chatbot.html" %}
+      <script src="/static/js/chatbot.js?v=b7ef0408cd35"></script>
     </body>
 </html>

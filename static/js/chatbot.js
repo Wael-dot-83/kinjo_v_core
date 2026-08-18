@@ -26,6 +26,12 @@
   var isWaitingResponse = false;
 
   var ROLE_META = {
+    admin: {
+      icon: "🛡️",
+      title_ar: "مدير النظام",
+      title_en: "System Admin",
+      badge_class: "role-admin"
+    },
     parent: {
       icon: "👨‍👩‍👧",
       title_ar: "ولي أمر",
@@ -55,6 +61,16 @@
   var I18N = {
     ar: {
       roles: {
+        admin: {
+          welcome: "أهلاً بك حضرة مدير النظام! 🛡️\n\nأنا مساعد KinJo الإداري الذكي. كيف يمكنني مساعدتك في: مؤشرات الأداء (KPIs)، إدارة دليل المستخدمين والصلاحيات، سجلات التدقيق والأمان، تقارير الحوكمة والوزارة، أو تحليلات السلامة؟",
+          chips: [
+            "مؤشرات الأداء الحالية KPIs",
+            "إدارة المستخدمين والصلاحيات",
+            "سجلات التدقيق الأمني Audit Logs",
+            "تقارير الحوكمة والامتثال للوزارة",
+            "سجل بلاغات الحوادث والسلامة"
+          ]
+        },
         parent: {
           welcome: "مرحباً بك يا ولي الأمر! 👨‍👩‍👧\n\nأنا مساعد KinJo الذكي. كيف يمكنني مساعدتك اليوم في: تسجيل طفلك، متابعة التقارير اليومية والوجبات، مواعيد التطعيمات، أو الرسوم؟",
           chips: [
@@ -99,6 +115,16 @@
     },
     en: {
       roles: {
+        admin: {
+          welcome: "Welcome System Administrator! 🛡️\n\nI am your KinJo Executive Admin AI Assistant. How can I assist you with: System KPIs, User Directory & Access, Security Audit Logs, Governance Filings, or Incident Analytics?",
+          chips: [
+            "System KPIs & Performance",
+            "User Directory & Roles",
+            "Security Audit Logs",
+            "Governance & Compliance Reports",
+            "Incident Reports & Safety Analytics"
+          ]
+        },
         parent: {
           welcome: "Welcome Parent! 👨‍👩‍👧\n\nI am your KinJo AI Assistant. How can I help you today with: Child enrollment, daily care reports, meals & naps, vaccination schedules, or tuition fees?",
           chips: [
@@ -337,7 +363,14 @@
       { label: currentLang === "ar" ? "تقديم طلب تسجيل" : "Apply for Enrollment", url: "/enrollment/apply", icon: "bi-person-plus-fill" }
     ];
 
-    if (currentRole === "supervisor") {
+    if (currentRole === "admin") {
+      defaultActions = [
+        { label: currentLang === "ar" ? "لوحة المؤشرات" : "KPI Dashboard", url: "/admin/dashboard", icon: "bi-speedometer2" },
+        { label: currentLang === "ar" ? "دليل المستخدمين" : "User Directory", url: "/admin/users", icon: "bi-people-fill" },
+        { label: currentLang === "ar" ? "سجلات التدقيق" : "Audit Logs", url: "/admin/audit-logs", icon: "bi-shield-check" },
+        { label: currentLang === "ar" ? "تقارير الحوكمة" : "Governance Reports", url: "/admin/governance-reports", icon: "bi-file-earmark-bar-graph" }
+      ];
+    } else if (currentRole === "supervisor") {
       defaultActions = [
         { label: currentLang === "ar" ? "بوابة المشرفين" : "Supervisor QA", url: "/services#supervisors", icon: "bi-clipboard2-check-fill" },
         { label: currentLang === "ar" ? "تصدير التقارير" : "Export Reports", url: "/dashboard", icon: "bi-file-earmark-bar-graph" }
@@ -455,6 +488,19 @@
 
     currentLang = detectLanguage();
 
+    // Auto-detect Initial Role
+    var userRoleAttr = (widget.getAttribute("data-user-role") || "").toLowerCase();
+    var isAdminAttr = widget.getAttribute("data-is-admin") === "true";
+    var isOnAdminRoute = window.location.pathname.indexOf("/admin") === 0;
+
+    if (isAdminAttr || (isOnAdminRoute && userRoleAttr === "admin")) {
+      currentRole = "admin";
+    } else if (userRoleAttr && ROLE_META[userRoleAttr] && userRoleAttr !== "admin") {
+      currentRole = userRoleAttr;
+    } else {
+      currentRole = "parent";
+    }
+
     // Setup Role Selector Event Listeners
     if (roleSelector) {
       var pills = roleSelector.querySelectorAll(".chatbot-role-pill");
@@ -501,6 +547,7 @@
       }
     });
 
+    setRole(currentRole, true);
     renderInitialWelcome();
   }
 

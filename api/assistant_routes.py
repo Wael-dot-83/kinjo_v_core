@@ -1,15 +1,19 @@
 """api/assistant_routes.py — Bilingual AI Assistant / FAQ Chatbot API for KinJo.
 
 Provides intelligent responses, multi-role avatars, guided topic recommendations,
-and direct platform action links for parents, supervisors, nursery managers, and general visitors.
+and direct platform action links for parents, supervisors, nursery managers, and general visitors,
+as well as dedicated administrative intelligence for authenticated system administrators.
 """
 
 from __future__ import annotations
 
 import re
 from typing import Dict, List, Optional
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
+
+import models
+from dependencies import get_current_user_optional
 
 
 router = APIRouter(prefix="/api/assistant", tags=["AI Assistant"])
@@ -24,7 +28,7 @@ class ChatAction(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=1000, description="User prompt or query")
     lang: Optional[str] = Field("ar", description="Language preference ('ar' or 'en')")
-    role: Optional[str] = Field("general", description="User role ('parent', 'supervisor', 'manager', 'general')")
+    role: Optional[str] = Field("general", description="User role ('parent', 'supervisor', 'manager', 'admin', 'general')")
     session_id: Optional[str] = Field(None, description="Optional conversation session ID")
 
 
@@ -37,10 +41,109 @@ class ChatResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Security Guardrail: Admin Domain Restricted Keywords
+# ---------------------------------------------------------------------------
+
+ADMIN_RESTRICTED_KEYWORDS_AR = [
+    "ادمن", "أدمن", "مدير النظام", "لوحة الادمن", "لوحة الأدمن", "سجلات التدقيق",
+    "انتحال الصفة", "صلاحيات الادمن", "صلاحيات الأدمن", "تعديل الصلاحيات",
+    "حذف المستخدمين", "حذف مستخدم", "قاعدة البيانات", "إعدادات النظام", "اعدادات النظام",
+    "تقرير الرقابة الإدارية", "تصدير سجلات النظام", "إدارة المستخدمين والصلاحيات",
+    "سجل الحركات الإدارية", "تغيير صلاحية", "دخول الادمن", "حساب الادمن", "بيانات النظام الداخلية"
+]
+
+ADMIN_RESTRICTED_KEYWORDS_EN = [
+    "admin", "administrator", "system admin", "admin panel", "admin dashboard",
+    "audit logs", "audit log", "impersonate", "impersonation", "admin role",
+    "admin permissions", "delete user", "modify user permissions", "system settings",
+    "database query", "administrative access", "admin controls", "admin credentials",
+    "admin portal", "root access", "superuser"
+]
+
+
+# ---------------------------------------------------------------------------
 # Comprehensive Multi-Role Domain Knowledge Base
 # ---------------------------------------------------------------------------
 
 INTENT_KNOWLEDGE_BASE = [
+    # -----------------------------------------------------------------------
+    # 0. AUTHENTICATED ADMIN INTENTS (Admin-Only)
+    # -----------------------------------------------------------------------
+    {
+        "intent": "admin_kpi_overview",
+        "target_role": "admin",
+        "keywords_ar": ["مؤشرات الاداء", "مؤشرات الأداء", "لوحة التحكم", "احصائيات النظام", "نظرة عامة", "kpi", "لوحة الادارة", "احصائيات المنصة", "معدل الاشغال"],
+        "keywords_en": ["kpi", "system metrics", "overview", "admin dashboard", "analytics summary", "executive dashboard", "occupancy rate", "platform stats"],
+        "reply_ar": "لوحة المؤشرات والتحليلات الإدارية الشاملة لـ KinJo:\n\n• متابعة إجمالي الحضانات المرخصة، الأطفال المسجلين، والكادر التعليمي المعتمد.\n• مراقبة معدلات الإشغال ونسب الامتثال للمعايير الوطنية.\n• رصد مؤشرات الأداء الحيوية (KPIs) والتنبيهات الفورية عبر المحافظات.",
+        "reply_en": "Comprehensive Executive & System KPI Analytics for KinJo:\n\n• Monitor total accredited nurseries, enrolled children, and certified staff.\n• Real-time occupancy tracking and national regulatory compliance scores.\n• High-level KPI breakdown with instant cross-governorate operational alerts.",
+        "actions": [
+            {"label_ar": "لوحة مؤشرات الأداء الإدارية", "label_en": "Admin KPI Dashboard", "url": "/admin/dashboard", "icon": "bi-speedometer2"},
+            {"label_ar": "مستكشف التحليلات المتقدم", "label_en": "Analytics Explorer", "url": "/admin/kpi", "icon": "bi-bar-chart-line-fill"},
+            {"label_ar": "الخريطة الحرارية للحضانات", "label_en": "Nurseries Heatmap", "url": "/admin/heatmap", "icon": "bi-map-fill"}
+        ],
+        "suggested_ar": ["كيف أستعرض تقرير مؤشرات الأداء الشهري؟", "كيف أراجع سجلات التدقيق الأمني؟", "كيف أدير صلاحيات المستخدمين؟"],
+        "suggested_en": ["How to review monthly KPI report?", "How to audit security logs?", "How to manage user directory?"]
+    },
+    {
+        "intent": "admin_user_directory",
+        "target_role": "admin",
+        "keywords_ar": ["إدارة المستخدمين", "ادارة المستخدمين", "دليل المستخدمين", "صلاحيات", "إضافة مستخدم", "تعديل مستخدم", "انتحال", "دخول بصفة", "استيراد مستخدمين", "mfa"],
+        "keywords_en": ["user directory", "manage users", "user access", "add user", "create user", "user roles", "impersonate user", "controlled access", "import users", "mfa"],
+        "reply_ar": "إدارة المستخدمين والصلاحيات المتقدمة في المنصة:\n\n1. دليل المستخدمين: استعراض وتعديل وتفعيل حسابات (أولياء الأمور، المشرفين، مدراء الحضانات).\n2. الاستيراد الجماعي: رفع وتعيين المستخدمين دفعة واحدة عبر ملفات منظمة.\n3. الدخول المقيّد بصفة مستخدم (Controlled User Access): لأغراض الدعم الفني والتدقيق مع توثيق مشفر في سجلات النظام.",
+        "reply_en": "Advanced User Directory & Access Management:\n\n1. User Registry: View, configure, and activate accounts (Parents, Supervisors, Nursery Managers, Auditors).\n2. Bulk Import: Batch onboard and assign users through standardized templates.\n3. Controlled User Access (Impersonation): Assist users with cryptographically signed audit trails.",
+        "actions": [
+            {"label_ar": "دليل المستخدمين والصلاحيات", "label_en": "User Directory", "url": "/admin/users", "icon": "bi-people-fill"},
+            {"label_ar": "استيراد المستخدمين", "label_en": "Import Users", "url": "/admin/users/import", "icon": "bi-person-up"},
+            {"label_ar": "الدخول المقيّد (الدعم)", "label_en": "Controlled Access", "url": "/admin/impersonate", "icon": "bi-person-bounding-box"}
+        ],
+        "suggested_ar": ["كيف أضيف مستخدماً جديداً بصلاحية مشرف؟", "كيف أفعل التحقق بخطوتين للمستخدم؟", "كيف أراجع عمليات الدخول المقيّد؟"],
+        "suggested_en": ["How to add a supervisor user?", "How to enforce 2FA/MFA?", "How to review controlled access history?"]
+    },
+    {
+        "intent": "admin_governance_and_audit",
+        "target_role": "admin",
+        "keywords_ar": ["سجلات التدقيق", "سجل الحركات", "تقارير الحوكمة", "تقارير الوزارة", "التنمية الاجتماعية", "وزارة التربية", "سجل الامتثال", "تصدير التقارير الحكومية", "سجل النشاط"],
+        "keywords_en": ["audit logs", "audit trail", "governance reports", "ministry reports", "mosd report", "moe report", "compliance exports", "agency reports", "audit history"],
+        "reply_ar": "منظومة الحوكمة وسجلات التدقيق الأمني المعتمدة:\n\n• سجلات تدقيق غير قابلة للتعديل ترصد كافة العمليات الحساسة، الدخول، وتغييرات الصلاحيات.\n• تقارير الحوكمة الرسمية وتنبيهات الامتثال المعتمدة.\n• تصدير التقارير الإحصائية المعتمدة لوزارة التنمية الاجتماعية ووزارة التربية والتعليم.",
+        "reply_en": "Certified Governance & Security Audit Trails:\n\n• Immutable audit logs tracking all administrative events, authentication logs, and mutations.\n• Official governance filings, compliance reminders, and regulatory audit reports.\n• Standardized compliance exports for the Ministry of Social Development and Ministry of Education.",
+        "actions": [
+            {"label_ar": "سجلات التدقيق الأمني", "label_en": "Security Audit Logs", "url": "/admin/audit-logs", "icon": "bi-shield-check"},
+            {"label_ar": "تقارير الحوكمة والامتثال", "label_en": "Governance Reports", "url": "/admin/governance-reports", "icon": "bi-file-earmark-bar-graph"},
+            {"label_ar": "تقارير الجهات الرسمية", "label_en": "Official Agency Reports", "url": "/admin/agency-reports", "icon": "bi-bank"}
+        ],
+        "suggested_ar": ["كيف أفلتر سجلات التدقيق حسب المستخدم أو التاريخ؟", "كيف أصدر التقرير السنوي للوزارة؟", "ما هي التنبيهات الإدارية المفتوحة؟"],
+        "suggested_en": ["How to filter audit logs by user/date?", "How to export annual ministry report?", "What are active admin alerts?"]
+    },
+    {
+        "intent": "admin_safety_and_incidents",
+        "target_role": "admin",
+        "keywords_ar": ["تحليلات الحوادث", "سجل السلامة", "الحوادث", "إشعارات الطوارئ", "تقارير السلامة", "البلاغات", "بلاغ طارئ"],
+        "keywords_en": ["incident analytics", "safety reports", "incidents", "emergency alerts", "safety log", "incident logs", "emergency notifications"],
+        "reply_ar": "منظومة تحليلات السلامة وإدارة الحوادث المركزية:\n\n• الرصد اللحظي للبلاغات والحوادث المسجلة من كافة الحضانات عبر المملكة.\n• تصنيف درجات الخطورة ومتابعة الإجراءات التصحيحية المتخذة من الكوادر والمشرفين.\n• تحليلات السلامة المتقدمة لتقليل المخاطر ورفع جودة الرعاية.",
+        "reply_en": "Centralized Safety Intelligence & Incident Management:\n\n• Real-time monitoring of all incidents and emergency notices logged by nurseries nationwide.\n• Severity classification and tracking of immediate corrective interventions.\n• Advanced safety analytics for proactive risk mitigation and quality assurance.",
+        "actions": [
+            {"label_ar": "سجل بلاغات الحوادث", "label_en": "Incident Reports Log", "url": "/admin/reports/incidents", "icon": "bi-heart-pulse-fill"},
+            {"label_ar": "تحليلات السلامة والحوادث", "label_en": "Safety Analytics", "url": "/admin/safety-analytics", "icon": "bi-pie-chart-fill"}
+        ],
+        "suggested_ar": ["كيف أتابع حالة بلاغ حادث مفتوح؟", "ما هي المحافظات الأكثر تسجيلاً للبلاغات؟", "كيف أصدر تقرير السلامة الربعي؟"],
+        "suggested_en": ["How to track an open incident report?", "Which regions report highest incidents?", "How to generate quarterly safety report?"]
+    },
+    {
+        "intent": "admin_kindergartens_management",
+        "target_role": "admin",
+        "keywords_ar": ["إدارة الحضانات", "ادارة الحضانات", "تراخيص الحضانات", "اعتماد الروضات", "استيراد الحضانات", "خريطة الحضانات", "قائمة الحضانات", "تصنيف الحضانات"],
+        "keywords_en": ["manage kindergartens", "nursery licensing", "accreditation", "import nurseries", "nursery map", "nursery directory", "kg classification"],
+        "reply_ar": "إدارة الحضانات والتراخيص والاعتماد الوطني:\n\n• مراجعة واعتماد ملفات الحضانات والتراخيص الرسمية وتحديث السعات الاستيعابية.\n• استيراد بيانات الحضانات ومطابقتها مع السجلات الجغرافية والرسمية.\n• تصنيف الحضانات وتقييم معايير الجودة والمقارنات المعيارية.",
+        "reply_en": "National Nursery Licensing & Institutional Governance:\n\n• Review and verify kindergarten licensing dossiers, approvals, and capacity allocations.\n• Batch import and synchronize nursery GIS records and official registration numbers.\n• Nursery classification, quality benchmark comparisons, and inspection history.",
+        "actions": [
+            {"label_ar": "سجل الحضانات الشامل", "label_en": "Kindergartens Directory", "url": "/admin/kindergartens", "icon": "bi-building-gear"},
+            {"label_ar": "استيراد الحضانات", "label_en": "Import Kindergartens", "url": "/admin/import/kindergartens", "icon": "bi-cloud-arrow-up-fill"},
+            {"label_ar": "التصنيف والمقارنات", "label_en": "Classification & Benchmarks", "url": "/admin/classification", "icon": "bi-award"}
+        ],
+        "suggested_ar": ["كيف أعتمد ترخيص حضانة جديدة؟", "كيف أستورد قائمة حضانات من ملف؟", "كيف أستعرض تصنيف الحضانات حسب المحافظة؟"],
+        "suggested_en": ["How to approve a new nursery license?", "How to bulk import nurseries?", "How to view regional kindergarten rankings?"]
+    },
+
     # -----------------------------------------------------------------------
     # 1. PARENT / GUARDIAN INTENTS
     # -----------------------------------------------------------------------
@@ -214,7 +317,22 @@ def _normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", t).strip()
 
 
-def _match_intent(query: str, lang: str, role: Optional[str] = None) -> Optional[dict]:
+def _is_admin_query(query: str) -> bool:
+    """Detect if query mentions restricted administrative concepts."""
+    normalized_query = _normalize_text(query)
+    query_tokens = set(normalized_query.split())
+
+    for kw in ADMIN_RESTRICTED_KEYWORDS_AR + ADMIN_RESTRICTED_KEYWORDS_EN:
+        norm_kw = _normalize_text(kw)
+        if norm_kw in normalized_query:
+            return True
+        kw_tokens = set(norm_kw.split())
+        if kw_tokens and kw_tokens.issubset(query_tokens):
+            return True
+    return False
+
+
+def _match_intent(query: str, lang: str, role: Optional[str] = None, is_admin: bool = False) -> Optional[dict]:
     normalized_query = _normalize_text(query)
     query_tokens = set(normalized_query.split())
 
@@ -222,11 +340,16 @@ def _match_intent(query: str, lang: str, role: Optional[str] = None) -> Optional
     max_score = 0
 
     for item in INTENT_KNOWLEDGE_BASE:
+        target_role = item.get("target_role")
+        # Admin-only intents are strictly skipped for non-admins
+        if target_role == "admin" and not is_admin:
+            continue
+
         score = 0
         keywords = item["keywords_ar"] if lang == "ar" else item["keywords_en"]
         
-        # Boost if query aligns with selected user role
-        if role and role.lower() == item.get("target_role"):
+        # Boost if query aligns with user role
+        if role and role.lower() == target_role:
             score += 2
 
         for kw in keywords:
@@ -248,16 +371,83 @@ def _match_intent(query: str, lang: str, role: Optional[str] = None) -> Optional
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat_with_assistant(payload: ChatRequest):
-    """Handle multi-role bilingual user chat messages and provide context-rich guidance."""
+async def chat_with_assistant(
+    payload: ChatRequest,
+    current_user: Optional[models.User] = Depends(get_current_user_optional)
+):
+    """Handle multi-role bilingual user chat messages and provide context-rich guidance,
+    enforcing strict security guardrails on administrative topics."""
     msg = payload.message.strip()
     lang = "en" if payload.lang and payload.lang.lower().startswith("en") else "ar"
-    role = payload.role.lower() if payload.role else "general"
+    requested_role = (payload.role or "general").lower()
 
     if not msg:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message cannot be empty")
 
-    match = _match_intent(msg, lang, role)
+    is_authenticated_admin = bool(current_user and current_user.role == models.UserRole.ADMIN)
+
+    # If user claims 'admin' role or is in admin context:
+    if requested_role == "admin" and not is_authenticated_admin:
+        # Non-admin trying to set admin role -> fallback to general
+        role = "general"
+    elif is_authenticated_admin and requested_role == "admin":
+        role = "admin"
+    else:
+        role = requested_role
+
+    # -----------------------------------------------------------------------
+    # Guardrail Check: Block admin queries for non-admins
+    # -----------------------------------------------------------------------
+    if not is_authenticated_admin and (_is_admin_query(msg) or requested_role == "admin"):
+        if lang == "ar":
+            refusal_reply = (
+                "عذراً، العمليات الإدارية وحوكمة النظام مقتصرة على مدراء النظام المعتمدين وتتطلب "
+                "تسجيل الدخول عبر لوحة تحكم الإدارة الآمنة. 🔒\n\n"
+                "لا يُسمح للمساعد الذكي بالإجابة على الاستفسارات الخاصة بإدارة النظام عبر القنوات العامة. "
+                "يمكنك استعراض خدمات أولياء الأمور والمشرفين ومدراء الحضانات، أو التواصل مع الدعم الفني."
+            )
+            actions = [
+                ChatAction(label="دليل الخدمات العامة", url="/services", icon="bi-info-circle-fill"),
+                ChatAction(label="مركز الدعم والمساعدة", url="/contact", icon="bi-envelope-fill"),
+                ChatAction(label="بوابة أولياء الأمور", url="/parent/dashboard", icon="bi-speedometer2")
+            ]
+            suggested = [
+                "كيف أسجل طفلي في الحضانة؟",
+                "البحث عن حضانات معتمدة في عمان",
+                "ما هي خدمات المشرفين التربويين؟",
+                "تواصل مع الدعم الفني"
+            ]
+        else:
+            refusal_reply = (
+                "Access Restricted: Administrative operations, system governance, and audit records "
+                "are strictly restricted to authorized administrators within the secure Admin Dashboard. 🔒\n\n"
+                "The AI Assistant is not permitted to answer administrative questions on public or unauthorized channels. "
+                "You may explore public parent, supervisor, or nursery manager services, or contact technical support."
+            )
+            actions = [
+                ChatAction(label="Platform Services Guide", url="/services", icon="bi-info-circle-fill"),
+                ChatAction(label="Contact Support", url="/contact", icon="bi-envelope-fill"),
+                ChatAction(label="Parent Portal", url="/parent/dashboard", icon="bi-speedometer2")
+            ]
+            suggested = [
+                "How do I enroll my child?",
+                "Find accredited nurseries in Amman",
+                "Supervisor & Quality tools",
+                "Contact technical support"
+            ]
+
+        return ChatResponse(
+            reply=refusal_reply,
+            actions=actions,
+            suggested_queries=suggested,
+            intent="admin_security_restricted",
+            target_role="general",
+        )
+
+    # -----------------------------------------------------------------------
+    # Match Intent in Knowledge Base
+    # -----------------------------------------------------------------------
+    match = _match_intent(msg, lang, role, is_admin=is_authenticated_admin)
 
     if match:
         reply = match["reply_ar"] if lang == "ar" else match["reply_en"]
@@ -278,8 +468,55 @@ def chat_with_assistant(payload: ChatRequest):
             target_role=match.get("target_role", role),
         )
 
+    # -----------------------------------------------------------------------
     # Contextual Role-Aware Fallback Responses
-    if role == "parent":
+    # -----------------------------------------------------------------------
+    if role == "admin" and is_authenticated_admin:
+        if lang == "ar":
+            reply = (
+                "أهلاً بك حضرة مدير النظام! 🛡️\n\n"
+                "أنا مساعد KinJo الإداري الذكي، في خدمتك لدعم إدارة العمليات:\n"
+                "• استعراض مؤشرات الأداء الحيوية (KPIs) ونسب الإشغال الوطنية\n"
+                "• إدارة دليل المستخدمين والصلاحيات والدخول المقيّد (Impersonation)\n"
+                "• تدقيق سجلات النشاط والأمان (Audit Logs) وتقارير الحوكمة\n"
+                "• متابعة بلاغات الحوادث وتحليلات السلامة المركزية\n"
+                "• إدارة وتدقيق تراخيص واعتماد الحضانات"
+            )
+            actions = [
+                ChatAction(label="لوحة المؤشرات الإدارية", url="/admin/dashboard", icon="bi-speedometer2"),
+                ChatAction(label="دليل المستخدمين والصلاحيات", url="/admin/users", icon="bi-people-fill"),
+                ChatAction(label="سجلات التدقيق الأمني", url="/admin/audit-logs", icon="bi-shield-check"),
+                ChatAction(label="تقارير الحوكمة والوزارة", url="/admin/governance-reports", icon="bi-file-earmark-bar-graph")
+            ]
+            suggested = [
+                "كيف أستعرض مؤشرات الأداء الحالية (KPIs)؟",
+                "كيف أدير صلاحيات المستخدمين؟",
+                "كيف أراجع سجلات التدقيق الأمني؟",
+                "كيف أتابع بلاغات الحوادث والسلامة؟"
+            ]
+        else:
+            reply = (
+                "Welcome System Administrator! 🛡️\n\n"
+                "I am your KinJo Executive Admin AI Assistant, ready to assist with:\n"
+                "• Executive KPIs & National Occupancy Metrics\n"
+                "• User Directory, Granular Permissions & Controlled Access (Impersonation)\n"
+                "• Cryptographic Audit Trails & Official Governance Filings\n"
+                "• Incident Log Monitoring & Safety Analytics\n"
+                "• Kindergarten Licensing, Inspections & Accreditation"
+            )
+            actions = [
+                ChatAction(label="Admin KPI Dashboard", url="/admin/dashboard", icon="bi-speedometer2"),
+                ChatAction(label="User Directory", url="/admin/users", icon="bi-people-fill"),
+                ChatAction(label="Security Audit Logs", url="/admin/audit-logs", icon="bi-shield-check"),
+                ChatAction(label="Governance Reports", url="/admin/governance-reports", icon="bi-file-earmark-bar-graph")
+            ]
+            suggested = [
+                "How to review system KPIs?",
+                "How to manage user directory and roles?",
+                "How to audit security logs?",
+                "How to monitor safety incident reports?"
+            ]
+    elif role == "parent":
         if lang == "ar":
             reply = (
                 "أهلاً بك يا ولي الأمر في منصة KinJo! 👋\n\n"
@@ -421,6 +658,7 @@ def chat_with_assistant(payload: ChatRequest):
         reply=reply,
         actions=actions,
         suggested_queries=suggested,
-        intent="general_help",
+        intent="general_help" if role != "admin" else "admin_overview",
         target_role=role,
     )
+
