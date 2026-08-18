@@ -5,7 +5,7 @@
 {% block title %}{% if ui_lang == 'en' %}Analytics Intelligence Center{% else %}مركز الذكاء التحليلي{% endif %} — KinJo{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/admin_analytics_v2.css?v=d70d10ee23b1">
+<link rel="stylesheet" href="/static/css/admin_analytics_v2.css?v=b47d76fa4874">
 <style>
   /* Suppress Bootstrap's default card styling where we use az-card */
   .kpi-grid, .kpi-card { display: none !important; }
@@ -220,7 +220,7 @@
               <span class="kpi-delta kpi-delta--flat" id="kpiKgGrowth" aria-live="polite">
                 <span class="skel skel-chip" aria-hidden="true"></span>
               </span>
-              <span class="text-muted" style="font:.4rem/1 sans-serif"> </span>
+              <span class="text-muted" style="font:0.75rem/1.45 sans-serif"> </span>
             </div>
             <div class="kpi-sparkline-v2" data-metric="total_kg" aria-hidden="true"></div>
           </article>
@@ -466,7 +466,7 @@
               </div>
               <div class="d-flex align-items-center justify-content-between">
                 <div class="az-badge" id="dataQualityStatus" style="margin-bottom:0">—</div>
-                <div style="font:700 1.25rem/1 var(--font-ar);color:var(--slate-800)" id="dataQualityScore">—</div>
+                <div style="font:700 1.25rem/1.45 var(--font-ar);color:var(--slate-800)" id="dataQualityScore">—</div>
               </div>
               <div id="ohDataQuality" style="display:none"></div>{# preserve ID for JS #}
               <!-- hidden SVG for backwards compatibility with JS -->
@@ -554,7 +554,7 @@
           <div class="az-card h-100 reg-entity-card">
             <div class="az-card__header">
               <h3 class="az-card__title" style="font-size:.85rem"><i class="bi bi-people"></i>{% if ui_lang == 'en' %}Users{% else %}المستخدمون{% endif %}</h3>
-              <span class="az-badge az-badge--blue" id="regUsersNew" style="font-size:.7rem">+0</span>
+              <span class="az-badge az-badge--blue" id="regUsersNew" style="font-size:0.75rem">+0</span>
             </div>
             <div class="az-card__body--compact">
               <div class="kpi-card-v2__value mb-2" style="font-size:1.75rem" id="regUsersTotal">
@@ -587,7 +587,7 @@
           <div class="az-card h-100 reg-entity-card">
             <div class="az-card__header">
               <h3 class="az-card__title" style="font-size:.85rem"><i class="bi bi-building"></i>{% if ui_lang == 'en' %}Facilities{% else %}المرافق{% endif %}</h3>
-              <span class="az-badge az-badge--blue" id="regKgNew" style="font-size:.7rem">+0</span>
+              <span class="az-badge az-badge--blue" id="regKgNew" style="font-size:0.75rem">+0</span>
             </div>
             <div class="az-card__body--compact">
               <div class="kpi-card-v2__value mb-2" style="font-size:1.75rem" id="regKgTotal">
@@ -620,7 +620,7 @@
           <div class="az-card h-100 reg-entity-card">
             <div class="az-card__header">
               <h3 class="az-card__title" style="font-size:.85rem"><i class="bi bi-file-earmark-check"></i>{% if ui_lang == 'en' %}Applications{% else %}الطلبات{% endif %}</h3>
-              <span class="az-badge az-badge--blue" id="regNewApplications" style="font-size:.7rem">+0</span>
+              <span class="az-badge az-badge--blue" id="regNewApplications" style="font-size:0.75rem">+0</span>
             </div>
             <div class="az-card__body--compact">
               <div class="kpi-card-v2__value mb-2" style="font-size:1.75rem" id="regTotalApplications">
@@ -629,15 +629,15 @@
               <div class="row g-2 text-center mt-1">
                 <div class="col-4">
                   <div class="az-badge az-badge--green d-block mb-1" id="regApproved" style="justify-content:center">0</div>
-                  <div style="font-size:.7rem;color:var(--slate-500)">{% if ui_lang == 'en' %}Approved{% else %}موافق{% endif %}</div>
+                  <div style="font-size:0.75rem;color:var(--slate-500)">{% if ui_lang == 'en' %}Approved{% else %}موافق{% endif %}</div>
                 </div>
                 <div class="col-4">
                   <div class="az-badge az-badge--amber d-block mb-1" id="regPending" style="justify-content:center">0</div>
-                  <div style="font-size:.7rem;color:var(--slate-500)">{% if ui_lang == 'en' %}Pending{% else %}انتظار{% endif %}</div>
+                  <div style="font-size:0.75rem;color:var(--slate-500)">{% if ui_lang == 'en' %}Pending{% else %}انتظار{% endif %}</div>
                 </div>
                 <div class="col-4">
                   <div class="az-badge az-badge--red d-block mb-1" id="regRejected" style="justify-content:center">0</div>
-                  <div style="font-size:.7rem;color:var(--slate-500)">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</div>
+                  <div style="font-size:0.75rem;color:var(--slate-500)">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</div>
                 </div>
               </div>
               <div class="d-none" id="regNewApplicationsLabel"></div>
@@ -922,7 +922,7 @@
                 <div class="skel skel-row" style="width:80%"></div>
               </div>
               <hr style="border-color:var(--slate-100);margin:12px 0">
-              <h4 style="font:.6rem/1 var(--font-ar);text-transform:uppercase;color:var(--slate-400);letter-spacing:.06em;margin-bottom:10px">
+              <h4 style="font:0.75rem/1.45 var(--font-ar);color:var(--slate-400);margin-bottom:10px">
                 {% if ui_lang == 'en' %}Needs Attention{% else %}تحتاج عناية{% endif %}
               </h4>
               <div class="rank-list" id="lowPerformersList">
@@ -1036,7 +1036,7 @@
             </div>
             <div class="az-card__body--compact">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-                <span style="font:.7rem/1 var(--font-ar);text-transform:uppercase;color:var(--slate-400);letter-spacing:.06em">
+                <span style="font:0.75rem/1.45 var(--font-ar);color:var(--slate-400);">
                   {% if ui_lang == 'en' %}Top 5 Facilities{% else %}أفضل 5 مرافق{% endif %}
                 </span>
               </div>
@@ -1046,7 +1046,7 @@
                 <div class="skel skel-row" style="width:80%"></div>
               </div>
               <hr style="border-color:var(--slate-100);margin:14px 0">
-              <span style="font:.7rem/1 var(--font-ar);text-transform:uppercase;color:var(--slate-400);letter-spacing:.06em;display:block;margin-bottom:10px">
+              <span style="font:0.75rem/1.45 var(--font-ar);color:var(--slate-400);display:block;margin-bottom:10px">
                 {% if ui_lang == 'en' %}Bottom 5 — Requires Intervention{% else %}أدنى 5 — تتطلب تدخلًا{% endif %}
               </span>
               <div class="rank-list" id="govLowPerformersList">
@@ -1097,7 +1097,7 @@
       <div class="model-meta-card mb-section" id="modelMetaPanel" aria-label="{% if ui_lang == 'en' %}AI Model information{% else %}معلومات نموذج الذكاء الاصطناعي{% endif %}">
         <div class="model-meta-item">
           <span class="model-meta-item__label">{% if ui_lang == 'en' %}Model Status{% else %}حالة النموذج{% endif %}</span>
-          <span class="az-badge az-badge--green"><i class="bi bi-circle-fill" style="font-size:.4rem"></i>{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
+          <span class="az-badge az-badge--green"><i class="bi bi-circle-fill" style="font-size:0.75rem"></i>{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
         </div>
         <div class="model-meta-item" id="modelMeta">
           <span class="model-meta-item__label">{% if ui_lang == 'en' %}Version{% else %}الإصدار{% endif %}</span>
@@ -1112,7 +1112,7 @@
           <span class="model-meta-item__value" id="aiConfidence">—</span>
         </div>
         <div class="model-meta-item">
-          <span class="model-meta-item__label" style="font-size:.7rem">{% if ui_lang == 'en' %}Predictions are statistical forecasts based on historical patterns and may not reflect actual outcomes.{% else %}التنبؤات تقديرات إحصائية وقد لا تعكس النتائج الفعلية.{% endif %}</span>
+          <span class="model-meta-item__label" style="font-size:0.75rem">{% if ui_lang == 'en' %}Predictions are statistical forecasts based on historical patterns and may not reflect actual outcomes.{% else %}التنبؤات تقديرات إحصائية وقد لا تعكس النتائج الفعلية.{% endif %}</span>
         </div>
       </div>
 
@@ -1359,7 +1359,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script defer src="/static/js/chart_utils.js?v=2.1" charset="utf-8"></script>
 <script defer src="/static/js/kpi-validation.js?v=2878ed231030" charset="utf-8"></script>
-<script defer src="/static/js/admin_analytics.js?v=2.4" charset="utf-8"></script>
+<script defer src="/static/js/admin_analytics.js?v=3b6299b9a1ab" charset="utf-8"></script>
 <script>
 /* ── Analytics v2 Enhancement Layer ───────────────────────────────────────── */
 (function () {
@@ -1723,7 +1723,7 @@
         '  </div>',
         '  <div class="risk-card__score">',
         '    <span class="az-badge az-badge--' + (lvl === 'critical' ? 'red' : lvl === 'high' ? 'amber' : 'blue') + '">' + label + '</span>',
-        '    <div style="text-align:center;font:700 1rem/1 var(--font-ar);color:var(--slate-700);margin-top:4px">' + scoreDisplay + '</div>',
+        '    <div style="text-align:center;font:700 1.0rem/1.45 var(--font-ar);color:var(--slate-700);margin-top:4px">' + scoreDisplay + '</div>',
         '  </div>',
         '</div>'
       ].join('');

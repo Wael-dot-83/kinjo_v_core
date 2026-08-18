@@ -108,7 +108,7 @@
   inset-inline-end: -2px;
   background-color: #ef4444;
   color: #ffffff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   width: 20px;
   height: 20px;
@@ -217,14 +217,14 @@
   background: rgba(197, 160, 89, 0.25);
   border: 1px solid var(--chatbot-accent);
   color: #fce7b2;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 10px;
 }
 
 .chatbot-subtitle {
-  font-size: 11px;
+  font-size: 12px;
   opacity: 0.9;
   color: #e2e8f0;
   display: block;
@@ -279,7 +279,7 @@
 }
 
 .chatbot-role-label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--chatbot-text-muted);
   display: flex;
@@ -300,7 +300,7 @@
   gap: 4px;
   padding: 4px 9px;
   border-radius: 12px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--chatbot-text-muted);
   background: #ffffff;
@@ -445,7 +445,7 @@
 }
 
 .chatbot-time {
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--chatbot-text-muted);
 }
 
@@ -454,7 +454,7 @@
   border: none;
   color: var(--chatbot-text-muted);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   padding: 0 4px;
   opacity: 0.7;
   transition: opacity 0.2s ease, color 0.2s ease;
@@ -558,7 +558,7 @@
 
 .chatbot-chip-btn {
   white-space: nowrap;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--chatbot-primary);
   background: var(--chatbot-primary-light);

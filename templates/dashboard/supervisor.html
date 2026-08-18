@@ -516,8 +516,8 @@
             const lastName  = escapeHtml(child.last_name  || '');
             const initials  = (child.first_name || '?')[0].toUpperCase();
             const timeLabel = child.check_out_time
-                ? `<span style="font-size:0.65rem;opacity:0.7">${escapeHtml(child.check_out_time)}</span>`
-                : (child.check_in_time ? `<span style="font-size:0.65rem;opacity:0.7">${escapeHtml(child.check_in_time)}</span>` : '');
+                ? `<span style="font-size:0.75rem;opacity:0.7">${escapeHtml(child.check_out_time)}</span>`
+                : (child.check_in_time ? `<span style="font-size:0.75rem;opacity:0.7">${escapeHtml(child.check_in_time)}</span>` : '');
 
             return `
             <button

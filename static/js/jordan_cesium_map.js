@@ -636,7 +636,7 @@ function renderRadarChart(perfIndicators) {
 
   return `
     <div style="display:flex;flex-direction:column;align-items:center;padding:.5rem 0 .25rem">
-      <div style="font-size:.7rem;color:#64748b;margin-bottom:.25rem;letter-spacing:.03em">مخطط الأداء الشعاعي</div>
+      <div style="font-size:0.75rem;color:#64748b;margin-bottom:.25rem;letter-spacing:.03em">مخطط الأداء الشعاعي</div>
       <svg width="${SZ}" height="${SZ}" viewBox="0 0 ${SZ} ${SZ}" style="overflow:visible" aria-hidden="true">
         ${grid}${axes}
         <polygon points="${poly}" fill="${fc}" fill-opacity=".18" stroke="${fc}" stroke-width="1.5" stroke-linejoin="round"/>
@@ -680,8 +680,8 @@ function renderIntelPanel(d) {
     const trend = d.trends?.[key];
     const color = available ? (meta.color || riskHex(100 - perf)) : RISK_UNAVAILABLE_HEX;
     const trendIcon = !trend ? '' :
-      trend.direction === 'up'   ? `<i class="bi bi-arrow-up-short" style="color:#22c55e" aria-hidden="true"></i><small style="color:#22c55e;font-size:.65rem">${trend.pct != null ? trend.pct.toFixed(1)+'%' : ''}</small>` :
-      trend.direction === 'down' ? `<i class="bi bi-arrow-down-short" style="color:#ef4444" aria-hidden="true"></i><small style="color:#ef4444;font-size:.65rem">${trend.pct != null ? trend.pct.toFixed(1)+'%' : ''}</small>` : '';
+      trend.direction === 'up'   ? `<i class="bi bi-arrow-up-short" style="color:#22c55e" aria-hidden="true"></i><small style="color:#22c55e;font-size:0.75rem">${trend.pct != null ? trend.pct.toFixed(1)+'%' : ''}</small>` :
+      trend.direction === 'down' ? `<i class="bi bi-arrow-down-short" style="color:#ef4444" aria-hidden="true"></i><small style="color:#ef4444;font-size:0.75rem">${trend.pct != null ? trend.pct.toFixed(1)+'%' : ''}</small>` : '';
     return `
       <div class="intel-ind-row" style="flex-direction:column;align-items:stretch;margin-bottom:.625rem">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
@@ -786,10 +786,10 @@ function renderIntelPanel(d) {
       <div>الأطفال المسجلون: <strong>${studentCount}</strong></div>
       <div>نقاط الحوكمة: <strong>${govScore}</strong></div>
       ${avgRisk > 0 ? `<div>المتوسط الوطني للخطر: <strong>${avgRisk.toFixed(1)}</strong></div>` : ''}
-      <div style="margin-top:.5rem;font-size:.7rem;color:#475569">
+      <div style="margin-top:.5rem;font-size:0.75rem;color:#475569">
         آخر تحديث: ${d.last_update ? new Date(d.last_update).toLocaleString('ar-JO') : 'غير متوفر'}
       </div>
-      <div style="font-size:.7rem;color:#475569">المصدر: قاعدة بيانات KinJo المركزية</div>
+      <div style="font-size:0.75rem;color:#475569">المصدر: قاعدة بيانات KinJo المركزية</div>
     </div>`;
 }
 
@@ -831,7 +831,7 @@ function renderCitySection(cityData, errorMsg) {
     const kgLabel   = c.kindergarten_count + ' منشأة';
     const stLabel   = c.children_count ? `· ${c.children_count} طفل` : '';
     const critLabel = c.critical_kindergartens
-      ? `<span style="color:#ef4444;font-size:.7rem"> — ${c.critical_kindergartens} حرجة</span>` : '';
+      ? `<span style="color:#ef4444;font-size:0.75rem"> — ${c.critical_kindergartens} حرجة</span>` : '';
     const cityName = esc(c.district || '');
     const safeCity  = (c.district || '').replace(/'/g, "\\'");
     return `
@@ -842,7 +842,7 @@ function renderCitySection(cityData, errorMsg) {
            onkeydown="if(event.key==='Enter'||event.key===' ')selectCity('${safeCity}')">
         <div class="city-row-name">
           <span>${cityName}</span>${critLabel}
-          <div style="font-size:.7rem;color:#64748b;margin-top:1px">${kgLabel}${stLabel}</div>
+          <div style="font-size:0.75rem;color:#64748b;margin-top:1px">${kgLabel}${stLabel}</div>
         </div>
         <div class="city-row-score">
           <div class="mini-bar-track" style="width:52px">
@@ -877,7 +877,7 @@ function selectCity(cityName) {
     if (counter) {
       const reset = document.createElement('button');
       reset.className = 'city-reset cc-btn';
-      reset.style.cssText = 'padding:.1rem .4rem;font-size:.7rem;margin-inline-end:.5rem';
+      reset.style.cssText = 'padding:.1rem .4rem;font-size:0.75rem;margin-inline-end:.5rem';
       reset.setAttribute('aria-label', 'إلغاء تحديد المدينة');
       reset.innerHTML = '<i class="bi bi-x" aria-hidden="true"></i>';
       reset.onclick = resetCityFilter;
@@ -976,7 +976,7 @@ function populateGovList(govs) {
     const cls     = riskClass(score);
     const govJson = JSON.stringify(g).replace(/"/g, '&quot;');
     const kgLabel = g.kg_count != null
-      ? `<span style="font-size:.7rem;color:#64748b">${g.kg_count} منشأة</span>` : '';
+      ? `<span style="font-size:0.75rem;color:#64748b">${g.kg_count} منشأة</span>` : '';
     return `
       <div class="cs-gov-item" data-slug="${g.slug}" data-risk-class="${cls}"
            tabindex="0" role="button"

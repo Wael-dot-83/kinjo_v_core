@@ -954,7 +954,7 @@ function renderComparisonDeltas(deltas) {
     }
 
     deltaEl.className = `kpi-delta ${bgClass} comparison-delta`;
-    deltaEl.innerHTML = `<i class="bi ${icon} me-1" aria-hidden="true"></i>${absPct}%${significant ? '<span class="badge bg-light text-dark ms-1" style="font-size:0.625rem;padding:0.25em 0.5em">SIG</span>' : ''}`;
+    deltaEl.innerHTML = `<i class="bi ${icon} me-1" aria-hidden="true"></i>${absPct}%${significant ? '<span class="badge bg-light text-dark ms-1" style="font-size:0.75rem;padding:0.25em 0.5em">SIG</span>' : ''}`;
     deltaEl.setAttribute('aria-label', `${absPct}% ${direction}${significant ? ' significant' : ''}`);
   });
 }
@@ -3066,11 +3066,11 @@ function _renderStatusMatrix(enrollments) {
     return `
       <div class="mb-2">
         <div class="d-flex justify-content-between align-items-center mb-1">
-          <small class="d-flex align-items-center gap-1 fw-medium" style="font-size:.72rem;">
-            <i class="bi ${s.icon}" style="color:${s.color};font-size:.6rem;" aria-hidden="true"></i>
+          <small class="d-flex align-items-center gap-1 fw-medium" style="font-size:0.75rem;">
+            <i class="bi ${s.icon}" style="color:${s.color};font-size:0.75rem;" aria-hidden="true"></i>
             ${label}
           </small>
-          <small style="color:${s.color};font-weight:600;font-size:.72rem;">
+          <small style="color:${s.color};font-weight:600;font-size:0.75rem;">
             ${count.toLocaleString(locale)}
             <span class="text-muted fw-normal">(${pct}%)</span>
           </small>
@@ -3121,7 +3121,7 @@ function _renderActionQueue(actions) {
         ${a.url ? `
           <a href="${escapeHtml(a.url)}"
              class="small text-primary text-decoration-none d-inline-flex align-items-center gap-1 mt-1"
-             style="font-size:.68rem;">
+             style="font-size:0.75rem;">
             ${escapeHtml(a.action_ar || adminAnalyticsText("عرض", "View"))}
             <i class="bi bi-arrow-left-short" aria-hidden="true"></i>
           </a>` : ""}
@@ -3533,17 +3533,17 @@ function _renderGovernorateBreakdown(rows) {
     const pct   = r.completion_rate || 0;
     const color = pct >= 75 ? "#10B981" : pct >= 50 ? "#F59E0B" : "#EF4444";
     const draftBadge = r.kg_draft > 0
-      ? `<span class="badge" style="background:#FEF9C3;color:#92400E;font-size:.65rem;">${r.kg_draft}</span>`
+      ? `<span class="badge" style="background:#FEF9C3;color:#92400E;font-size:0.75rem;">${r.kg_draft}</span>`
       : `<span class="text-muted" style="font-size:.8rem;">—</span>`;
     const pendBadge = r.enrollments_pending > 0
-      ? `<span class="badge" style="background:#FEE2E2;color:#991B1B;font-size:.65rem;">${r.enrollments_pending.toLocaleString(locale)}</span>`
+      ? `<span class="badge" style="background:#FEE2E2;color:#991B1B;font-size:0.75rem;">${r.enrollments_pending.toLocaleString(locale)}</span>`
       : `<span class="text-muted" style="font-size:.8rem;">—</span>`;
     return `
       <tr>
         <td class="fw-medium" style="font-size:.8rem;">${escapeHtml(r.governorate)}</td>
         <td class="text-center" style="font-size:.8rem;">${r.kg_total.toLocaleString(locale)}</td>
         <td class="text-center">
-          <span class="badge" style="background:#D1FAE5;color:#065F46;font-size:.65rem;">${r.kg_active}</span>
+          <span class="badge" style="background:#D1FAE5;color:#065F46;font-size:0.75rem;">${r.kg_active}</span>
         </td>
         <td class="text-center">${draftBadge}</td>
         <td class="text-center" style="font-size:.8rem;">${r.enrollments_total.toLocaleString(locale)}</td>
@@ -3554,7 +3554,7 @@ function _renderGovernorateBreakdown(rows) {
                  role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
               <div class="progress-bar" style="width:${pct}%;background:${color};"></div>
             </div>
-            <small style="color:${color};font-weight:600;font-size:.72rem;min-width:32px;">${pct}%</small>
+            <small style="color:${color};font-weight:600;font-size:0.75rem;min-width:32px;">${pct}%</small>
           </div>
         </td>
       </tr>`;
@@ -3594,12 +3594,12 @@ function _renderCompletenessPanel(comp) {
       <div class="mb-3">
         <div class="d-flex justify-content-between align-items-center mb-1">
           <div class="d-flex align-items-center gap-1">
-            <i class="bi ${item.icon}" style="color:${item.color};font-size:.65rem;" aria-hidden="true"></i>
+            <i class="bi ${item.icon}" style="color:${item.color};font-size:0.75rem;" aria-hidden="true"></i>
             <small class="fw-medium" style="font-size:.75rem;">${label}</small>
           </div>
           <div class="d-flex align-items-center gap-1">
-            <small style="color:${color};font-weight:700;font-size:.72rem;">${pct.toFixed(1)}%</small>
-            <small class="text-muted" style="font-size:.66rem;">(${d.complete}/${d.total})</small>
+            <small style="color:${color};font-weight:700;font-size:0.75rem;">${pct.toFixed(1)}%</small>
+            <small class="text-muted" style="font-size:0.75rem;">(${d.complete}/${d.total})</small>
           </div>
         </div>
         <div class="progress" style="height:5px;"

@@ -874,14 +874,14 @@ class KgOverview {
           <div class="ko-kg-card-name">${koEscape(kg.name)}</div>
           <div class="ko-kg-card-meta">${koEscape(kg.gov)} · ${kg.children} ${isAr ? 'طفل' : 'children'}</div>
           <div class="ko-kg-bar-wrap">
-            <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--ko-text-muted);margin-bottom:.25rem;">
+            <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--ko-text-muted);margin-bottom:.25rem;">
               <span>${isAr ? 'الحضور' : 'Attendance'}</span>
               <span class="${cls ? `ko-badge ko-badge-${badge}` : ''}">${pct}%</span>
             </div>
             <div class="ko-kg-bar"><div class="ko-kg-bar-fill ${cls}" style="width:${pct}%"></div></div>
           </div>
           <div style="margin-top:.625rem;">
-            <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--ko-text-muted);margin-bottom:.25rem;">
+            <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--ko-text-muted);margin-bottom:.25rem;">
               <span>${isAr ? 'الإشغال' : 'Occupancy'}</span><span>${cap}%</span>
             </div>
             <div class="ko-kg-bar"><div class="ko-kg-bar-fill" style="width:${cap}%;background:var(--ko-teal)"></div></div>

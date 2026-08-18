@@ -491,7 +491,7 @@
   height: 20px;
   padding: 0 6px;
   border-radius: var(--r-full);
-  font: 600 0.6875rem/1 var(--font-ar);
+  font: 600 0.75rem/1 var(--font-ar);
   background: var(--az-primary-mid);
   color: var(--az-primary);
   margin-inline-start: 2px;
@@ -2098,7 +2098,7 @@ a:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 600;
   padding: 2px 8px;
   border-radius: var(--r-full);
