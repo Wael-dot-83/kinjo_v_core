@@ -32,6 +32,8 @@ LOCK_FILE="/var/lock/kinjo-deploy.lock"
 BACKUP_DIR="/var/backups/kinjo"
 WEB_CONTAINER="kinjo-web-1"
 KEEP_BACKUPS=5
+KEEP_ROLLBACK_IMAGES="${KEEP_ROLLBACK_IMAGES:-10}"
+KEEP_BUILD_CACHE="${KEEP_BUILD_CACHE:-5GB}"
 
 log() { printf '[%s] %s\n' "$(date '+%H:%M:%S')" "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
@@ -146,6 +148,45 @@ if docker inspect "$WEB_CONTAINER" >/dev/null 2>&1; then
 else
   log "no running web container; skipping rollback tag"
 fi
+
+# ---------------------------------------------------------------------------
+# 1b. Retention, run here so the disk is reclaimed BEFORE the build needs it.
+#
+#     Every deploy tags a rollback image and every build leaves layer cache
+#     behind, and nothing reaped either. By 2026-08-18 the droplet held 78
+#     rollback tags going back six days plus 15.95GB of build cache, and / was
+#     81% full; clearing both took it to 26%. A deploy that exhausts the disk
+#     fails at the worst possible moment -- midway through recreating
+#     containers, with the site already down.
+#
+#     Rollback tags are timestamped (rollback-YYYYmmdd_HHMMSS), so a reverse
+#     lexicographic sort is chronological -- no dependence on `docker images`
+#     ordering. The image the web container is currently running is skipped
+#     explicitly; it is normally the tag just taken above, but a re-run of a
+#     failed deploy can reach here with it further down the list.
+#
+#     Build cache is capped rather than emptied: `-af` alone would force every
+#     subsequent build to start cold, so --keep-storage retains the hottest
+#     cache up to the cap.
+#
+#     None of this may fail a deploy. Reclaiming disk is housekeeping, and an
+#     image that refuses to delete because something still references it is not
+#     a release problem -- hence `|| true` throughout.
+# ---------------------------------------------------------------------------
+RUNNING_IMAGE_ID=""
+if docker inspect "$WEB_CONTAINER" >/dev/null 2>&1; then
+  RUNNING_IMAGE_ID="$(docker inspect "$WEB_CONTAINER" --format '{{.Image}}' 2>/dev/null || true)"
+fi
+STALE_ROLLBACK_TAGS="$(docker images --filter=reference='kinjo-web:rollback-*'   --format '{{.Tag}}' 2>/dev/null | sort -r | tail -n +$((KEEP_ROLLBACK_IMAGES + 1)) || true)"
+PRUNED_IMAGES=0
+for _tag in $STALE_ROLLBACK_TAGS; do
+  _id="$(docker images --no-trunc --format '{{.ID}}' "kinjo-web:$_tag" 2>/dev/null || true)"
+  [[ -n "$_id" && "$_id" == "$RUNNING_IMAGE_ID" ]] && continue
+  docker rmi "kinjo-web:$_tag" >/dev/null 2>&1 && PRUNED_IMAGES=$((PRUNED_IMAGES + 1)) || true
+done
+log "retention: kept newest $KEEP_ROLLBACK_IMAGES rollback images, removed $PRUNED_IMAGES"
+docker builder prune -af --keep-storage "$KEEP_BUILD_CACHE" >/dev/null 2>&1 || true
+log "retention: build cache capped at $KEEP_BUILD_CACHE; / now $(df -h / | awk 'NR==2 {print $5" used, "$4" free"}')"
 
 # ---------------------------------------------------------------------------
 # 2. Database backup when a migration is pending, or on request.
