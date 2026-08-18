@@ -31,13 +31,9 @@
   transition: transform .18s ease, box-shadow .18s ease;
 }
 .kg-kpi-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(15, 23, 42, .10); }
-.kg-kpi-card::before {
-  content: "";
-  position: absolute;
-  inset-inline-start: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: linear-gradient(180deg, var(--accent-a, #3b82f6), var(--accent-b, var(--kinjo-action)));
-}
+/* Removed: a 3px gradient stripe down one side of the card. It encoded
+   nothing -- the same accent on every card -- and combined two anti-patterns,
+   a side-tab edge and a decorative gradient. */
 .kg-kpi-card--total  { --accent-a:#6366f1; --accent-b:#4338ca; }
 .kg-kpi-card--active { --accent-a:#22c55e; --accent-b:#15803d; }
 .kg-kpi-card--frozen { --accent-a:#38bdf8; --accent-b:#0284c7; }

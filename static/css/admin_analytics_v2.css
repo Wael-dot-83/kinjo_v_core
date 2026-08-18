@@ -603,16 +603,10 @@
   position: relative;
   overflow: hidden;
 }
-.kpi-card-v2::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  inset-inline-start: 0;
-  width: 4px;
-  height: 100%;
-  background: var(--kpi-accent, var(--az-primary));
-  border-radius: 0 0 0 var(--r-lg);
-}
+/* A 4px accent stripe down one side of the KPI card was decoration -- the
+   accent is per-card styling, not a state signal, and it is the shape
+   impeccable.style calls the most recognisable AI tell. The card's own value,
+   label and trend already carry its meaning. */
 .kpi-card-v2:hover {
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.08);
   transform: translateY(-4px) scale(1.01);
@@ -1471,7 +1465,9 @@
   gap: var(--sp-3);
   padding: var(--sp-3) var(--sp-4);
   border-radius: var(--r-md);
-  border-inline-start: 3px solid;
+  /* Severity reads from the tinted surface and the icon, both already set by
+     the --high/--medium/--low variants; the 3px edge repeated it. */
+  border: 1px solid transparent;
   background: var(--slate-50);
   font: 400 0.875rem/1.4 var(--font-ar);
   color: var(--slate-700);
@@ -1863,9 +1859,9 @@ a:focus-visible {
 .insight-card,
 .action-item {
   background: #fff;
+  /* Was a 1px outline plus a 4px coloured edge on one side -- two boundary
+     strategies on one element, and the thick one is the tell. One outline. */
   border: 1px solid var(--slate-200);
-  border-inline-start-width: 4px;
-  border-inline-start-color: var(--slate-300);
   border-radius: var(--r-md);
   padding: var(--sp-4);
   box-shadow: var(--shadow-xs);
@@ -2070,24 +2066,17 @@ a:focus-visible {
   padding: var(--sp-2) var(--sp-3);
   border-radius: var(--r-sm);
   background: var(--slate-50);
-  border-inline-start: 3px solid var(--slate-300);
 }
 .narrative-line i {
   margin-top: 3px;
   flex: 0 0 auto;
 }
-.narrative-line--positive {
-  border-inline-start-color: var(--az-success);
-}
-.narrative-line--warning {
-  border-inline-start-color: var(--az-warning);
-}
-.narrative-line--negative {
-  border-inline-start-color: var(--az-danger);
-}
-.narrative-line--neutral {
-  border-inline-start-color: var(--slate-400);
-}
+/* Tone now reads from the line's own icon rather than a coloured edge. The
+   icon is a non-colour-dependent cue as well, which the edge never was. */
+.narrative-line--positive i { color: var(--az-success); }
+.narrative-line--warning  i { color: var(--az-warning); }
+.narrative-line--negative i { color: var(--az-danger); }
+.narrative-line--neutral  i { color: var(--slate-400); }
 
 .lineage-grid {
   display: grid;

@@ -32,7 +32,14 @@
                                     <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                                 </div>
                             </div>
-                            <img id="mfaQrImage" alt="MFA QR" class="img-fluid d-none" style="max-width: 220px;">
+                            {# The real QR is set by JS; the transparent 1x1 keeps the
+                               element from being a broken-image box before then. #}
+                            <img
+                                id="mfaQrImage"
+                                alt="{% if ui_lang == 'en' %}MFA setup QR code{% else %}رمز الاستجابة السريعة للتحقق بخطوتين{% endif %}"
+                                class="img-fluid d-none mfa-qr-image"
+                                width="220" height="220"
+                                src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
                         </div>
                         <div class="mb-4">
                             <label class="form-label fw-semibold">

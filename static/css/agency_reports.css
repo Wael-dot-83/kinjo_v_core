@@ -124,7 +124,7 @@ details[open] .agency-help-summary::before{transform:rotate(90deg)}
 .agency-header-actions .admin-btn{min-height:44px}
 
 /* Compact privacy notice */
-.agency-privacy-notice{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--kinjo-color-border);border-inline-start:3px solid var(--kinjo-action);background:#f8fafc;border-radius:12px;padding:14px 18px;margin-bottom:22px;color:#334155;font-weight:500;line-height:1.7}
+.agency-privacy-notice{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--kinjo-color-border);background:#f8fafc;border-radius:12px;padding:14px 18px;margin-bottom:22px;color:#334155;font-weight:500;line-height:1.7}
 .agency-privacy-notice__icon{color:var(--kinjo-action);font-size:1.3rem;flex:0 0 auto;margin-top:2px}
 .agency-privacy-notice__text{line-height:1.8;font-size:.95rem}
 
@@ -144,12 +144,13 @@ details[open] .agency-help-summary::before{transform:rotate(90deg)}
 .agency-kpi__value{font-size:1.9rem;font-weight:800;line-height:1;color: var(--kinjo-color-text-primary)}
 .agency-kpi__label{font-size:.95rem;font-weight:700;color:#334155}
 .agency-kpi__hint{font-size:.8rem;color: var(--kinjo-color-text-muted)}
-.agency-kpi--primary{border-inline-start:3px solid #1d4ed8}
+/* The --primary/--success/--warning variants used to add a 3px coloured edge on
+   one side of the card as well as the filled icon chip below. The chip (and, for
+   success/warning, the value colour) already carries the state, so the edge was
+   removed rather than thinned. */
 .agency-kpi--primary .agency-kpi__icon{background:#eff6ff;color:#1d4ed8}
-.agency-kpi--success{border-inline-start:3px solid #16a34a}
 .agency-kpi--success .agency-kpi__icon{background:#f0fdf4;color:#15803d}
 .agency-kpi--success .agency-kpi__value{color:#15803d}
-.agency-kpi--warning{border-inline-start:3px solid #d97706}
 .agency-kpi--warning .agency-kpi__icon{background:#fffbeb;color:#b45309}
 .agency-kpi--warning .agency-kpi__value{color:#b45309}
 

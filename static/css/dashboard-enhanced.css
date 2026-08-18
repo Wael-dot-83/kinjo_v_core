@@ -241,8 +241,10 @@
 .dfe-alert-item {
   background: #fff;
   border-radius: 10px;
+  /* Severity was a 3px coloured edge on top of a 1px outline. The alert already
+     leads with a severity icon; that icon now carries the colour, so the row
+     keeps one boundary and one signal. */
   border: 1px solid var(--kinjo-color-border);
-  border-inline-start: 3px solid var(--sev-color, var(--kinjo-color-border));
   padding: .875rem 1rem;
   display:flex; align-items:flex-start; gap:.875rem;
   transition: box-shadow 160ms, opacity 300ms;
@@ -924,4 +926,8 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   }
 }
 
-
+/* Severity colour moved off the card edge and onto the alert's icon. */
+.dfe-alert-item > i,
+.dfe-alert-item .dfe-alert-icon {
+  color: var(--sev-color, var(--kinjo-color-text-muted));
+}

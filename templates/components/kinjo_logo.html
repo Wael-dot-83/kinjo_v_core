@@ -8,7 +8,7 @@
     sidebar — sidebar header          (width: 120px, height auto)
     login   — login brand panel       (height: 160px, width auto)
 
-  Every <img> here previously opened with `width=" 60\ height=\60\`, an unterminated
+  Every image tag here previously opened with `width=" 60\ height=\60\`, an unterminated
   attribute that swallowed the next line. An HTML parser resolved it to
   width=' 60\ height=0  src=' plus three junk attributes named `static`, `img` and
   `kinjo-logo.png"` — and, critically, **no src at all**. No amount of CSS can size an
