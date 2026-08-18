@@ -161,7 +161,7 @@ INTENT_KNOWLEDGE_BASE = [
         "target_role": "general",
         "keywords_ar": ["بحث عن حضانة", "حضانات عمان", "حضانات اربد", "حضانات الزرقاء", "حضانات قريبة", "دليل الحضانات", "حضانة معتمدة", "موقع الحضانة", "روضات الأردن"],
         "keywords_en": ["find nursery", "nursery search", "nurseries in amman", "licensed nursery", "directory", "accredited", "locations in jordan", "kindergartens jordan"],
-        "reply_ar": "تضم منصة KinJo دليلاً وطنياً شاملاً لجميع الحضانات والحضانات المرخصة في المملكة الأردنية الهاشمية (عمان، إربد، الزرقاء، وكافة المحافظات). يمكنك البحث والفلترة حسب المحافظة، الفئة العمرية، والتقييمات الرسمية.",
+        "reply_ar": "تضم منصة KinJo دليلاً وطنياً شاملاً لجميع الحضانات المرخصة في المملكة الأردنية الهاشمية (عمان، إربد، الزرقاء، وكافة المحافظات). يمكنك البحث والفلترة حسب المحافظة، الفئة العمرية، والتقييمات الرسمية.",
         "reply_en": "KinJo hosts a comprehensive national directory of licensed and accredited kindergartens across Jordan (Amman, Irbid, Zarqa, and all governorates) with filtering by location, age group, curriculum, and ratings.",
         "actions": [
             {"label_ar": "دليل الحضانات الشامل", "label_en": "Nursery Directory", "url": "/kindergartens", "icon": "bi-geo-alt-fill"},
