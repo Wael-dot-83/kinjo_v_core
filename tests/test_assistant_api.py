@@ -19,7 +19,7 @@ def test_assistant_chat_arabic_enrollment(client):
     assert response.status_code == 200
     data = response.json()
     assert "reply" in data
-    assert "تسجيل" in data["reply"] or "كينجو" in data["reply"]
+    assert "تسجيل" in data["reply"] or "KinJo" in data["reply"]
     assert data["intent"] == "enrollment"
     assert len(data["actions"]) >= 1
     assert any(a["url"] == "/enrollment/apply" for a in data["actions"])
@@ -101,7 +101,7 @@ def test_assistant_chat_general_fallback_arabic(client):
     assert response.status_code == 200
     data = response.json()
     assert data["intent"] == "general_help"
-    assert "كينجو" in data["reply"]
+    assert "KinJo" in data["reply"]
 
 
 def test_assistant_chat_general_fallback_english(client):

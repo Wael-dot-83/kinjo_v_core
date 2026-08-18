@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>{% if ui_lang == 'en' %}KinJo - Jordan Kindergarten Portal{% else %}KinJo - بوابة رياض الأطفال الرسمية{% endif %}</title>
+  <title>{% if ui_lang == 'en' %}KinJo - Jordan Kindergarten Portal{% else %}KinJo - بوابة الحضانات الرسمية{% endif %}</title>
   <meta name="description" content="KinJo connects parents, kindergarten teams, and supervisors so enrollment, daily care, attendance, and official reporting stay in one secure, bilingual record.">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 
@@ -23,8 +23,6 @@
     }
     
     /* Language Toggle Logic */
-    body.lang-ar .lang-en-content { display: none !important; }
-    body.lang-en .lang-ar-content { display: none !important; }
     
     body.lang-ar {
       font-family: 'Cairo', 'Noto Serif', serif;
@@ -157,28 +155,23 @@
       <a href="/" class="flex items-center gap-base" aria-label="KinJo Homepage">
         <img alt="KinJo Logo" class="h-16 w-auto object-contain rounded-sm bg-white p-2 shadow-sm" src="/static/img/landing/logo.png">
         <span class="font-title-lg text-title-lg font-bold text-white">
-          <span class="lang-en-content">Jordan Kindergarten Portal</span>
-          <span class="lang-ar-content">بوابة رياض الأطفال الأردنية</span>
+          {% if ui_lang == 'en' %}Jordan Kindergarten Portal{% else %}بوابة الحضانات الأردنية{% endif %}
         </span>
       </a>
 
       <!-- Nav Links (Desktop) -->
       <nav class="hidden md:flex gap-md" aria-label="Main Navigation">
         <a class="font-body-md text-body-md text-white font-bold border-b-2 border-tertiary h-24 flex items-center px-2" href="/services">
-          <span class="lang-en-content">Services</span>
-          <span class="lang-ar-content">الخدمات</span>
+          {% if ui_lang == 'en' %}Services{% else %}الخدمات{% endif %}
         </a>
         <a class="font-body-md text-body-md text-white/80 hover:text-tertiary transition-colors h-24 flex items-center px-2" href="/about">
-          <span class="lang-en-content">About</span>
-          <span class="lang-ar-content">نبذة عنا</span>
+          {% if ui_lang == 'en' %}About{% else %}نبذة عنا{% endif %}
         </a>
         <a class="font-body-md text-body-md text-white/80 hover:text-tertiary transition-colors h-24 flex items-center px-2" href="/contact">
-          <span class="lang-en-content">Contact</span>
-          <span class="lang-ar-content">اتصل بنا</span>
+          {% if ui_lang == 'en' %}Contact{% else %}اتصل بنا{% endif %}
         </a>
         <a class="font-body-md text-body-md text-white/80 hover:text-tertiary transition-colors h-24 flex items-center px-2" href="/faq">
-          <span class="lang-en-content">FAQ</span>
-          <span class="lang-ar-content">الأسئلة الشائعة</span>
+          {% if ui_lang == 'en' %}FAQ{% else %}الأسئلة الشائعة{% endif %}
         </a>
       </nav>
 
@@ -187,25 +180,21 @@
         <!-- Bilingual Toggle -->
         <button type="button" class="flex items-center gap-xs px-sm py-2 rounded-lg border border-white/30 hover:bg-white/10 transition-colors min-h-[44px]" onclick="toggleLanguage()" aria-label="Switch Language / تبديل اللغة">
           <span class="material-symbols-outlined text-sm text-white" aria-hidden="true" data-icon="language">language</span>
-          <span class="font-label-caps text-label-caps uppercase lang-en-content text-white">عربي</span>
-          <span class="font-label-caps text-label-caps uppercase lang-ar-content text-white">EN</span>
+          <span class="font-label-caps text-label-caps uppercase text-white">{% if ui_lang == 'en' %}عربي{% else %}EN{% endif %}</span>
         </button>
 
         {% if current_user %}
         <a class="inline-flex px-md py-3 bg-tertiary text-primary font-label-bold text-label-bold rounded-lg hover:bg-tertiary/90 transition-colors shadow-sm items-center gap-2 min-h-[44px]" href="/dashboard" aria-label="Dashboard">
           <span class="material-symbols-outlined text-base" aria-hidden="true" data-icon="dashboard">dashboard</span>
-          <span class="lang-en-content">Dashboard</span>
-          <span class="lang-ar-content">لوحة التحكم</span>
+          {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
         </a>
         {% else %}
         <a class="hidden md:inline-flex px-md py-2 text-white font-label-bold text-label-bold hover:bg-white/10 transition-colors rounded-lg items-center min-h-[44px]" href="/login" aria-label="Sign In">
-          <span class="lang-en-content">Login</span>
-          <span class="lang-ar-content">تسجيل الدخول</span>
+          {% if ui_lang == 'en' %}Login{% else %}تسجيل الدخول{% endif %}
         </a>
         {% if public_registration_enabled %}
         <a class="inline-flex px-md py-3 bg-tertiary text-primary font-label-bold text-label-bold rounded-lg hover:bg-tertiary/90 transition-colors shadow-sm items-center min-h-[44px]" href="/register" aria-label="Register">
-          <span class="lang-en-content">Register</span>
-          <span class="lang-ar-content">حساب جديد</span>
+          {% if ui_lang == 'en' %}Register{% else %}حساب جديد{% endif %}
         </a>
         {% endif %}
         {% endif %}
@@ -225,9 +214,8 @@
 
       <div class="relative z-10 max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop py-xl md:py-[140px] grid md:grid-cols-2 gap-lg items-center">
         <div class="space-y-lg">
-          
-          <!-- English Headline/Sub -->
-          <div class="lang-en-content space-y-md">
+          {% if ui_lang == 'en' %}
+          <div class="space-y-md">
             <h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary">
               One official workspace for every role in Jordan's kindergarten sector.
             </h1>
@@ -235,9 +223,8 @@
               KinJo connects parents, kindergarten teams, and supervisors so enrollment, daily care, attendance, and official reporting stay in one secure, bilingual record.
             </p>
           </div>
-
-          <!-- Arabic Headline/Sub -->
-          <div class="lang-ar-content space-y-md">
+          {% else %}
+          <div class="space-y-md">
             <h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary font-bold">
               مساحة رسمية واحدة لكل دور في قطاع الحضانات في الأردن.
             </h1>
@@ -245,24 +232,22 @@
               تربط KinJo أولياء الأمور وفرق الحضانة والمشرفين، ليبقى التسجيل والرعاية اليومية والحضور والتقارير الرسمية في سجل واحد آمن وثنائي اللغة.
             </p>
           </div>
+          {% endif %}
 
           <!-- Action CTAs -->
           <div class="flex flex-wrap gap-md pt-sm">
             {% if current_user %}
             <a class="inline-flex items-center justify-center px-xl py-4 bg-primary text-white font-label-bold text-label-bold rounded-lg hover:bg-primary/90 transition-colors shadow-md min-h-[48px]" href="/dashboard">
-              <span class="lang-en-content">Go to Dashboard</span>
-              <span class="lang-ar-content">الانتقال للوحة التحكم</span>
+              {% if ui_lang == 'en' %}Go to Dashboard{% else %}الانتقال للوحة التحكم{% endif %}
             </a>
             {% else %}
             {% if public_registration_enabled %}
             <a class="inline-flex items-center justify-center px-xl py-4 bg-primary text-white font-label-bold text-label-bold rounded-lg hover:bg-primary/90 transition-colors shadow-md min-h-[48px]" href="/register">
-              <span class="lang-en-content">Create an account</span>
-              <span class="lang-ar-content">إنشاء حساب</span>
+              {% if ui_lang == 'en' %}Create an account{% else %}إنشاء حساب{% endif %}
             </a>
             {% endif %}
             <a class="inline-flex items-center justify-center px-xl py-4 border-2 border-primary text-primary font-label-bold text-label-bold rounded-lg hover:bg-surface-container transition-colors bg-white/90 shadow-sm min-h-[48px]" href="/login">
-              <span class="lang-en-content">Sign in</span>
-              <span class="lang-ar-content">تسجيل الدخول</span>
+              {% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}
             </a>
             {% endif %}
           </div>
@@ -282,8 +267,7 @@
         <div class="flex flex-col items-center justify-center gap-md w-full">
           <p class="font-title-lg text-title-lg text-primary text-center flex items-center justify-center gap-2 mb-md">
             <span class="material-symbols-outlined text-tertiary" aria-hidden="true" data-icon="verified">verified</span>
-            <span class="lang-en-content">Trusted Partners</span>
-            <span class="lang-ar-content">الشركاء المعتمدون</span>
+            {% if ui_lang == 'en' %}Trusted Partners{% else %}الشركاء المعتمدون{% endif %}
           </p>
 
           <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-lg items-center justify-items-center opacity-80">
@@ -299,8 +283,7 @@
 
         <div class="mt-md bg-surface-container-low px-6 py-2 rounded-full border border-tertiary/30 shadow-sm">
           <p class="font-label-caps text-label-caps text-primary text-center tracking-wider">
-            <span class="lang-en-content">Part of Jordan's National Digital Transformation Strategy</span>
-            <span class="lang-ar-content">جزء من استراتيجية التحول الرقمي الوطني في الأردن</span>
+            {% if ui_lang == 'en' %}Part of Jordan's National Digital Transformation Strategy{% else %}جزء من استراتيجية التحول الرقمي الوطني في الأردن{% endif %}
           </p>
         </div>
 
@@ -311,8 +294,7 @@
     <section class="py-[120px] bg-surface-container-low max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop" aria-label="Role Portals">
       <div class="text-center mb-xl">
         <h2 class="font-display-lg-mobile md:font-headline-lg text-display-lg-mobile md:text-headline-lg text-primary mb-sm">
-          <span class="lang-en-content">Built for every participant in the sector</span>
-          <span class="lang-ar-content">مصمم لكل مشارك في القطاع</span>
+          {% if ui_lang == 'en' %}Built for every participant in the sector{% else %}مصمم لكل مشارك في القطاع{% endif %}
         </h2>
       </div>
 
@@ -324,16 +306,13 @@
             <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="family_home">family_home</span>
           </div>
           <h3 class="font-title-lg text-title-lg text-primary mb-sm">
-            <span class="lang-en-content">Parents &amp; Guardians</span>
-            <span class="lang-ar-content">أولياء الأمور</span>
+            {% if ui_lang == 'en' %}Parents &amp; Guardians{% else %}أولياء الأمور{% endif %}
           </h3>
           <p class="font-body-md text-body-md text-on-surface-variant mb-lg flex-grow leading-relaxed">
-            <span class="lang-en-content">Stay connected with real-time visibility into attendance, daily care reports, and secure communication with educators.</span>
-            <span class="lang-ar-content">ابق على اتصال مع رؤية في الوقت الفعلي للحضور وتقارير الرعاية اليومية والتواصل الآمن مع المعلمين.</span>
+            {% if ui_lang == 'en' %}Stay connected with real-time visibility into attendance, daily care reports, and secure communication with educators.{% else %}ابق على اتصال مع رؤية في الوقت الفعلي للحضور وتقارير الرعاية اليومية والتواصل الآمن مع المعلمين.{% endif %}
           </p>
           <a class="font-label-bold text-label-bold text-primary flex items-center gap-2 group-hover:text-tertiary transition-colors min-h-[44px]" href="/services#parents">
-            <span class="lang-en-content">See how it works</span>
-            <span class="lang-ar-content">شاهد كيف يعمل</span>
+            {% if ui_lang == 'en' %}See how it works{% else %}شاهد كيف يعمل{% endif %}
             <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true" data-icon="arrow_forward">arrow_forward</span>
           </a>
         </div>
@@ -344,16 +323,13 @@
             <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="fact_check">fact_check</span>
           </div>
           <h3 class="font-title-lg text-title-lg text-primary mb-sm">
-            <span class="lang-en-content">Supervisors</span>
-            <span class="lang-ar-content">المشرفون</span>
+            {% if ui_lang == 'en' %}Supervisors{% else %}المشرفون{% endif %}
           </h3>
           <p class="font-body-md text-body-md text-on-surface-variant mb-lg flex-grow leading-relaxed">
-            <span class="lang-en-content">Ensure compliance with streamlined oversight, official data exports, and standardized quality assurance tools.</span>
-            <span class="lang-ar-content">ضمان الامتثال من خلال إشراف مبسط وتصدير بيانات رسمية وأدوات ضمان جودة موحدة.</span>
+            {% if ui_lang == 'en' %}Ensure compliance with streamlined oversight, official data exports, and standardized quality assurance tools.{% else %}ضمان الامتثال من خلال إشراف مبسط وتصدير بيانات رسمية وأدوات ضمان جودة موحدة.{% endif %}
           </p>
           <a class="font-label-bold text-label-bold text-primary flex items-center gap-2 group-hover:text-tertiary transition-colors min-h-[44px]" href="/services#supervisors">
-            <span class="lang-en-content">See how it works</span>
-            <span class="lang-ar-content">شاهد كيف يعمل</span>
+            {% if ui_lang == 'en' %}See how it works{% else %}شاهد كيف يعمل{% endif %}
             <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true" data-icon="arrow_forward">arrow_forward</span>
           </a>
         </div>
@@ -364,16 +340,13 @@
             <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="domain">domain</span>
           </div>
           <h3 class="font-title-lg text-title-lg text-primary mb-sm">
-            <span class="lang-en-content">Kindergarten Managers</span>
-            <span class="lang-ar-content">مدراء الحضانات</span>
+            {% if ui_lang == 'en' %}Kindergarten Managers{% else %}مدراء الحضانات{% endif %}
           </h3>
           <p class="font-body-md text-body-md text-on-surface-variant mb-lg flex-grow leading-relaxed">
-            <span class="lang-en-content">Drive operational efficiency by managing the enrollment pipeline, staff allocation, and facility compliance in one place.</span>
-            <span class="lang-ar-content">زيادة الكفاءة التشغيلية من خلال إدارة مسار التسجيل وتخصيص الموظفين وامتثال المنشأة في مكان واحد.</span>
+            {% if ui_lang == 'en' %}Drive operational efficiency by managing the enrollment pipeline, staff allocation, and facility compliance in one place.{% else %}زيادة الكفاءة التشغيلية من خلال إدارة مسار التسجيل وتخصيص الموظفين وامتثال المنشأة في مكان واحد.{% endif %}
           </p>
           <a class="font-label-bold text-label-bold text-primary flex items-center gap-2 group-hover:text-tertiary transition-colors min-h-[44px]" href="/services#managers">
-            <span class="lang-en-content">See how it works</span>
-            <span class="lang-ar-content">شاهد كيف يعمل</span>
+            {% if ui_lang == 'en' %}See how it works{% else %}شاهد كيف يعمل{% endif %}
             <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true" data-icon="arrow_forward">arrow_forward</span>
           </a>
         </div>
@@ -391,32 +364,26 @@
         <div class="flex items-center gap-sm mb-4">
           <img alt="KinJo Logo" class="h-12 w-auto object-contain rounded-sm" src="/static/img/landing/logo.png">
           <span class="font-title-lg text-title-lg font-bold text-primary block">
-            <span class="lang-en-content">Jordan Kindergarten Portal</span>
-            <span class="lang-ar-content">بوابة رياض الأطفال الأردنية</span>
+            {% if ui_lang == 'en' %}Jordan Kindergarten Portal{% else %}بوابة الحضانات الأردنية{% endif %}
           </span>
         </div>
         <p class="font-body-sm text-body-sm text-on-surface-variant">
-          <span class="lang-en-content">© 2024 Ministry of Education - Hashemite Kingdom of Jordan. All Rights Reserved.</span>
-          <span class="lang-ar-content">© 2024 وزارة التربية والتعليم - المملكة الأردنية الهاشمية. جميع الحقوق محفوظة.</span>
+          {% if ui_lang == 'en' %}© 2024 Ministry of Education - Hashemite Kingdom of Jordan. All Rights Reserved.{% else %}© 2024 وزارة التربية والتعليم - المملكة الأردنية الهاشمية. جميع الحقوق محفوظة.{% endif %}
         </p>
       </div>
 
       <div class="col-span-1 md:col-span-2 flex flex-col md:flex-row gap-lg md:justify-end items-start md:items-center">
         <a class="font-body-sm text-body-sm text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="/privacy">
-          <span class="lang-en-content">Privacy Policy</span>
-          <span class="lang-ar-content">سياسة الخصوصية</span>
+          {% if ui_lang == 'en' %}Privacy Policy{% else %}سياسة الخصوصية{% endif %}
         </a>
         <a class="font-body-sm text-body-sm text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="/terms">
-          <span class="lang-en-content">Terms of Service</span>
-          <span class="lang-ar-content">شروط الخدمة</span>
+          {% if ui_lang == 'en' %}Terms of Service{% else %}شروط الخدمة{% endif %}
         </a>
         <a class="font-body-sm text-body-sm text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="/about">
-          <span class="lang-en-content">Accessibility Statement</span>
-          <span class="lang-ar-content">بيان إمكانية الوصول</span>
+          {% if ui_lang == 'en' %}Accessibility Statement{% else %}بيان إمكانية الوصول{% endif %}
         </a>
         <a class="font-body-sm text-body-sm text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="/services">
-          <span class="lang-en-content">National Portal</span>
-          <span class="lang-ar-content">البوابة الوطنية</span>
+          {% if ui_lang == 'en' %}National Portal{% else %}البوابة الوطنية{% endif %}
         </a>
       </div>
 
@@ -425,7 +392,7 @@
 
   <!-- KinJo Floating AI/FAQ Chatbot Widget -->
   {% include "components/chatbot.html" %}
-  <script src="/static/js/chatbot.js?v=69ceadb45f92"></script>
+  <script src="/static/js/chatbot.js?v=af0d12c76789"></script>
 
   <!-- Client-Side Language Toggle and Persistence Controller -->
   <script>

@@ -38,9 +38,14 @@ def test_home_page_shows_dashboard_cta_when_user_is_signed_in(client, admin_user
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
-    assert "Open your dashboard" in response.text
+    # Copy moved with the Stitch redesign ("Open your dashboard" -> "Go to
+    # Dashboard"). What this test is actually for is the rule, not the wording:
+    # a signed-in visitor is offered their dashboard and is never invited to
+    # create a second account.
+    assert "Go to Dashboard" in response.text
     assert "/dashboard" in response.text
     assert "Create an account" not in response.text
+    assert "Sign in" not in response.text
 
 
 def test_home_page_renders_in_arabic_without_english_ctas(client):
@@ -52,7 +57,18 @@ def test_home_page_renders_in_arabic_without_english_ctas(client):
     assert 'dir="rtl"' in response.text
     assert "إنشاء حساب" in response.text
     assert "تسجيل الدخول" in response.text
-    assert "شاهد طريقة العمل" in response.text
-    assert "Create an account" not in response.text
-    assert "Sign in" not in response.text
-    assert "See how it works" not in response.text
+
+    # The "شاهد طريقة العمل" CTA no longer exists -- the redesign dropped it.
+    #
+    # The page also used to ship BOTH languages and hide one with
+    # `body.lang-ar .lang-en-content { display: none }`, which is why the
+    # English assertions below were failing: the strings were in the source of
+    # every Arabic render. CLAUDE.md requires server-side
+    # {% if ui_lang == 'en' %} guards, and the switcher does a full page
+    # reload, so nothing needed the client-side toggle. With that converted,
+    # these assertions test what they always claimed to.
+    for english_cta in ("Create an account", "Sign in", "See how it works", "Go to Dashboard"):
+        assert english_cta not in response.text, (
+            f"{english_cta!r} rendered on the Arabic page -- Arabic is the "
+            f"default language and the page must not ship English copy it hides"
+        )

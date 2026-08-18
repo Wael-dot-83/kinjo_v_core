@@ -49,7 +49,7 @@ INTENT_KNOWLEDGE_BASE = [
         "target_role": "parent",
         "keywords_ar": ["تسجيل", "قبول", "تسجيل طفل", "طلب تسجيل", "كيف اسجل", "تسجيل روضة", "شروط القبول", "الأوراق المطلوبة", "المستندات المطلوبة", "وثائق التسجيل", "العمر المقبول", "سن القبول"],
         "keywords_en": ["enroll", "enrollment", "register", "admission", "apply", "register child", "documents required", "required papers", "accepted age", "age criteria"],
-        "reply_ar": "لتقديم طلب تسجيل طفلك في أي حضانة معتمدة عبر كينجو:\n\n1. استعرض دليل الحضانات واختر الحضانة الأنسب لموقعك.\n2. اضغط 'تقديم طلب تسجيل' وأدخل بيانات الطفل والولي.\n3. أرفق الوثائق الرسمية: شهادة الميلاد، دفتر العائلة، بطاقة المطاعيم، وتقرير الفحص الطبي.\n\nتصلك إشعارات فورية بحالة تدقيق الطلب واعتماده من إدارة الحضانة.",
+        "reply_ar": "لتقديم طلب تسجيل طفلك في أي حضانة معتمدة عبر KinJo:\n\n1. استعرض دليل الحضانات واختر الحضانة الأنسب لموقعك.\n2. اضغط 'تقديم طلب تسجيل' وأدخل بيانات الطفل والولي.\n3. أرفق الوثائق الرسمية: شهادة الميلاد، دفتر العائلة، بطاقة المطاعيم، وتقرير الفحص الطبي.\n\nتصلك إشعارات فورية بحالة تدقيق الطلب واعتماده من إدارة الحضانة.",
         "reply_en": "To apply for child enrollment in any accredited nursery via KinJo:\n\n1. Browse the nursery directory and choose the most suitable kindergarten.\n2. Click 'Apply for Enrollment' and enter the child and guardian details.\n3. Upload official documents: Birth certificate, Family book, Immunization record, and General health examination.\n\nYou will receive real-time notifications on application verification and admission.",
         "actions": [
             {"label_ar": "بدء طلب تسجيل إلكتروني", "label_en": "Start Digital Application", "url": "/enrollment/apply", "icon": "bi-person-plus-fill"},
@@ -64,7 +64,7 @@ INTENT_KNOWLEDGE_BASE = [
         "target_role": "parent",
         "keywords_ar": ["تقرير يومي", "تقارير يومية", "التقارير اليومية", "التقرير اليومي", "متابعة الطفل", "وجبات", "حضور الطفل", "غياب", "نوم", "قيلولة", "نشاطات الطفل", "سلوك الطفل", "ملاحظات المعلمة"],
         "keywords_en": ["daily report", "daily reports", "child tracking", "meals", "child attendance", "nap time", "activities", "child behavior", "teacher notes"],
-        "reply_ar": "تتيح لك منصة كينجو الاطلاع لحظياً على سجل يوم طفلك في الحضانة:\n\n• مواعيد تسجيل الحضور والانصراف بدقة.\n• تفاصيل وجبات الإفطار والغداء والكميات المتناولة.\n• فترات القيلولة والراحة وساعات النوم.\n• الأنشطة التعليمية والحركية والمهارات المكتسبة.\n• الملاحظات اليومية المباشرة من المربية أو المعلمة.",
+        "reply_ar": "تتيح لك منصة KinJo الاطلاع لحظياً على سجل يوم طفلك في الحضانة:\n\n• مواعيد تسجيل الحضور والانصراف بدقة.\n• تفاصيل وجبات الإفطار والغداء والكميات المتناولة.\n• فترات القيلولة والراحة وساعات النوم.\n• الأنشطة التعليمية والحركية والمهارات المكتسبة.\n• الملاحظات اليومية المباشرة من المربية أو المعلمة.",
         "reply_en": "KinJo enables you to monitor your child's daily nursery journey in real-time:\n\n• Accurate check-in and check-out timestamps.\n• Meals & nutrition intake breakdown (breakfast, lunch, snacks).\n• Nap times and rest duration.\n• Learning, sensory, and motor activities completed.\n• Direct daily observations and notes from educators.",
         "actions": [
             {"label_ar": "التقارير اليومية لطفلي", "label_en": "Child Daily Reports", "url": "/parent/dashboard", "icon": "bi-journal-check"},
@@ -78,7 +78,7 @@ INTENT_KNOWLEDGE_BASE = [
         "target_role": "parent",
         "keywords_ar": ["تطعيمات", "لقاحات", "صحة الطفل", "جدول التطعيمات", "حساسية طعام", "حساسية دواء", "طوارئ طبية", "ملف صحي", "وزارة الصحة", "طبيب الحضانة"],
         "keywords_en": ["vaccine", "vaccination", "child health", "immunization schedule", "food allergy", "medical emergency", "health profile", "ministry of health"],
-        "reply_ar": "تلتزم منصة كينجو بالبرنامج الوطني للتطعيم المعتمد من وزارة الصحة الأردنية:\n\n• يمكنك رفع وتحديث بطاقة التطعيمات لطفلك إلكترونياً.\n• توثيق أي حساسية غذائية (كالقمح، الحليب، المكسرات) أو حساسية دوائية لإشعار الكادر فوراً.\n• تفعيل بروتوكول الرعاية الطبية وإشعارات الطوارئ المسجلة للحضانة.",
+        "reply_ar": "تلتزم منصة KinJo بالبرنامج الوطني للتطعيم المعتمد من وزارة الصحة الأردنية:\n\n• يمكنك رفع وتحديث بطاقة التطعيمات لطفلك إلكترونياً.\n• توثيق أي حساسية غذائية (كالقمح، الحليب، المكسرات) أو حساسية دوائية لإشعار الكادر فوراً.\n• تفعيل بروتوكول الرعاية الطبية وإشعارات الطوارئ المسجلة للحضانة.",
         "reply_en": "KinJo complies with Jordan's National Immunization Program (Ministry of Health):\n\n• Upload and maintain your child's digital immunization card.\n• Record food allergies (e.g. dairy, gluten, nuts) or medication notes to alert staff instantly.\n• Enable emergency health protocols and authorized emergency contacts.",
         "actions": [
             {"label_ar": "تحديث الملف الصحي والمطاعيم", "label_en": "Update Health & Vaccines", "url": "/parent/children", "icon": "bi-shield-plus"},
@@ -110,7 +110,7 @@ INTENT_KNOWLEDGE_BASE = [
         "target_role": "manager",
         "keywords_ar": ["إدارة الحضانة", "لوحة الإدارة", "تسجيل حضور الكادر", "توزيع الفصول", "شعب الحضانة", "السعة الاستيعابية", "قبول الطلاب", "إدارة التسجيل", "إدارة الموظفين", "المربيات"],
         "keywords_en": ["nursery management", "manager dashboard", "staff attendance", "classroom allocation", "nursery sections", "capacity", "admissions pipeline", "manage registration", "manage staff"],
-        "reply_ar": "توفر لوحة إدارة الحضانة في كينجو تحكماً شاملاً في العمليات اليومية:\n\n1. مسار التسجيل: تدقيق طلبات القبول واعتماد تسجيل الأطفال وإسنادهم للشعب المناسبة.\n2. إدارة الفصول: متابعة السعة الاستيعابية والنسبة القانونية لكل مربية وفق تعليمات الوزارة.\n3. الكادر التعليمي: متابعة حضور الموظفين، سجل المؤهلات والشهادات، وساعات العمل.\n4. الحوادث والسلامة: توثيق أي طارئ أو حادث في سجل السلامة الرسمي فوراً.",
+        "reply_ar": "توفر لوحة إدارة الحضانة في KinJo تحكماً شاملاً في العمليات اليومية:\n\n1. مسار التسجيل: تدقيق طلبات القبول واعتماد تسجيل الأطفال وإسنادهم للشعب المناسبة.\n2. إدارة الفصول: متابعة السعة الاستيعابية والنسبة القانونية لكل مربية وفق تعليمات الوزارة.\n3. الكادر التعليمي: متابعة حضور الموظفين، سجل المؤهلات والشهادات، وساعات العمل.\n4. الحوادث والسلامة: توثيق أي طارئ أو حادث في سجل السلامة الرسمي فوراً.",
         "reply_en": "The KinJo Kindergarten Operations Dashboard delivers complete control over daily facility workflows:\n\n1. Admissions Pipeline: Review incoming enrollments, accept students, and assign classrooms.\n2. Capacity & Ratios: Monitor real-time classroom capacity and legally mandated teacher-to-child ratios.\n3. Staff Management: Track staff attendance, qualification certifications, and working shifts.\n4. Health & Safety: Instantly document incidents or medical logs in the official safety log.",
         "actions": [
             {"label_ar": "لوحة تحكم إدارة الحضانة", "label_en": "Operations Dashboard", "url": "/dashboard", "icon": "bi-kanban-fill"},
@@ -161,7 +161,7 @@ INTENT_KNOWLEDGE_BASE = [
         "target_role": "general",
         "keywords_ar": ["بحث عن حضانة", "حضانات عمان", "حضانات اربد", "حضانات الزرقاء", "حضانات قريبة", "دليل الحضانات", "حضانة معتمدة", "موقع الحضانة", "روضات الأردن"],
         "keywords_en": ["find nursery", "nursery search", "nurseries in amman", "licensed nursery", "directory", "accredited", "locations in jordan", "kindergartens jordan"],
-        "reply_ar": "تضم منصة كينجو دليلاً وطنياً شاملاً لجميع رياض الأطفال والحضانات المرخصة في المملكة الأردنية الهاشمية (عمان، إربد، الزرقاء، وكافة المحافظات). يمكنك البحث والفلترة حسب المحافظة، الفئة العمرية، والتقييمات الرسمية.",
+        "reply_ar": "تضم منصة KinJo دليلاً وطنياً شاملاً لجميع الحضانات والحضانات المرخصة في المملكة الأردنية الهاشمية (عمان، إربد، الزرقاء، وكافة المحافظات). يمكنك البحث والفلترة حسب المحافظة، الفئة العمرية، والتقييمات الرسمية.",
         "reply_en": "KinJo hosts a comprehensive national directory of licensed and accredited kindergartens across Jordan (Amman, Irbid, Zarqa, and all governorates) with filtering by location, age group, curriculum, and ratings.",
         "actions": [
             {"label_ar": "دليل الحضانات الشامل", "label_en": "Nursery Directory", "url": "/kindergartens", "icon": "bi-geo-alt-fill"},
@@ -175,7 +175,7 @@ INTENT_KNOWLEDGE_BASE = [
         "target_role": "general",
         "keywords_ar": ["أمان", "خصوصية", "تشفير", "حماية البيانات", "بيانات الطفل", "الحوكمة الإلكترونية", "وزارة الاقتصاد الرقمي", "سري"],
         "keywords_en": ["security", "privacy", "encryption", "data protection", "child data", "e-government", "ministry of digital economy", "confidential"],
-        "reply_ar": "تلتزم كينجو بأعلى معايير الأمن السيبراني وحماية البيانات الوطنية في الأردن:\n\n• تشفير كامل لكافة السجلات الشخصية والطبية أثناء النقل والتخزين.\n• صلاحيات وصول محكمة وفق الدور (ولي أمر، مشرف، مدير حضانة).\n• الامتثال لقانون حماية البيانات الشخصية الأردني ومعايير الحوكمة الإلكترونية الرسمية.",
+        "reply_ar": "تلتزم KinJo بأعلى معايير الأمن السيبراني وحماية البيانات الوطنية في الأردن:\n\n• تشفير كامل لكافة السجلات الشخصية والطبية أثناء النقل والتخزين.\n• صلاحيات وصول محكمة وفق الدور (ولي أمر، مشرف، مدير حضانة).\n• الامتثال لقانون حماية البيانات الشخصية الأردني ومعايير الحوكمة الإلكترونية الرسمية.",
         "reply_en": "KinJo is engineered to strict national cybersecurity and privacy standards in Jordan:\n\n• End-to-end encryption for all personal and medical records in transit and at rest.\n• Granular role-based access control (Parent, Supervisor, Manager, Auditor).\n• Compliance with Jordan's Personal Data Protection Law and official e-government guidelines.",
         "actions": [
             {"label_ar": "سياسة الخصوصية وحماية البيانات", "label_en": "Privacy Policy", "url": "/privacy", "icon": "bi-shield-lock-fill"},
@@ -189,7 +189,7 @@ INTENT_KNOWLEDGE_BASE = [
         "target_role": "general",
         "keywords_ar": ["دعم", "مساعدة", "اتصال", "تواصل", "رقم الهاتف", "مشكلة تقنية", "شكوى", "استفسار", "ساعات العمل", "خدمة العملاء"],
         "keywords_en": ["support", "help", "contact", "phone", "technical issue", "complaint", "inquiry", "email", "working hours", "customer service"],
-        "reply_ar": "فريق الدعم الفني وخدمة العملاء في كينجو جاهز لمساعدتكم:\n\n• نموذج الاتصال السريع عبر المنصة.\n• خط الدعم المباشر ومكتب المساعدة الفنية.\n• مركز الأسئلة الشائعة لإجابات فورية على استفساراتكم.",
+        "reply_ar": "فريق الدعم الفني وخدمة العملاء في KinJo جاهز لمساعدتكم:\n\n• نموذج الاتصال السريع عبر المنصة.\n• خط الدعم المباشر ومكتب المساعدة الفنية.\n• مركز الأسئلة الشائعة لإجابات فورية على استفساراتكم.",
         "reply_en": "KinJo's Technical Support and Customer Care team is ready to assist you:\n\n• Fast online contact and ticketing form.\n• Direct technical helpdesk support.\n• Comprehensive FAQ Center for instant answers.",
         "actions": [
             {"label_ar": "نموذج اتصل بنا", "label_en": "Contact Helpdesk", "url": "/contact", "icon": "bi-envelope-fill"},
@@ -282,7 +282,7 @@ def chat_with_assistant(payload: ChatRequest):
     if role == "parent":
         if lang == "ar":
             reply = (
-                "أهلاً بك يا ولي الأمر في منصة كينجو! 👋\n\n"
+                "أهلاً بك يا ولي الأمر في منصة KinJo! 👋\n\n"
                 "يمكنني مساعدتك في: تسجيل طفلك، متابعة التقارير اليومية، الاطلاع على مواعيد التطعيمات، "
                 "أو التواصل المباشر مع الحضانة. ما الذي تود الاستفسار عنه؟"
             )
@@ -384,7 +384,7 @@ def chat_with_assistant(payload: ChatRequest):
         # General / Visitor
         if lang == "ar":
             reply = (
-                "أهلاً بك في منصة كينجو الوطنية لرياض الأطفال في الأردن! 🇯🇴\n\n"
+                "أهلاً بك في منصة KinJo الوطنية للحضانات في الأردن! 🇯🇴\n\n"
                 "أنا المساعد الذكي المعتمد، اختر دورك أو اسألني مباشرة عن: البحث عن الحضانات المرخصة، "
                 "إجراءات التسجيل، التقارير اليومية، معايير الرقابة والتفتيش، أو الدعم الفني."
             )
