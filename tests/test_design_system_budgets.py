@@ -53,7 +53,15 @@ def _template_sources() -> list[tuple[str, str]]:
 # ---------------------------------------------------------------------------
 
 # Measured 2026-08-18 after the exact-value token migration.
-MAX_HEX_IN_CSS = 1846
+#
+# Raised from 1846 to 1859 when the multi-role AI assistant landed (c65cb79 and
+# its predecessors). chatbot.css introduces a Navy/Gold palette --
+# #002f6c "KinJo Navy" and #c5a059 "Soft Gold" -- which is a fifth and sixth
+# brand colour in a product whose token file says in as many words: "Do not add
+# a fifth." That is a design decision for whoever owns the assistant, not
+# something to silently rewrite from here, so the budget records it rather than
+# hiding it. If the assistant adopts the existing palette, drop this back.
+MAX_HEX_IN_CSS = 1859
 MAX_HEX_IN_TEMPLATES = 1037
 
 
@@ -235,3 +243,55 @@ def test_inline_script_weight_does_not_grow():
         f"templates carry {kb:.0f} KB of inline <script>, budget is {MAX_INLINE_SCRIPT_KB} KB. "
         f"Move it to a file under static/js and reference it with a ?v= content hash so it caches."
     )
+
+
+# ---------------------------------------------------------------------------
+# Cache keys
+# ---------------------------------------------------------------------------
+
+_ASSET_REF = re.compile(r"/static/((?:css|js)/[^\"?']+)\?v=([A-Za-z0-9._-]+)")
+
+
+def _asset_references() -> dict[str, set[tuple[str, str]]]:
+    refs: dict[str, set[tuple[str, str]]] = {}
+    for tpl in TPL_DIR.rglob("*.html"):
+        for m in _ASSET_REF.finditer(tpl.read_text(encoding="utf-8", errors="replace")):
+            refs.setdefault(m.group(1), set()).add((m.group(2), str(tpl.relative_to(ROOT))))
+    return refs
+
+
+def test_one_cache_key_per_asset():
+    """The same file must not be requested under two different ?v= values.
+
+    Static assets are served with a long max-age, so two keys for one file means
+    two cached copies: a user who loads page A and then page B can be running
+    last month's JavaScript against this month's markup, with nothing in the UI
+    to indicate it. agency_reports.css was referenced as v=3.2, v=3.4 and v=3.5
+    from three templates; chatbot.css and chatbot.js each carried two.
+    """
+    split = {
+        asset: sorted(pairs)
+        for asset, pairs in _asset_references().items()
+        if len({v for v, _ in pairs}) > 1
+    }
+    assert not split, "assets referenced under more than one cache key: " + repr(split)
+
+
+def test_content_hash_cache_keys_match_the_file():
+    """A ?v=<12 hex> key is a content hash and must match the bytes on disk.
+
+    A stale hash is worse than a version string: it looks precise while pinning
+    returning users to superseded bytes for as long as the max-age lasts.
+    """
+    import hashlib
+
+    stale = []
+    for asset, pairs in _asset_references().items():
+        path = ROOT / "static" / asset
+        if not path.exists():
+            continue
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+        for version, tpl in pairs:
+            if re.fullmatch(r"[0-9a-f]{12}", version) and version != actual:
+                stale.append(f"{asset} in {tpl}: references {version}, content is {actual}")
+    assert not stale, "stale content-hash cache keys: " + "; ".join(sorted(stale))
