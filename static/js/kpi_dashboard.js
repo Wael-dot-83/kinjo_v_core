@@ -134,12 +134,17 @@
       if (typeof window.fetchWithAuth === "function") {
         return window.fetchWithAuth(url, options);
       }
-      const token = getToken();
-      const headers = new Headers(options.headers || {});
-      if (token && !headers.has("Authorization")) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-      return fetch(url, { ...options, headers });
+      // No Authorization header, deliberately. The session lives in the HttpOnly
+      // kinjo_session cookie; auth.js injects X-CSRF-Token on unsafe methods.
+      //
+      // This used to fall back to `Bearer ${getToken()}`, which is worse than
+      // useless: AuthStorage.getToken() returns the CSRF cookie as a truthy
+      // sentinel (kinjo_token has not been written since the JWT left browser
+      // storage), so the request that would have authenticated on the cookie
+      // alone took a 401 -- and auth.js turns any 401 into
+      // window.location.href = "/login?expired=true". The KPI dashboard logged
+      // the user out. See tests/test_frontend_auth_header_contract.py.
+      return fetch(url, { ...options, credentials: "same-origin" });
     }
 
     function extractErrorMessage(error, fallbackMessage) {

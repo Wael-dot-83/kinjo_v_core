@@ -953,13 +953,23 @@ class TestFrontendRoutes:
         assert 'id="filterStatus"' in page
         assert 'id="filterError"' in page
         assert "\u062c\u0645\u064a\u0639 \u0627\u0644\u062d\u0636\u0627\u0646\u0627\u062a" in page
-        assert page.count("function renderRankingList(") == 1
-        assert page.count("function escapeHtml(") == 1
-        assert page.count("requestWithAuth(") >= 1
-        assert page.count("function createTrendChart(") == 1
-        assert "noDataOverlay" in page
-        assert page.count("function renderStudentDistribution(") == 1
-        assert "/ws/dashboard?token=" in page
+        # The behaviour moved out of the template into a versioned file, so that
+        # 63 KB could be cached instead of re-downloaded on every page view.
+        # These assertions guard exactly what they always did -- each function
+        # defined once, no accidental duplicate -- they just look where the code
+        # now lives. The page must still reference it.
+        assert 'src="/static/js/kpi_dashboard.js?v=' in page, (
+            "the KPI dashboard script must be referenced with a cache key"
+        )
+        script = (Path(__file__).resolve().parent.parent
+                  / "static" / "js" / "kpi_dashboard.js").read_text(encoding="utf-8")
+        assert script.count("function renderRankingList(") == 1
+        assert script.count("function escapeHtml(") == 1
+        assert script.count("requestWithAuth(") >= 1
+        assert script.count("function createTrendChart(") == 1
+        assert script.count("function renderStudentDistribution(") == 1
+        assert "/ws/dashboard?token=" in script
+        assert "noDataOverlay" in script
 
         app.dependency_overrides.clear()
 
