@@ -225,11 +225,11 @@
           </div>
           {% else %}
           <div class="space-y-md">
-            <h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary font-bold">
-              مساحة رسمية واحدة لكل دور في قطاع الحضانات في الأردن.
+            <h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary font-bold leading-tight">
+              المنصة الوطنية الموحدة لقطاع الحضانات ورياض الأطفال في الأردن 🇯🇴
             </h1>
-            <p class="font-body-lg text-body-lg text-on-surface-variant font-normal border-r-4 border-tertiary pr-6 py-2">
-              تربط KinJo أولياء الأمور وفرق الحضانة والمشرفين، ليبقى التسجيل والرعاية اليومية والحضور والتقارير الرسمية في سجل واحد آمن وثنائي اللغة.
+            <p class="font-body-lg text-body-lg text-on-surface-variant font-normal border-r-4 border-tertiary pr-6 py-2 leading-relaxed">
+              منظومة إلكترونية متكاملة تربط أولياء الأمور وإدارات الحضانات والمشرفين التربويين، لإدارة التسجيل، والرعاية اليومية، والمتابعة الصحية، والتقارير الرقابية المعتمدة بكل موثوقية وأمان.
             </p>
           </div>
           {% endif %}
@@ -238,16 +238,14 @@
           <div class="flex flex-wrap gap-md pt-sm">
             {% if current_user %}
             <a class="inline-flex items-center justify-center px-xl py-4 bg-primary text-white font-label-bold text-label-bold rounded-lg hover:bg-primary/90 transition-colors shadow-md min-h-[48px]" href="/dashboard">
-              {% if ui_lang == 'en' %}Go to Dashboard{% else %}الانتقال للوحة التحكم{% endif %}
+              {% if ui_lang == 'en' %}Go to Dashboard{% else %}الانتقال إلى لوحة التحكم{% endif %}
             </a>
             {% else %}
-            {% if public_registration_enabled %}
-            <a class="inline-flex items-center justify-center px-xl py-4 bg-primary text-white font-label-bold text-label-bold rounded-lg hover:bg-primary/90 transition-colors shadow-md min-h-[48px]" href="/register">
-              {% if ui_lang == 'en' %}Create an account{% else %}إنشاء حساب{% endif %}
+            <a class="inline-flex items-center justify-center px-xl py-4 bg-primary text-white font-label-bold text-label-bold rounded-lg hover:bg-primary/90 transition-colors shadow-md min-h-[48px]" href="/login">
+              {% if ui_lang == 'en' %}Sign in to Platform{% else %}تسجيل الدخول إلى المنصة{% endif %}
             </a>
-            {% endif %}
-            <a class="inline-flex items-center justify-center px-xl py-4 border-2 border-primary text-primary font-label-bold text-label-bold rounded-lg hover:bg-surface-container transition-colors bg-white/90 shadow-sm min-h-[48px]" href="/login">
-              {% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}
+            <a class="inline-flex items-center justify-center px-xl py-4 border-2 border-primary text-primary font-label-bold text-label-bold rounded-lg hover:bg-surface-container transition-colors bg-white/90 shadow-sm min-h-[48px]" href="/kindergartens">
+              {% if ui_lang == 'en' %}Explore Accredited Nurseries{% else %}استعراض الحضانات المعتمدة{% endif %}
             </a>
             {% endif %}
           </div>
@@ -267,7 +265,7 @@
         <div class="flex flex-col items-center justify-center gap-md w-full">
           <p class="font-title-lg text-title-lg text-primary text-center flex items-center justify-center gap-2 mb-md">
             <span class="material-symbols-outlined text-tertiary" aria-hidden="true" data-icon="verified">verified</span>
-            {% if ui_lang == 'en' %}Trusted Partners{% else %}الشركاء المعتمدون{% endif %}
+            {% if ui_lang == 'en' %}Official Institutional Partners{% else %}الجهات والمؤسسات الشريكة المعتمدة{% endif %}
           </p>
 
           <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-lg items-center justify-items-center opacity-80">
@@ -283,7 +281,7 @@
 
         <div class="mt-md bg-surface-container-low px-6 py-2 rounded-full border border-tertiary/30 shadow-sm">
           <p class="font-label-caps text-label-caps text-primary text-center tracking-wider">
-            {% if ui_lang == 'en' %}Part of Jordan's National Digital Transformation Strategy{% else %}جزء من استراتيجية التحول الرقمي الوطني في الأردن{% endif %}
+            {% if ui_lang == 'en' %}Part of Jordan's National Digital Transformation Strategy{% else %}إحدى مبادرات التحول الرقمي الوطني وحوكمة قطاع الطفولة في المملكة الأردنية الهاشمية{% endif %}
           </p>
         </div>
 
@@ -293,8 +291,8 @@
     <!-- Section 3: Persona Strip (Exact Stitch Match) -->
     <section class="py-[120px] bg-surface-container-low max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop" aria-label="Role Portals">
       <div class="text-center mb-xl">
-        <h2 class="font-display-lg-mobile md:font-headline-lg text-display-lg-mobile md:text-headline-lg text-primary mb-sm">
-          {% if ui_lang == 'en' %}Built for every participant in the sector{% else %}مصمم لكل مشارك في القطاع{% endif %}
+        <h2 class="font-display-lg-mobile md:font-headline-lg text-display-lg-mobile md:text-headline-lg text-primary mb-sm font-bold">
+          {% if ui_lang == 'en' %}Comprehensive Portals Built for Every Role{% else %}منظومة متكاملة تلبي احتياجات جميع أطراف الرعاية والتعليم{% endif %}
         </h2>
       </div>
 
@@ -305,14 +303,14 @@
           <div class="w-14 h-14 bg-surface-container-low text-primary border border-tertiary/30 rounded-xl flex items-center justify-center mb-md group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
             <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="family_home">family_home</span>
           </div>
-          <h3 class="font-title-lg text-title-lg text-primary mb-sm">
+          <h3 class="font-title-lg text-title-lg text-primary mb-sm font-bold">
             {% if ui_lang == 'en' %}Parents &amp; Guardians{% else %}أولياء الأمور{% endif %}
           </h3>
           <p class="font-body-md text-body-md text-on-surface-variant mb-lg flex-grow leading-relaxed">
-            {% if ui_lang == 'en' %}Stay connected with real-time visibility into attendance, daily care reports, and secure communication with educators.{% else %}ابق على اتصال مع رؤية في الوقت الفعلي للحضور وتقارير الرعاية اليومية والتواصل الآمن مع المعلمين.{% endif %}
+            {% if ui_lang == 'en' %}Stay connected with real-time visibility into attendance, daily care reports, and secure communication with educators.{% else %}متابعة فورية للحضور والانصراف، وسجلات التغذية والنوم اليومية، والتواصل المباشر مع الكادر التعليمي.{% endif %}
           </p>
           <a class="font-label-bold text-label-bold text-primary flex items-center gap-2 group-hover:text-tertiary transition-colors min-h-[44px]" href="/services#parents">
-            {% if ui_lang == 'en' %}See how it works{% else %}شاهد كيف يعمل{% endif %}
+            {% if ui_lang == 'en' %}Explore Parent Services{% else %}استعراض خدمات أولياء الأمور{% endif %}
             <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true" data-icon="arrow_forward">arrow_forward</span>
           </a>
         </div>
@@ -322,14 +320,14 @@
           <div class="w-14 h-14 bg-surface-container-low text-primary border border-tertiary/30 rounded-xl flex items-center justify-center mb-md group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
             <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="fact_check">fact_check</span>
           </div>
-          <h3 class="font-title-lg text-title-lg text-primary mb-sm">
-            {% if ui_lang == 'en' %}Supervisors{% else %}المشرفون{% endif %}
+          <h3 class="font-title-lg text-title-lg text-primary mb-sm font-bold">
+            {% if ui_lang == 'en' %}Supervisors &amp; Auditors{% else %}المشرفون والمدققون التربويون{% endif %}
           </h3>
           <p class="font-body-md text-body-md text-on-surface-variant mb-lg flex-grow leading-relaxed">
-            {% if ui_lang == 'en' %}Ensure compliance with streamlined oversight, official data exports, and standardized quality assurance tools.{% else %}ضمان الامتثال من خلال إشراف مبسط وتصدير بيانات رسمية وأدوات ضمان جودة موحدة.{% endif %}
+            {% if ui_lang == 'en' %}Ensure compliance with streamlined oversight, official data exports, and standardized quality assurance tools.{% else %}أدوات تدقيق رقمية ميدانية، ومطابقة النسب القانونية (مربية / طفل)، وتصدير التقارير الإحصائية المعتمدة.{% endif %}
           </p>
           <a class="font-label-bold text-label-bold text-primary flex items-center gap-2 group-hover:text-tertiary transition-colors min-h-[44px]" href="/services#supervisors">
-            {% if ui_lang == 'en' %}See how it works{% else %}شاهد كيف يعمل{% endif %}
+            {% if ui_lang == 'en' %}Explore Supervisor Tools{% else %}استعراض أدوات الإشراف والرقابة{% endif %}
             <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true" data-icon="arrow_forward">arrow_forward</span>
           </a>
         </div>
@@ -339,14 +337,14 @@
           <div class="w-14 h-14 bg-surface-container-low text-primary border border-tertiary/30 rounded-xl flex items-center justify-center mb-md group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
             <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="domain">domain</span>
           </div>
-          <h3 class="font-title-lg text-title-lg text-primary mb-sm">
-            {% if ui_lang == 'en' %}Kindergarten Managers{% else %}مدراء الحضانات{% endif %}
+          <h3 class="font-title-lg text-title-lg text-primary mb-sm font-bold">
+            {% if ui_lang == 'en' %}Kindergarten Managers{% else %}إدارات الحضانات والروضات{% endif %}
           </h3>
           <p class="font-body-md text-body-md text-on-surface-variant mb-lg flex-grow leading-relaxed">
-            {% if ui_lang == 'en' %}Drive operational efficiency by managing the enrollment pipeline, staff allocation, and facility compliance in one place.{% else %}زيادة الكفاءة التشغيلية من خلال إدارة مسار التسجيل وتخصيص الموظفين وامتثال المنشأة في مكان واحد.{% endif %}
+            {% if ui_lang == 'en' %}Drive operational efficiency by managing the enrollment pipeline, staff allocation, and facility compliance in one place.{% else %}إدارة مسار القبول والتسجيل، وتنظيم الشعب وتوزيع الكادر، ومتابعة الامتثال لمعايير الترخيص والسلامة.{% endif %}
           </p>
           <a class="font-label-bold text-label-bold text-primary flex items-center gap-2 group-hover:text-tertiary transition-colors min-h-[44px]" href="/services#managers">
-            {% if ui_lang == 'en' %}See how it works{% else %}شاهد كيف يعمل{% endif %}
+            {% if ui_lang == 'en' %}Explore Manager Solutions{% else %}استعراض حلول إدارة الحضانات{% endif %}
             <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true" data-icon="arrow_forward">arrow_forward</span>
           </a>
         </div>

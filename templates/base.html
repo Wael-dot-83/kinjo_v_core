@@ -42,9 +42,7 @@
       <meta name="author" content="KinJo" />
       <meta name="theme-color" content="#1F5E47" />
       <meta name="color-scheme" content="light" />
-      <title>
-        {% block title %}KinJo{% endblock %} &ndash; KinJo
-      </title>
+      <title>{% block title %}{% if ui_lang == 'en' %}KinJo — Jordan Kindergarten Portal{% else %}KinJo — بوابة الحضانات والروضات الرسمية{% endif %}{% endblock %}</title>
 
       <!-- Favicon -->
       <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
