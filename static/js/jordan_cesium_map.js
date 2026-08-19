@@ -325,7 +325,19 @@ function updateGovLabels(govs) {
     // dots and diacritics before Latin loses anything at small sizes.
     labelDiv.style.fontSize = '12px';
     labelDiv.style.fontWeight = 'bold';
-    labelDiv.style.fontFamily = 'system-ui, sans-serif';
+    // Inherit the consolidated stack rather than system-ui: these labels are
+    // Arabic governorate names, and system-ui hands them to whatever face the
+    // OS happens to supply instead of Noto Sans Arabic. --kinjo-font-family
+    // already resolves to the Arabic or Latin stack from the document
+    // language, and design-tokens.css is reachable from every rendered
+    // document (tests/test_design_token_reachability.py), so this cannot fall
+    // back to an unstyled inherit.
+    labelDiv.style.fontFamily = 'var(--kinjo-font-family)';
+    // The halo is what makes white legible over the heat overlay: the tiles
+    // underneath range from light basemap to dark red, so a fixed foreground
+    // needs its own backing. Contrast tooling that compares color against the
+    // composited background cannot see text-shadow and will read these as
+    // ~1.3:1; the rendered pixels are not that.
     labelDiv.style.textShadow = '0px 1px 3px rgba(0,0,0,0.8)';
     labelDiv.style.transform = 'translate(-50%, -50%)';
 
