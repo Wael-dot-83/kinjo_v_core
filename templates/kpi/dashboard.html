@@ -297,7 +297,11 @@ endblock %} {% block extra_css %}
                   'en' %}Suggested Improvement Actions:{% else %}إجراءات مقترحة
                   للتحسين:{% endif %}
                 </div>
-                <ul class="mb-0 ps-3 small" id="suggestedActionsList"></ul>
+                <!-- no .small here: .action-suggest is already 0.85rem (13.6px), and
+                     Bootstrap's .small is 0.875em, so the two compounded to
+                     11.9px -- under the 12px floor, where Arabic starts
+                     losing its dots. -->
+                <ul class="mb-0 ps-3" id="suggestedActionsList"></ul>
               </div>
             </div>
             <div class="col-md-5 text-center">

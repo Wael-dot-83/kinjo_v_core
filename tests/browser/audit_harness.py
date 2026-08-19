@@ -78,6 +78,14 @@ CONTRAST_JS = r"""
     if (cs.display === 'none' || cs.visibility === 'hidden') return;
     if (parseFloat(cs.opacity) === 0) return;
     const r = el.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return;
+    // Screen-reader-only text paints no pixels, so its contrast is meaningless.
+    // Bootstrap's .visually-hidden is 1x1 with clip:rect(0,0,0,0), which slips
+    // past the size check above and reported four "failures" on /kpi/dashboard
+    // for text no sighted user can see. Excluding it removes noise, not debt --
+    // any element that is genuinely visible still has clip/clip-path 'auto'/'none'.
+    const clip = cs.clip, cp = cs.clipPath;
+    if ((clip && clip !== 'auto' && /rect\(\s*0/.test(clip)) ||
+        (cp && cp !== 'none' && /inset\(\s*(50%|100%)/.test(cp))) return;
     const fg = parse(cs.color); if (!fg || fg.a < 0.95) return;
     const bg = backing(el);
     const sel = el.tagName.toLowerCase() +

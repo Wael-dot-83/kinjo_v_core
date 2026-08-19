@@ -52,7 +52,11 @@
   --kinjo-bg-light: var(--kinjo-color-bg-body, #FAF9F6);
   --kinjo-bg-dark: #0f172a;
   --kinjo-text-primary: #1e293b;
-  --kinjo-text-secondary: #64748b;
+  /* The previous slate grey landed at 4.0-4.45:1 on the light tints this token is
+     actually used over (pagination chrome, badges, .bg-light buttons) --
+     under the 4.5:1 floor in every one of those places. dark-mode.css
+     redefines this token separately, so dark surfaces are unaffected. */
+  --kinjo-text-secondary: var(--kinjo-color-neutral-text);
   /* was #64748b: 3.9-4.27:1 as text on this file's tinted surfaces */
   --kinjo-text-muted: #475569;
   /* Aliases, not copies — same reason as --kinjo-bg-light above. These held their
@@ -281,8 +285,12 @@ html {
 }
 
 .btn-danger {
-  background: var(--kinjo-danger);
-  border-color: var(--kinjo-danger);
+  /* --kinjo-danger (#ef4444) is the right hue for a danger *surface* -- a
+     chart band, a status fill -- but white on it is 3.76:1, and this class is
+     used on real controls such as "report an incident" on /safety. The action
+     variant keeps the same hue at 5.74:1 with white. */
+  background: var(--kinjo-color-danger-action);
+  border-color: var(--kinjo-color-danger-action);
 }
 
 /* Icon button helper */
@@ -375,6 +383,20 @@ html {
   font-weight: 500;
   border-radius: var(--kinjo-radius-sm);
   letter-spacing: 0.02em;
+  /* rem, not Bootstrap's .75em: em compounds against the parent, so a badge
+     inside a 14px block rendered at 10.5px on /safety. Arabic loses its dots
+     and diacritics before Latin loses anything, so the 12px floor is a
+     legibility limit here, not a preference. */
+  font-size: 0.75rem;
+}
+
+/* Arabic is cursive -- its letters join -- and letter-spacing pulls those
+   joins apart, so tracking that flatters Latin small-caps actively damages
+   Arabic. The badges carry Arabic on live surfaces (the status word on
+   /kpi/dashboard is "ضعيف"), so the tracking above must not apply when the
+   document is Arabic. Latin text explicitly marked lang="en" keeps it. */
+[dir="rtl"] .badge:not([lang="en"]) {
+  letter-spacing: normal;
 }
 
 /* Pill badges */
@@ -1935,6 +1957,11 @@ body.sidebar-open .sidebar-backdrop {
 .pagination .page-item.active .page-link {
   background-color: var(--kinjo-primary);
   border-color: var(--kinjo-primary);
+  /* The active state set a dark brand background and no foreground, so it
+     inherited the secondary grey from .page-link above: grey on dark green,
+     measured at 1.6:1 on /safety. A background and its foreground are one
+     decision; setting only half of the pair is how this happens. */
+  color: var(--kinjo-color-text-inverse);
 }
 
 /* ============================================================================
@@ -3646,4 +3673,69 @@ body.sidebar-open .sidebar-backdrop {
   font-weight: 700;
   color: var(--kinjo-brand);
   display: inline-block;
+}
+
+/* ---------------------------------------------------------------------------
+   Accessible foregrounds for Bootstrap's tint utilities.
+
+   Bootstrap pairs a saturated brand colour with a very light tint of itself
+   (.text-warning on .bg-warning-subtle, .text-success on .bg-success-subtle).
+   Those pairs are decorative, not legible: measured in Chromium on
+   /kpi/dashboard, the amber pair renders at 1.47:1 and .text-warning on a
+   white card at 1.63:1, against a 4.5:1 requirement for
+   text this size. The numbers in those badges are enrolment percentages --
+   the actual content of the page.
+
+   These map the foreground onto the semantic tokens that were derived for
+   exactly this job, each measured against the surface it sits on. Kept in
+   kinjo.css because all three shells (base, admin_base, manager_base) load
+   it, whereas admin_design_system.css never reaches /kpi/dashboard.
+
+   !important is required, not lazy: these compete with Bootstrap's own
+   single-class utilities, and losing the cascade here means the declaration
+   silently does nothing.
+   --------------------------------------------------------------------------- */
+.text-warning,
+.badge.bg-warning-subtle.text-warning,
+.text-warning-emphasis {
+  color: var(--kinjo-color-warning-text-on-tint) !important;
+}
+
+.badge.bg-success-subtle.text-success,
+.text-success-emphasis {
+  color: var(--kinjo-color-success-text-on-tint) !important;
+}
+
+.badge.bg-danger-subtle.text-danger,
+.text-danger-emphasis,
+.badge.badge-lg {
+  color: var(--kinjo-color-danger-text-strong) !important;
+}
+
+.badge.bg-light.text-secondary,
+.btn.text-secondary,
+.badge.bg-secondary-subtle {
+  color: var(--kinjo-color-neutral-text) !important;
+}
+
+/* White on Bootstrap's danger red is 3.76:1. This is the "report an incident"
+   button on /safety, so it is the one control on the page that must not be
+   hard to read. Overriding the button's own custom properties keeps hover and
+   focus states derived from the same colour instead of fighting them. */
+/* Bootstrap's outline-secondary foreground is 4.45:1 on the light
+   panel it sits in on /safety -- just under the floor, on a control ("clear
+   filters") rather than decoration. */
+.btn-outline-secondary {
+  --bs-btn-color: var(--kinjo-color-neutral-text);
+  --bs-btn-hover-bg: var(--kinjo-color-neutral-text);
+  --bs-btn-hover-border-color: var(--kinjo-color-neutral-text);
+}
+
+.btn-danger {
+  --bs-btn-bg: var(--kinjo-color-danger-action);
+  --bs-btn-border-color: var(--kinjo-color-danger-action);
+  --bs-btn-hover-bg: var(--kinjo-color-danger-text-strong);
+  --bs-btn-hover-border-color: var(--kinjo-color-danger-text-strong);
+  --bs-btn-active-bg: var(--kinjo-color-danger-text-strong);
+  --bs-btn-active-border-color: var(--kinjo-color-danger-text-strong);
 }

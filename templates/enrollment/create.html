@@ -408,7 +408,9 @@ breadcrumbs=[
         height: 40px;
         border-radius: 50%;
         background-color: #e9ecef;
-        color: #6c757d;
+        /* was #6c757d, which is 3.95:1 on this chip -- below the 4.5:1 floor
+           for a step number the user reads to know where they are. */
+        color: var(--kinjo-color-neutral-text);
         display: inline-flex;
         align-items: center;
         justify-content: center;

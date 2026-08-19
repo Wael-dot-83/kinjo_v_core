@@ -7,7 +7,10 @@ endblock %} {% block extra_css %}
 <style>
   .parent-reports-shell {
     --reports-ink: #16342c;
-    --reports-muted: #6b7a75;
+    /* was #6b7a75: 4.26:1 on this page's tinted surface, just under the
+       4.5:1 floor. The token is 7.56:1 on white and stays neutral-cool, so
+       the muted role reads as muted without failing. */
+    --reports-muted: var(--kinjo-color-neutral-text);
     --reports-surface: #ffffff;
     --reports-surface-soft: #f5faf7;
     --reports-border: rgba(31, 94, 71, 0.12);
