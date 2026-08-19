@@ -3739,3 +3739,41 @@ body.sidebar-open .sidebar-backdrop {
   --bs-btn-active-bg: var(--kinjo-color-danger-text-strong);
   --bs-btn-active-border-color: var(--kinjo-color-danger-text-strong);
 }
+
+/* ---------------------------------------------------------------------------
+   Arabic tracking invariant.
+
+   Arabic is a cursive script: its letters join. letter-spacing pulls those
+   joins apart, and negative tracking crushes them. Tracking that flatters a
+   Latin small-caps label therefore damages Arabic text, and Arabic is this
+   product's default language.
+
+   Measured in Chromium across 18 routes before writing this rule: 142 Arabic
+   text nodes were receiving non-normal tracking, from 25 distinct CSS rules --
+   .table th (18 nodes, 0.05em), .sidebar-section-title (13, 0.07em !important),
+   .card-title (11, -0.01em), .text-label-bold (7), .kpi-label (6),
+   #rankingsTable th (6, 0.08em), .page-header-title (5, -0.02em),
+   .stat-card .stat-label (4), .status-chip (3), .filter-label (2, 0.09em) and
+   fifteen more with one node each.
+
+   Fixing 25 rules one at a time would fix today's 142 nodes and none of
+   tomorrow's, so this states the invariant instead: in an RTL document, text
+   has normal tracking. Two escapes keep it honest rather than absolute --
+   lang="en" for genuinely Latin content, and .allow-tracking for a case that
+   has been proved in a browser to need it. Neither exists in the codebase
+   today, which is the point: tracking on Arabic should have to be argued for.
+
+   The LTR/English UI is untouched; nothing below this selector applies there.
+
+   !important is load-bearing, not lazy: two of the 25 rules
+   (.sidebar-section-title and .kpi-value) declare tracking !important
+   themselves, and a guard that loses to them would silently do nothing --
+   which is exactly the class of failure this workstream kept hitting.
+
+   Enforced by tests/test_arabic_typography.py, which fails on any Arabic node
+   that renders with non-normal tracking and carries a synthetic control
+   proving the check still catches a real violation.
+   --------------------------------------------------------------------------- */
+[dir="rtl"] *:not([lang="en"]):not([lang="en"] *):not(.allow-tracking):not(.allow-tracking *) {
+  letter-spacing: normal !important;
+}

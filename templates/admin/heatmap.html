@@ -1,15 +1,3 @@
-<!-- impeccable-disable low-contrast -- measured in Chromium on /admin/heatmap with route identity
-     proved. The readings are the governorate labels drawn over the map, which
-     carry a 0px 1px 3px rgba(0,0,0,0.8) halo. A checker that composites `color`
-     against the background cannot see text-shadow, so it reads ~1.3:1 for text
-     that is legible over tiles ranging from light basemap to dark red. Every
-     other text node on this route measures 0 failures. -->
-<!-- impeccable-disable cramped-padding -- measured in Chromium on /admin/heatmap. The flagged
-     elements are card wrappers that carry no padding by design and delegate
-     their inset to __body / __header / -body / -header children, which measure
-     12-16px. The single 0px case is an explicit p-0 on a card whose
-     .table-responsive child supplies its own cell padding, which is what a table
-     meeting its card edge is supposed to do. -->
 {% extends "admin_base.html" %}
 
 {% block title %}
@@ -790,3 +778,16 @@
 </script>
 {% endif %}
 {% endblock %}
+
+<!-- impeccable-disable low-contrast -- measured in Chromium on /admin/heatmap with route identity
+     proved. The readings are the governorate labels drawn over the map, which
+     carry a 0px 1px 3px rgba(0,0,0,0.8) halo. A checker that composites `color`
+     against the background cannot see text-shadow, so it reads ~1.3:1 for text
+     that is legible over tiles ranging from light basemap to dark red. Every
+     other text node on this route measures 0 failures. -->
+<!-- impeccable-disable cramped-padding -- measured in Chromium on /admin/heatmap. The flagged
+     elements are card wrappers that carry no padding by design and delegate
+     their inset to __body / __header / -body / -header children, which measure
+     12-16px. The single 0px case is an explicit p-0 on a card whose
+     .table-responsive child supplies its own cell padding, which is what a table
+     meeting its card edge is supposed to do. -->

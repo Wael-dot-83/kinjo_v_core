@@ -1,9 +1,3 @@
-<!-- impeccable-disable cramped-padding -- measured in Chromium on /services. The flagged
-     elements are card wrappers that carry no padding by design and delegate
-     their inset to __body / __header / -body / -header children, which measure
-     12-16px. The single 0px case is an explicit p-0 on a card whose
-     .table-responsive child supplies its own cell padding, which is what a table
-     meeting its card edge is supposed to do. -->
 {% extends 'base.html' %} {% from 'components/page-header.html' import
 page_header %} {# Age-bound wording helpers. Both bounds are configuration
 values, so the sentence has to agree with whatever number they hold. Arabic
@@ -393,3 +387,10 @@ endblock %} {% block content %}
   </div>
   {% endblock %}
 </div>
+
+<!-- impeccable-disable cramped-padding -- measured in Chromium on /services. The flagged
+     elements are card wrappers that carry no padding by design and delegate
+     their inset to __body / __header / -body / -header children, which measure
+     12-16px. The single 0px case is an explicit p-0 on a card whose
+     .table-responsive child supplies its own cell padding, which is what a table
+     meeting its card edge is supposed to do. -->

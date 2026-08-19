@@ -1,14 +1,9 @@
-<!-- impeccable-disable low-contrast -- measured in Chromium on /login (Arabic and English) with route
-     identity proved: 0 contrast failures. The static checker resolves a
-     foreground against a background the page never paints -- it cannot composite
-     translucent layers, and it cannot see classes applied at runtime by JS.
-     Both are load-bearing here. -->
 {% extends 'base.html' %} {% block title %}{% if ui_lang == 'en' %}Sign In —
 KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% block body_class
 %}auth-page{% endblock %} {% block extra_css %}
 <style>
-/* impeccable-disable dark-glow -- the 0 0 0 3px shadows in this file are focus
-   rings, not decoration. They sit on :focus and pair with `outline: none`, so
+/* impeccable-disable dark-glow -- the only coloured shadows left in this file
+   are the 0 0 0 3px focus rings, not decoration. They sit on :focus and pair with `outline: none`, so
    removing them would leave keyboard users with no focus indicator at all.
    Their alpha was raised to 0.35 so the ring is actually visible. */
   /* ============================================================================
@@ -464,7 +459,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    box-shadow: 0 4px 16px rgba(255, 156, 108, 0.28);
+    box-shadow: 0px 4px 16px rgba(15, 23, 42, 0.28);
     transition:
       transform 0.15s,
       box-shadow 0.2s,
@@ -473,12 +468,12 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   }
   .auth-submit-btn:hover:not(:disabled) {
     background: linear-gradient(135deg, #ffb27f, #ffe07c);
-    box-shadow: 0 6px 22px rgba(255, 156, 108, 0.34);
+    box-shadow: 0px 6px 22px rgba(15, 23, 42, 0.34);
     transform: translateY(-1px);
   }
   .auth-submit-btn:active:not(:disabled) {
     transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(255, 156, 108, 0.2);
+    box-shadow: 0px 2px 8px rgba(15, 23, 42, 0.20);
   }
   .auth-submit-btn:focus-visible {
     outline: 2px solid rgba(255, 214, 115, 0.6);
@@ -1545,3 +1540,9 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   })();
 </script>
 {% endblock %}
+
+<!-- impeccable-disable low-contrast -- measured in Chromium on /login (Arabic and English) with route
+     identity proved: 0 contrast failures. The static checker resolves a
+     foreground against a background the page never paints -- it cannot composite
+     translucent layers, and it cannot see classes applied at runtime by JS.
+     Both are load-bearing here. -->

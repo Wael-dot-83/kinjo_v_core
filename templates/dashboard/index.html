@@ -1,8 +1,3 @@
-<!-- impeccable-disable low-contrast -- measured in Chromium on /dashboard (Arabic) with route
-     identity proved: 0 contrast failures. The static checker resolves a
-     foreground against a background the page never paints -- it cannot composite
-     translucent layers, and it cannot see classes applied at runtime by JS.
-     Both are load-bearing here. -->
 {% extends 'base.html' %}
 {% block footer %}{% endblock %}
 
@@ -1708,3 +1703,9 @@
     });
 </script>
 {% endblock %}
+
+<!-- impeccable-disable low-contrast -- measured in Chromium on /dashboard (Arabic) with route
+     identity proved: 0 contrast failures. The static checker resolves a
+     foreground against a background the page never paints -- it cannot composite
+     translucent layers, and it cannot see classes applied at runtime by JS.
+     Both are load-bearing here. -->

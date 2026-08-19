@@ -1,9 +1,3 @@
-<!-- impeccable-disable cramped-padding -- measured in Chromium on /kpi/dashboard. The flagged
-     elements are card wrappers that carry no padding by design and delegate
-     their inset to __body / __header / -body / -header children, which measure
-     12-16px. The single 0px case is an explicit p-0 on a card whose
-     .table-responsive child supplies its own cell padding, which is what a table
-     meeting its card edge is supposed to do. -->
 {% extends 'base.html' %}
 {% block footer %}{% endblock %} {% from 'components/kpi_card.html' import kpi_card %}
 {% from 'components/chart_container.html' import chart_container %} {% from
@@ -620,3 +614,10 @@ endblock %} {% block extra_css %}
 <script src="/static/js/kpi-validation.js?v=2878ed231030"></script>
          <script src="/static/js/kpi_dashboard.js?v=31fdd2cc9f86"></script>
 {% endblock %}
+
+<!-- impeccable-disable cramped-padding -- measured in Chromium on /kpi/dashboard. The flagged
+     elements are card wrappers that carry no padding by design and delegate
+     their inset to __body / __header / -body / -header children, which measure
+     12-16px. The single 0px case is an explicit p-0 on a card whose
+     .table-responsive child supplies its own cell padding, which is what a table
+     meeting its card edge is supposed to do. -->

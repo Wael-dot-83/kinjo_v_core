@@ -41,6 +41,15 @@
       outline: 3px solid #c5a059;
       outline-offset: 2px;
     }
+    /* Arabic tracking invariant. This page is standalone -- it carries its own
+       <!DOCTYPE> and loads only chatbot.css, so the guard in kinjo.css never
+       reaches it, and its own type classes (font-label-caps, font-display-lg,
+       font-label-bold) were tracking Arabic at 0.6-0.8px. Arabic is cursive:
+       tracking pulls its joins apart and negative tracking crushes them.
+       Same rule and same escapes as kinjo.css; see tests/test_arabic_typography.py. */
+    [dir="rtl"] *:not([lang="en"]):not([lang="en"] *):not(.allow-tracking):not(.allow-tracking *) {
+      letter-spacing: normal !important;
+    }
   </style>
 
   <script id="tailwind-config">
