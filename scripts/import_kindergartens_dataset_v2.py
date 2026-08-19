@@ -173,11 +173,11 @@ def wipe_all_kindergartens(db: Session) -> dict[str, Any]:
     
     if is_postgres:
         logger.info("Performing PostgreSQL fast CASCADE wipe...")
+        db.execute(text("TRUNCATE TABLE kindergartens CASCADE;"))
         db.execute(text("DELETE FROM user_dashboard_preferences WHERE user_id IN (SELECT id FROM users WHERE role IN ('MANAGER', 'SUPERVISOR') OR kindergarten_id IS NOT NULL);"))
         db.execute(text("DELETE FROM user_filter_preferences WHERE user_id IN (SELECT id FROM users WHERE role IN ('MANAGER', 'SUPERVISOR') OR kindergarten_id IS NOT NULL);"))
         db.execute(text("DELETE FROM users WHERE role IN ('MANAGER', 'SUPERVISOR') OR kindergarten_id IS NOT NULL;"))
         db.execute(text("UPDATE users SET kindergarten_id = NULL WHERE kindergarten_id IS NOT NULL;"))
-        db.execute(text("TRUNCATE TABLE kindergartens CASCADE;"))
         db.flush()
         stats["wiped_postgresql_cascade"] = True
         logger.info("PostgreSQL CASCADE wipe completed.")
