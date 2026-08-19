@@ -71,7 +71,7 @@
     "templates/classes/list.html": 2,
     "templates/components/chatbot.html": 3,
     "templates/components/footer.html": 29,
-    "templates/components/impersonation_banner.html": 7,
+    "templates/components/impersonation_banner.html": 4,
     "templates/components/step-indicator.html": 7,
     "templates/dashboard/index.html": 18,
     "templates/dashboard/supervisor.html": 50,
