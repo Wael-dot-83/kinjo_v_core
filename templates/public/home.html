@@ -13,22 +13,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif:wght@400;500;600;700&family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  
+
   <!-- Chatbot CSS -->
   <link rel="stylesheet" href="/static/css/chatbot.css?v=558c206e2e26">
 
+  <link rel="stylesheet" href="/static/css/home_premium.css?v=1">
+
   <style>
-/* impeccable-disable nested-cards -- inspected element by element in the
-   browser. These are constituent parts of one card, not a card inside a card:
-   .card-footer (part of its own card), icon chips, avatars and badge pills,
-   each of which legitimately carries its own boundary. Flattening them would
-   remove real structure and worsen the hierarchy the rule exists to protect. */
     .material-symbols-outlined {
       font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
     }
-    
-    /* Language Toggle Logic */
-    
+
     body.lang-ar {
       font-family: 'Cairo', 'Noto Serif', serif;
     }
@@ -36,17 +31,11 @@
       font-family: 'Inter', sans-serif;
     }
 
-    /* WCAG 2.1 AA focus rings */
     a:focus-visible, button:focus-visible {
       outline: 3px solid #c5a059;
       outline-offset: 2px;
     }
-    /* Arabic tracking invariant. This page is standalone -- it carries its own
-       <!DOCTYPE> and loads only chatbot.css, so the guard in kinjo.css never
-       reaches it, and its own type classes (font-label-caps, font-display-lg,
-       font-label-bold) were tracking Arabic at 0.6-0.8px. Arabic is cursive:
-       tracking pulls its joins apart and negative tracking crushes them.
-       Same rule and same escapes as kinjo.css; see tests/test_arabic_typography.py. */
+
     [dir="rtl"] *:not([lang="en"]):not([lang="en"] *):not(.allow-tracking):not(.allow-tracking *) {
       letter-spacing: normal !important;
     }
@@ -65,10 +54,10 @@
             "tertiary-fixed-dim": "#dcc661",
             "inverse-on-surface": "#f2f0f1",
             "background": "#faf9fa",
-            "primary": "#002f6c", /* KinJo Navy override */
+            "primary": "#002f6c",
             "on-secondary-fixed-variant": "#42474b",
             "on-tertiary-fixed-variant": "#524600",
-            "surface-container-low": "#f8f9ff", /* Clean off-white override */
+            "surface-container-low": "#f8f9ff",
             "inverse-surface": "#303031",
             "on-tertiary-fixed": "#211b00",
             "on-error-container": "#93000a",
@@ -93,7 +82,7 @@
             "error-container": "#ffdad6",
             "surface-container-high": "#e9e8e9",
             "on-primary-fixed": "#001946",
-            "tertiary": "#c5a059", /* Soft gold override */
+            "tertiary": "#c5a059",
             "primary-fixed": "#d9e2ff",
             "error": "#ba1a1a",
             "on-surface": "#1b1c1d",
@@ -106,11 +95,11 @@
             "secondary-fixed-dim": "#c2c7cc",
             "on-tertiary-container": "#4a3f00",
             "on-secondary-container": "#606569",
-            "brand-orange": "#c5a059" /* Mapped to soft gold */
+            "brand-orange": "#c5a059"
           },
           "borderRadius": {
             "DEFAULT": "0.125rem",
-            "lg": "1rem", /* Round Four */
+            "lg": "1rem",
             "xl": "1.5rem",
             "full": "9999px"
           },
@@ -143,16 +132,16 @@
           "fontSize": {
             "headline-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
             "label-bold": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600" }],
-            "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
-            "headline-lg-mobile": ["32px", { "lineHeight": "38px", "fontWeight": "700" }],
-            "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
-            "headline-md": ["28px", { "lineHeight": "34px", "fontWeight": "600" }],
-            "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+            "body-lg": ["18px", { "lineHeight": "28px", "letterSpacing": "0", "fontWeight": "400" }],
+            "headline-lg-mobile": ["32px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+            "headline-md": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "body-md": ["16px", { "lineHeight": "24px", "letterSpacing": "0", "fontWeight": "400" }],
             "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
-            "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "title-lg": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
             "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
-            "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
-            "display-lg-mobile": ["32px", { "lineHeight": "40px", "fontWeight": "700" }]
+            "body-sm": ["14px", { "lineHeight": "20px", "letterSpacing": "0", "fontWeight": "400" }],
+            "display-lg-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
           }
         }
       }
@@ -161,11 +150,9 @@
 </head>
 <body class="bg-surface text-on-surface font-body-md {% if ui_lang == 'en' %}lang-en{% else %}lang-ar{% endif %} min-h-screen flex flex-col antialiased">
 
-  <!-- TopNavBar (Exact Stitch Match) -->
+  <!-- TopNavBar -->
   <header class="bg-primary text-white border-b border-white/20 docked full-width top-0 z-50 shadow-sm" role="banner">
     <div class="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop max-w-7xl mx-auto h-24">
-      
-      <!-- Brand -->
       <a href="/" class="flex items-center gap-base" aria-label="KinJo Homepage">
         <img alt="KinJo Logo" class="h-16 w-auto object-contain rounded-sm bg-white p-2 shadow-sm" src="/static/img/landing/logo.png">
         <span class="font-title-lg text-title-lg font-bold text-white">
@@ -173,7 +160,6 @@
         </span>
       </a>
 
-      <!-- Nav Links (Desktop) -->
       <nav class="hidden md:flex gap-md" aria-label="Main Navigation">
         <a class="font-body-md text-body-md text-white font-bold border-b-2 border-tertiary h-24 flex items-center px-2" href="/services">
           {% if ui_lang == 'en' %}Services{% else %}الخدمات{% endif %}
@@ -189,9 +175,7 @@
         </a>
       </nav>
 
-      <!-- Actions -->
       <div class="flex items-center gap-sm">
-        <!-- Bilingual Toggle -->
         <button type="button" class="flex items-center gap-xs px-sm py-2 rounded-lg border border-white/30 hover:bg-white/10 transition-colors min-h-[44px]" onclick="toggleLanguage()" aria-label="Switch Language / تبديل اللغة">
           <span class="material-symbols-outlined text-sm text-white" aria-hidden="true" data-icon="language">language</span>
           <span class="font-label-caps text-label-caps uppercase text-white">{% if ui_lang == 'en' %}عربي{% else %}EN{% endif %}</span>
@@ -213,73 +197,98 @@
         {% endif %}
         {% endif %}
       </div>
-
     </div>
   </header>
 
   <main class="flex-grow" role="main">
-    
-    <!-- Section 1: Hero (Exact Stitch Match) -->
-    <section class="relative bg-surface-container-low overflow-hidden" aria-label="Introduction">
+
+    <!-- Section 1: Search-First Hero -->
+    <section class="relative bg-surface-container-low overflow-hidden" aria-label="Search Kindergartens">
       <div class="absolute inset-0 z-0">
         <div class="bg-cover bg-center w-full h-full opacity-100" style="background-image: url('/static/img/landing/hero_bg.jpg');"></div>
-        <div class="absolute inset-0 bg-gradient-to-l from-surface-container-low/80 via-surface-container-low/40 to-transparent"></div>
+        <div class="absolute inset-0 bg-gradient-to-l from-surface-container-low/90 via-surface-container-low/60 to-transparent"></div>
       </div>
 
-      <div class="relative z-10 max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop py-xl md:py-[140px] grid md:grid-cols-2 gap-lg items-center">
-        <div class="space-y-lg">
+      <div class="relative z-10 max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop py-xl md:py-[120px]">
+        <div class="max-w-3xl">
           {% if ui_lang == 'en' %}
-          <div class="space-y-md">
-            <h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary">
-              One official workspace for every role in Jordan's kindergarten sector.
-            </h1>
-            <p class="font-body-lg text-body-lg text-on-surface-variant font-normal border-l-4 border-tertiary pl-6 py-2">
-              KinJo connects parents, kindergarten teams, and supervisors so enrollment, daily care, attendance, and official reporting stay in one secure, bilingual record.
-            </p>
-          </div>
+          <h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary mb-md animate-fade-in-up">
+            Find the perfect kindergarten in Jordan.
+          </h1>
+          <p class="font-body-lg text-body-lg text-on-surface-variant mb-lg animate-fade-in-up" style="animation-delay: 0.1s;">
+            Search accredited nurseries by governorate, district, and status. Compare options and start your child's journey with confidence.
+          </p>
           {% else %}
-          <div class="space-y-md">
-            <h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary font-bold leading-tight">
-              المنصة الوطنية الموحدة لقطاع الحضانات في الأردن 🇯🇴
-            </h1>
-            <p class="font-body-lg text-body-lg text-on-surface-variant font-normal border-r-4 border-tertiary pr-6 py-2 leading-relaxed">
-              منظومة إلكترونية متكاملة تربط أولياء الأمور وإدارات الحضانات والمشرفين التربويين، لإدارة التسجيل، والرعاية اليومية، والمتابعة الصحية، والتقارير الرقابية المعتمدة بكل موثوقية وأمان.
-            </p>
-          </div>
+          <h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary font-bold leading-tight mb-md animate-fade-in-up">
+            اعثر على الحضانة المثالية لطفلك في الأردن
+          </h1>
+          <p class="font-body-lg text-body-lg text-on-surface-variant mb-lg leading-relaxed animate-fade-in-up" style="animation-delay: 0.1s;">
+            ابحث عن الحضانات المعتمدة حسب المحافظة والمنطقة والحالة. قارن الخيارات وابدأ رحلة طفلك بثقة.
+          </p>
           {% endif %}
 
-          <!-- Action CTAs -->
-          <div class="flex flex-wrap gap-md pt-sm">
-            {% if current_user %}
-            <a class="inline-flex items-center justify-center px-xl py-4 bg-primary text-white font-label-bold text-label-bold rounded-lg hover:bg-primary/90 transition-colors shadow-md min-h-[48px]" href="/dashboard">
-              {% if ui_lang == 'en' %}Go to Dashboard{% else %}الانتقال إلى لوحة التحكم{% endif %}
-            </a>
-            {% else %}
-            <a class="inline-flex items-center justify-center px-xl py-4 bg-primary text-white font-label-bold text-label-bold rounded-lg hover:bg-primary/90 transition-colors shadow-md min-h-[48px]" href="/login">
-              {% if ui_lang == 'en' %}Sign in to Platform{% else %}تسجيل الدخول إلى المنصة{% endif %}
-            </a>
-            <a class="inline-flex items-center justify-center px-xl py-4 border-2 border-primary text-primary font-label-bold text-label-bold rounded-lg hover:bg-surface-container transition-colors bg-white/90 shadow-sm min-h-[48px]" href="/kindergartens">
-              {% if ui_lang == 'en' %}Explore Accredited Nurseries{% else %}استعراض الحضانات المعتمدة{% endif %}
-            </a>
-            {% endif %}
+          <!-- Search Bar -->
+          <div class="bg-white rounded-xl shadow-lg border border-outline-variant/30 p-4 md:p-6 animate-fade-in-up" style="animation-delay: 0.2s;">
+            <div class="flex flex-col gap-4">
+              <div class="relative">
+                <span class="material-symbols-outlined absolute start-3 top-1/2 -translate-y-1/2 text-on-surface-variant" aria-hidden="true">search</span>
+                <input
+                  type="text"
+                  id="kg-search-input"
+                  class="w-full ps-12 pe-4 py-3 rounded-lg border border-outline-variant/50 bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-body-md"
+                  placeholder="{% if ui_lang == 'en' %}Search kindergartens by name...{% else %}ابحث عن حضانات بالاسم...{% endif %}"
+                  autocomplete="off"
+                >
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <select id="kg-filter-governorate" class="w-full py-2.5 px-3 rounded-lg border border-outline-variant/50 bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-body-md">
+                  <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
+                </select>
+                <select id="kg-filter-district" class="w-full py-2.5 px-3 rounded-lg border border-outline-variant/50 bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-body-md">
+                  <option value="">{% if ui_lang == 'en' %}All Districts{% else %}جميع المناطق{% endif %}</option>
+                </select>
+                <select id="kg-filter-status" class="w-full py-2.5 px-3 rounded-lg border border-outline-variant/50 bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-body-md">
+                  <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}جميع الحالات{% endif %}</option>
+                  <option value="active">{% if ui_lang == 'en' %}Active{% else %}نشطة{% endif %}</option>
+                  <option value="frozen">{% if ui_lang == 'en' %}Frozen{% else %}مجمدة{% endif %}</option>
+                  <option value="draft">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</option>
+                </select>
+              </div>
+
+              <button id="kg-search-btn" type="button" class="w-full sm:w-auto inline-flex items-center justify-center px-xl py-3 bg-primary text-white font-label-bold text-label-bold rounded-lg hover:bg-primary/90 transition-colors shadow-md min-h-[48px]">
+                {% if ui_lang == 'en' %}Search Kindergartens{% else %}بحث عن حضانات{% endif %}
+              </button>
+            </div>
+
+            <!-- Results Preview Panel -->
+            <div id="kg-search-results" class="mt-6 hidden">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="font-title-lg text-title-lg text-primary font-bold">{% if ui_lang == 'en' %}Results{% else %}النتائج{% endif %}</h3>
+                <a href="/kindergartens" class="font-label-bold text-label-bold text-primary hover:text-tertiary transition-colors">
+                  {% if ui_lang == 'en' %}View all{% else %}عرض الكل{% endif %}
+                </a>
+              </div>
+              <div id="kg-results-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+              <div id="kg-results-empty" class="hidden text-center py-8 text-on-surface-variant">
+                {% if ui_lang == 'en' %}No kindergartens match your search.{% else %}لا توجد حضانات مطابقة لبحثك.{% endif %}
+              </div>
+              <div id="kg-results-error" class="hidden text-center py-8 text-error">
+                {% if ui_lang == 'en' %}Unable to load results. Please try again.{% else %}تعذر تحميل النتائج. يرجى المحاولة مرة أخرى.{% endif %}
+              </div>
+            </div>
           </div>
-
-        </div>
-
-        <div class="hidden md:block relative h-[560px] rounded-xl overflow-hidden shadow-2xl border-4 border-white/50 bg-white rotate-1 hover:rotate-0 transition-transform duration-500">
-          <img alt="Kindergarten Classroom" class="w-full h-full object-cover" src="/static/img/landing/classroom.jpg">
         </div>
       </div>
     </section>
 
-    <!-- Section 2: Trust Band (Exact Stitch Match) -->
+    <!-- Section 2: Trust Band -->
     <section class="bg-white border-y border-outline-variant/20 py-xl" aria-label="Trusted Partners">
       <div class="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop flex flex-col items-center justify-center gap-lg">
-        
         <div class="flex flex-col items-center justify-center gap-md w-full">
           <p class="font-title-lg text-title-lg text-primary text-center flex items-center justify-center gap-2 mb-md">
             <span class="material-symbols-outlined text-on-tertiary-fixed-variant" aria-hidden="true" data-icon="verified">verified</span>
-            {% if ui_lang == 'en' %}Official Institutional Partners{% else %}الجهات والمؤسسات الشريكة المعتمدة{% endif %}
+            {% if ui_lang == 'en' %}Official Institutional Partners{% else %}الجهات والمؤسسات المستفيدة{% endif %}
           </p>
 
           <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-lg items-center justify-items-center opacity-80">
@@ -302,8 +311,8 @@
       </div>
     </section>
 
-    <!-- Section 3: Persona Strip (Exact Stitch Match) -->
-    <section class="py-[120px] bg-surface-container-low max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop" aria-label="Role Portals">
+    <!-- Section 3: Animated Value-Proposition Cards -->
+    <section class="py-[80px] bg-surface-container-low max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop" aria-label="Role Portals">
       <div class="text-center mb-xl">
         <h2 class="font-display-lg-mobile md:font-headline-lg text-display-lg-mobile md:text-headline-lg text-primary mb-sm font-bold">
           {% if ui_lang == 'en' %}Comprehensive Portals Built for Every Role{% else %}منظومة متكاملة تلبي احتياجات جميع أطراف الرعاية والتعليم{% endif %}
@@ -311,9 +320,8 @@
       </div>
 
       <div class="grid md:grid-cols-3 gap-xl">
-        
-        <!-- Card 1: Parents -->
-        <div class="bg-white rounded-xl p-lg flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-outline-variant/20 group">
+
+        <div class="kinjo-home-value-card bg-white rounded-xl p-lg flex flex-col border border-outline-variant/20 animate-fade-in-up" style="animation-delay: 0s;">
           <div class="w-14 h-14 bg-surface-container-low text-primary border border-tertiary/30 rounded-xl flex items-center justify-center mb-md group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
             <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="family_home">family_home</span>
           </div>
@@ -329,8 +337,7 @@
           </a>
         </div>
 
-        <!-- Card 2: Supervisors -->
-        <div class="bg-white rounded-xl p-lg flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-outline-variant/20 group">
+        <div class="kinjo-home-value-card bg-white rounded-xl p-lg flex flex-col border border-outline-variant/20 animate-fade-in-up" style="animation-delay: 0.15s;">
           <div class="w-14 h-14 bg-surface-container-low text-primary border border-tertiary/30 rounded-xl flex items-center justify-center mb-md group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
             <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="fact_check">fact_check</span>
           </div>
@@ -346,8 +353,7 @@
           </a>
         </div>
 
-        <!-- Card 3: Managers -->
-        <div class="bg-white rounded-xl p-lg flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-outline-variant/20 group">
+        <div class="kinjo-home-value-card bg-white rounded-xl p-lg flex flex-col border border-outline-variant/20 animate-fade-in-up" style="animation-delay: 0.3s;">
           <div class="w-14 h-14 bg-surface-container-low text-primary border border-tertiary/30 rounded-xl flex items-center justify-center mb-md group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
             <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="domain">domain</span>
           </div>
@@ -366,12 +372,57 @@
       </div>
     </section>
 
+    <!-- Section 4: App Ecosystem -->
+    <section class="py-[80px] bg-white border-y border-outline-variant/20" aria-label="Mobile App">
+      <div class="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop">
+        <div class="grid md:grid-cols-2 gap-xl items-center">
+          <div class="animate-fade-in-up">
+            <h2 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary mb-md font-bold">
+              {% if ui_lang == 'en' %}KinJo in Your Pocket{% else %}KinJo في جيبك{% endif %}
+            </h2>
+            <p class="font-body-lg text-body-lg text-on-surface-variant mb-lg leading-relaxed">
+              {% if ui_lang == 'en' %}Download the KinJo mobile app and stay connected to your kindergarten community wherever you are.{% else %}نزل تطبيق KinJo وابقَ على تواصل مع مجتمع الحضانة أينما كنت.{% endif %}
+            </p>
+            <ul class="space-y-3 mb-8">
+              <li class="flex items-start gap-3">
+                <span class="material-symbols-outlined text-tertiary mt-0.5" aria-hidden="true">notifications_active</span>
+                <span class="font-body-md text-body-md text-on-surface-variant">{% if ui_lang == 'en' %}Real-time push notifications for attendance and announcements{% else %}إشعارات فورية للحضور والإعلانات{% endif %}</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="material-symbols-outlined text-tertiary mt-0.5" aria-hidden="true">dashboard</span>
+                <span class="font-body-md text-body-md text-on-surface-variant">{% if ui_lang == 'en' %}Instant access to daily reports and care logs{% else %}وصول فوري إلى التقارير اليومية وسجلات الرعاية{% endif %}</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="material-symbols-outlined text-tertiary mt-0.5" aria-hidden="true">analytics</span>
+                <span class="font-body-md text-body-md text-on-surface-variant">{% if ui_lang == 'en' %}Smart analytics and insights for parents and managers{% else %}تحليلات وتقارير ذكية لأولياء الأمور والإدارات{% endif %}</span>
+              </li>
+            </ul>
+            <div class="flex flex-wrap gap-3">
+              <a href="#" class="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors min-h-[44px]">
+                <span class="material-symbols-outlined" aria-hidden="true">android</span>
+                <span class="font-label-bold text-label-bold text-white">{% if ui_lang == 'en' %}Google Play{% else %}Google Play{% endif %}</span>
+              </a>
+              <a href="#" class="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors min-h-[44px]">
+                <span class="material-symbols-outlined" aria-hidden="true">apple</span>
+                <span class="font-label-bold text-label-bold text-white">{% if ui_lang == 'en' %}App Store{% else %}App Store{% endif %}</span>
+              </a>
+            </div>
+          </div>
+          <div class="hidden md:flex items-center justify-center animate-fade-in-up" style="animation-delay: 0.2s;">
+            <div class="w-64 h-[500px] bg-surface-container-low rounded-[2.5rem] border-4 border-outline-variant/30 shadow-xl flex items-center justify-center">
+              <span class="material-symbols-outlined text-6xl text-primary" aria-hidden="true">smartphone</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
-  <!-- Footer (Exact Stitch Match) -->
+  <!-- Footer -->
   <footer class="bg-white border-t border-outline-variant/30 full-width" role="contentinfo">
     <div class="grid grid-cols-1 md:grid-cols-4 gap-gutter px-margin-mobile md:px-margin-desktop py-xl max-w-7xl mx-auto">
-      
+
       <div class="col-span-1 md:col-span-2 mb-md md:mb-0 flex flex-col gap-sm">
         <div class="flex items-center gap-sm mb-4">
           <img alt="KinJo Logo" class="h-12 w-auto object-contain rounded-sm" src="/static/img/landing/logo.png">
@@ -379,9 +430,6 @@
             {% if ui_lang == 'en' %}Jordan Kindergarten Portal{% else %}بوابة الحضانات الأردنية{% endif %}
           </span>
         </div>
-        <p class="font-body-sm text-body-sm text-on-surface-variant">
-          {% if ui_lang == 'en' %}© 2024 Ministry of Education - Hashemite Kingdom of Jordan. All Rights Reserved.{% else %}© 2024 وزارة التربية والتعليم - المملكة الأردنية الهاشمية. جميع الحقوق محفوظة.{% endif %}
-        </p>
       </div>
 
       <div class="col-span-1 md:col-span-2 flex flex-col md:flex-row gap-lg md:justify-end items-start md:items-center">
@@ -406,7 +454,8 @@
   {% include "components/chatbot.html" %}
   <script src="/static/js/chatbot.js?v=81c1ad2b58bc"></script>
 
-  <!-- Client-Side Language Toggle and Persistence Controller -->
+  <script src="/static/js/home-search.js?v=1"></script>
+
   <script>
     function toggleLanguage() {
       const body = document.body;

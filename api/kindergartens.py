@@ -30,6 +30,8 @@ from services.jordan_locations import (
 _JORDAN_TZ = timezone(timedelta(hours=3))
 logger = logging.getLogger(__name__)
 
+from rate_limiter import limiter
+
 router = APIRouter(tags=["Kindergartens"])
 
 
@@ -442,6 +444,7 @@ def _public_kindergarten_projection(item: dict) -> dict:
     allowed = {
         "id", "name_ar", "name_en", "governorate", "district", "area",
         "address_line", "contact_phone", "contact_email", "status",
+        "total_capacity", "current_child_count",
     }
     return {key: value for key, value in item.items() if key in allowed}
 
@@ -564,6 +567,54 @@ def list_kindergartens(
 
     if role in (models.UserRole.PARENT, models.UserRole.SUPERVISOR):
         items = [_public_kindergarten_projection(item) for item in items]
+
+    return _envelope(
+        True,
+        {"items": items, "total": total, "skip": skip, "limit": limit, "returned": len(items)},
+        "تم جلب قائمة الحضانات بنجاح",
+    )
+
+
+@router.get("/public/kindergartens/search")
+@limiter.limit(settings.RATE_LIMIT_PUBLIC_SEARCH)
+def public_kindergarten_search(
+    request: Request,
+    q: Optional[str] = Query(None, description="search by name"),
+    governorate: Optional[str] = None,
+    district: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = Query(20, ge=1, le=100),
+    skip: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    query = db.query(models.Kindergarten)
+    query = query.filter(models.Kindergarten.status != models.KindergartenStatus.DELETED)
+
+    if q:
+        query = query.filter(
+            or_(
+                models.Kindergarten.name_ar.ilike(f"%{q}%"),
+                models.Kindergarten.name_en.ilike(f"%{q}%"),
+                models.Kindergarten.legal_name.ilike(f"%{q}%"),
+            )
+        )
+    if governorate:
+        query = query.filter(governorate_filter(models.Kindergarten.governorate, governorate))
+    if district:
+        query = query.filter(models.Kindergarten.district == district)
+    if status:
+        try:
+            query = query.filter(models.Kindergarten.status == _normalize_status(status))
+        except ValueError:
+            return _envelope(False, None, "قيمة الحالة غير صالحة / Invalid status value", 400)
+
+    total = query.count()
+    kgs = query.order_by(models.Kindergarten.id.desc()).offset(skip).limit(limit).all()
+
+    items = []
+    for kg in kgs:
+        item = _serialize(kg)
+        items.append(_public_kindergarten_projection(item))
 
     return _envelope(
         True,

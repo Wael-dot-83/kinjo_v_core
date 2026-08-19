@@ -13,6 +13,11 @@
   }
 }
 
+.animate-fade-in-up {
+  opacity: 0;
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* ── Public Landing Page Layout ───────────────────────────────────────────── */
 .kinjo-home-page {
   position: relative;
@@ -20,11 +25,10 @@
   background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
 }
 
-/* Bright, colorful, child-friendly yet highly professional hero section */
 .kinjo-home-hero {
   position: relative;
   color: #1E293B;
-  background: 
+  background:
     radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.12), transparent 45%),
     radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.08), transparent 45%),
     linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 50%, #EFF6FF 100%) !important;
@@ -37,7 +41,6 @@
   padding: clamp(3rem, 5vw, 6rem) 0 clamp(2rem, 4vw, 3.5rem);
 }
 
-/* Animations applied to hero columns */
 .kinjo-home-hero-inner .col-lg-7 {
   animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -46,7 +49,6 @@
   animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Vibrant badge wrapper */
 .kinjo-home-badge {
   display: inline-flex;
   align-items: center;
@@ -65,7 +67,6 @@
   color: #F59E0B;
 }
 
-/* H1 Title: professional sizing, gorgeous gradient colors & attractive styling */
 .kinjo-home-title {
   max-width: none;
   margin: 1rem 0;
@@ -85,7 +86,6 @@
   line-height: 1.75;
 }
 
-/* Action buttons with custom animated hover highlights */
 .kinjo-home-actions {
   display: flex;
   flex-wrap: wrap;
@@ -374,6 +374,67 @@
   line-height: 1.5;
 }
 
+/* ── Search Component Styles ──────────────────────────────────────────────── */
+.kinjo-home-search-input {
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.kinjo-home-search-input:focus {
+  border-color: var(--kinjo-action);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.kinjo-home-search-card {
+  background: #FFFFFF;
+  border-radius: 1rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.kinjo-home-search-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.08);
+}
+
+.kinjo-home-search-card .card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 0.25rem;
+}
+
+.kinjo-home-search-card .card-meta {
+  font-size: 0.85rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.kinjo-home-search-card .card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.kinjo-home-search-card .card-badge-active {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.kinjo-home-search-card .card-badge-frozen {
+  background: rgba(245, 158, 11, 0.1);
+  color: #D97706;
+}
+
+.kinjo-home-search-card .card-badge-draft {
+  background: rgba(100, 116, 139, 0.1);
+  color: #475569;
+}
+
 /* ── Section Scaffolding ──────────────────────────────────────────────────── */
 .kinjo-home-section {
   position: relative;
@@ -396,9 +457,7 @@
 }
 
 /* ── Premium Animated Cards ───────────────────────────────────────────────── */
-.kinjo-home-service-card,
-.kinjo-home-user-card,
-.kinjo-home-cta-card {
+.kinjo-home-value-card {
   height: 100%;
   border: 1px solid rgba(226, 232, 240, 0.75);
   border-radius: 1.25rem;
@@ -407,9 +466,7 @@
   transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.kinjo-home-service-card:hover,
-.kinjo-home-user-card:hover,
-.kinjo-home-cta-card:hover {
+.kinjo-home-value-card:hover {
   transform: translateY(-5px) scale(1.015);
   box-shadow: 0 16px 35px rgba(37, 99, 235, 0.06);
   border-color: rgba(37, 99, 235, 0.2);
@@ -565,7 +622,6 @@
   }
 }
 
-/* Symmetrical RTL direction flipping for marquee */
 [dir="rtl"] .logos-marquee {
   animation: marquee-rtl 25s linear infinite;
 }
@@ -623,7 +679,6 @@
   transform: scale(1.03);
 }
 
-/* Active navigation item indicator line */
 .kinjo-navbar .nav-link {
   color: #334155 !important;
   font-weight: 600 !important;
@@ -725,6 +780,62 @@
   border-color: rgba(226, 232, 240, 0.8) !important;
 }
 
+/* ── App Ecosystem Section ────────────────────────────────────────────────── */
+.kinjo-home-app-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.75rem;
+  background: #0F172A;
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.kinjo-home-app-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
+}
+
+.kinjo-home-app-badge .material-symbols-outlined {
+  font-size: 1.25rem;
+}
+
+.kinjo-home-app-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+}
+
+.kinjo-home-app-feature-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  background: rgba(197, 160, 89, 0.1);
+  color: var(--kinjo-action);
+  font-size: 1.1rem;
+}
+
+.kinjo-home-app-feature-text {
+  font-size: 0.95rem;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.kinjo-home-app-mockup {
+  background: linear-gradient(180deg, #F8FAFC 0%, #EFF6FF 100%);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
+}
+
 @media (max-width: 991.98px) {
   .kinjo-home-title {
     max-width: none;
@@ -739,10 +850,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .kinjo-home-value-card,
   .kinjo-home-service-card,
   .kinjo-home-user-card,
   .kinjo-home-cta-card {
     transition: none;
+  }
+  .animate-fade-in-up {
+    animation: none;
+    opacity: 1;
   }
   .logos-marquee {
     animation: none;

@@ -146,6 +146,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_MESSAGES_DELETE: str = "30/minute"
     RATE_LIMIT_MESSAGES_ARCHIVE: str = "30/minute"
     RATE_LIMIT_MESSAGES_UPLOAD: str = "10/minute"
+    RATE_LIMIT_PUBLIC_SEARCH: str = "30/minute"
 
     # Pagination Configuration
     DEFAULT_PAGE_SIZE: int = 25

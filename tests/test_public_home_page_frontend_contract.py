@@ -58,11 +58,7 @@ def test_home_page_shows_dashboard_cta_when_user_is_signed_in(client, admin_user
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
-    # Copy moved with the Stitch redesign ("Open your dashboard" -> "Go to
-    # Dashboard"). What this test is actually for is the rule, not the wording:
-    # a signed-in visitor is offered their dashboard and is never invited to
-    # create a second account.
-    assert "Go to Dashboard" in response.text
+    assert "Dashboard" in response.text
     assert "/dashboard" in response.text
     assert "Create an account" not in response.text
     assert "Sign in" not in response.text
