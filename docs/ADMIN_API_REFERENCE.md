@@ -12,7 +12,7 @@
 - Pagination: list endpoints use the parameter names shown below; do not assume a universal page size.
 - Live interactive schemas and examples are also available at `/docs` and `/openapi.json` in an authorized environment.
 
-## Registered operations (165)
+## Registered operations (166)
 
 | Method | Path | Purpose | Parameters | Request body | Success/error responses |
 |---|---|---|---|---|---|
@@ -141,6 +141,7 @@
 | `PUT` | `/api/admin/profile` | Update Admin Profile | `kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | application/json: `AdminProfileUpdateSchema` | `200` —<br>`422` `HTTPValidationError` |
 | `GET` | `/api/admin/profile/audit-logs` | Get Admin Own Audit Log | `limit` (query, integer, optional)<br>`offset` (query, integer, optional)<br>`kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` —<br>`422` `HTTPValidationError` |
 | `POST` | `/api/admin/profile/password` | Change Admin Password | `kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | application/json: `AdminPasswordChangeSchema` | `200` —<br>`422` `HTTPValidationError` |
+| `GET` | `/api/admin/release` | Admin Release Identity | `kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` —<br>`422` `HTTPValidationError` |
 | `GET` | `/api/admin/reports/children/age-buckets` | Children Age Buckets | `level` (query, value, optional)<br>`governorate` (query, value, optional)<br>`city` (query, value, optional)<br>`area` (query, value, optional)<br>`period` (query, value, optional)<br>`date_from` (query, value, optional)<br>`date_to` (query, value, optional)<br>`lang` (query, string, optional)<br>`kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` —<br>`422` `HTTPValidationError` |
 | `GET` | `/api/admin/reports/children/gender` | Children Gender | `level` (query, value, optional)<br>`governorate` (query, value, optional)<br>`city` (query, value, optional)<br>`area` (query, value, optional)<br>`period` (query, value, optional)<br>`date_from` (query, value, optional)<br>`date_to` (query, value, optional)<br>`lang` (query, string, optional)<br>`kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` —<br>`422` `HTTPValidationError` |
 | `GET` | `/api/admin/reports/children/geography` | Children Geography | `level` (query, value, optional)<br>`governorate` (query, value, optional)<br>`city` (query, value, optional)<br>`area` (query, value, optional)<br>`period` (query, value, optional)<br>`date_from` (query, value, optional)<br>`date_to` (query, value, optional)<br>`lang` (query, string, optional)<br>`kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` —<br>`422` `HTTPValidationError` |
