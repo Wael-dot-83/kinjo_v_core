@@ -52,12 +52,17 @@
   --kinjo-bg-light: var(--kinjo-color-bg-body, #FAF9F6);
   --kinjo-bg-dark: #0f172a;
   --kinjo-text-primary: #1e293b;
-  --kinjo-text-secondary: #64748b;
-  --kinjo-text-muted: #64748b;
+  /* The previous slate grey landed at 4.0-4.45:1 on the light tints this token is
+     actually used over (pagination chrome, badges, .bg-light buttons) --
+     under the 4.5:1 floor in every one of those places. dark-mode.css
+     redefines this token separately, so dark surfaces are unaffected. */
+  --kinjo-text-secondary: var(--kinjo-color-neutral-text);
+  /* was #64748b: 3.9-4.27:1 as text on this file's tinted surfaces */
+  --kinjo-text-muted: #475569;
   /* Aliases, not copies — same reason as --kinjo-bg-light above. These held their
      own #e2e8f0 / #f1f5f9 and were free to drift from the tokens they mirror. */
   --kinjo-border-color: var(--kinjo-color-border);
-  --kinjo-border-light: var(--kinjo-color-border-subtle, #DCEAE3);
+  --kinjo-border-light: var(--kinjo-color-border-subtle);
   --kinjo-surface: #ffffff;
   --kinjo-surface-muted: #f8fafc;
   --kinjo-navbar-height: 64px;
@@ -205,7 +210,7 @@ html {
 }
 
 .progress-bar {
-  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  
   border-radius: var(--kinjo-radius-full);
 }
 
@@ -280,8 +285,12 @@ html {
 }
 
 .btn-danger {
-  background: var(--kinjo-danger);
-  border-color: var(--kinjo-danger);
+  /* --kinjo-danger (#ef4444) is the right hue for a danger *surface* -- a
+     chart band, a status fill -- but white on it is 3.76:1, and this class is
+     used on real controls such as "report an incident" on /safety. The action
+     variant keeps the same hue at 5.74:1 with white. */
+  background: var(--kinjo-color-danger-action);
+  border-color: var(--kinjo-color-danger-action);
 }
 
 /* Icon button helper */
@@ -374,6 +383,20 @@ html {
   font-weight: 500;
   border-radius: var(--kinjo-radius-sm);
   letter-spacing: 0.02em;
+  /* rem, not Bootstrap's .75em: em compounds against the parent, so a badge
+     inside a 14px block rendered at 10.5px on /safety. Arabic loses its dots
+     and diacritics before Latin loses anything, so the 12px floor is a
+     legibility limit here, not a preference. */
+  font-size: 0.75rem;
+}
+
+/* Arabic is cursive -- its letters join -- and letter-spacing pulls those
+   joins apart, so tracking that flatters Latin small-caps actively damages
+   Arabic. The badges carry Arabic on live surfaces (the status word on
+   /kpi/dashboard is "ضعيف"), so the tracking above must not apply when the
+   document is Arabic. Latin text explicitly marked lang="en" keeps it. */
+[dir="rtl"] .badge:not([lang="en"]) {
+  letter-spacing: normal;
 }
 
 /* Pill badges */
@@ -548,7 +571,7 @@ h6 {
   align-items: center;
   gap: 0.3rem;
   margin-block-start: 0.15rem;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--kinjo-sidebar-muted, #cbd5e1);
 }
@@ -812,7 +835,7 @@ html[lang="en"] .sidebar-section-title {
 }
 
 .notification-badge {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   padding: 0.25rem 0.4rem;
 }
 
@@ -882,26 +905,30 @@ body.sidebar-open .sidebar-backdrop {
 
 /* Dashboard Stats Cards */
 .stat-card {
-  border-inline-start: 4px solid var(--kinjo-primary);
-  border-inline-end: 0;
-  background: white;
+  /* The 4px inline-start rule here was decoration: it was --kinjo-primary on
+     every card regardless of state, and a second 4px ::before stripe drew the
+     same edge again. A thick coloured edge on one side of a card is the tell
+     impeccable.style names outright, so the card now carries the ordinary
+     component outline and lets its own content say what it is. */
+  border: 1px solid var(--kinjo-color-border-subtle);
+  background: var(--kinjo-color-bg-surface);
   border-radius: var(--kinjo-radius-md);
 }
 
 .stat-card.success {
-  border-inline-start-color: var(--kinjo-success);
+  background: var(--kinjo-success-light);
 }
 
 .stat-card.warning {
-  border-inline-start-color: var(--kinjo-warning);
+  background: var(--kinjo-warning-light);
 }
 
 .stat-card.danger {
-  border-inline-start-color: var(--kinjo-danger);
+  background: var(--kinjo-danger-light);
 }
 
 .stat-card.info {
-  border-inline-start-color: var(--kinjo-info);
+  background: var(--kinjo-info-light);
 }
 
 .stat-card .stat-icon {
@@ -920,7 +947,6 @@ body.sidebar-open .sidebar-backdrop {
   font-size: 0.8125rem;
   color: var(--kinjo-text-muted);
   font-weight: 500;
-  text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
@@ -1152,7 +1178,6 @@ body.sidebar-open .sidebar-backdrop {
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  backdrop-filter: blur(2px);
 }
 
 .loading-spinner {
@@ -1935,6 +1960,11 @@ body.sidebar-open .sidebar-backdrop {
 .pagination .page-item.active .page-link {
   background-color: var(--kinjo-primary);
   border-color: var(--kinjo-primary);
+  /* The active state set a dark brand background and no foreground, so it
+     inherited the secondary grey from .page-link above: grey on dark green,
+     measured at 1.6:1 on /safety. A background and its foreground are one
+     decision; setting only half of the pair is how this happens. */
+  color: var(--kinjo-color-text-inverse);
 }
 
 /* ============================================================================
@@ -2319,7 +2349,7 @@ body.sidebar-open .sidebar-backdrop {
 }
 
 .nav-tabs-pill .badge {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   padding: 0.2em 0.55em;
   border-radius: var(--kinjo-radius-full);
   vertical-align: middle;
@@ -2441,12 +2471,16 @@ body.sidebar-open .sidebar-backdrop {
 }
 
 /* ============================================================================
-   KPI Card — subtle background tint (replaces side-tab border)
+   KPI Card — band-aware left border (applied via inline style from macro)
    ============================================================================ */
-.kpi-card.band-green        { background-color: rgba(25, 135, 84, 0.04) !important; }
-.kpi-card.band-amber        { background-color: rgba(253, 126, 20, 0.04) !important; }
-.kpi-card.band-red          { background-color: rgba(220, 53, 69, 0.04) !important; }
-.kpi-card.band-insufficient { background-color: rgba(108, 117, 125, 0.04) !important; }
+/* Band state is already carried by the pill badge the KPI card renders, so the
+   coloured edge was a second copy of the same signal in the shape impeccable.style
+   flags. A soft surface tint keeps the at-a-glance read without the tell, and the
+   badge remains the non-colour-dependent cue. */
+.kpi-card.band-green        { background: var(--kinjo-success-light) !important; }
+.kpi-card.band-amber        { background: var(--kinjo-warning-light) !important; }
+.kpi-card.band-red          { background: var(--kinjo-danger-light)  !important; }
+.kpi-card.band-insufficient { background: var(--kinjo-bg-light)      !important; }
 
 /* ============================================================================
    Breadcrumb size utility
@@ -2456,7 +2490,7 @@ body.sidebar-open .sidebar-backdrop {
 /* ============================================================================
    Form counter / tiny label utilities
    ============================================================================ */
-.form-counter { font-size: 0.72rem; color: var(--kinjo-text-muted); }
+.form-counter { font-size: 0.75rem; color: var(--kinjo-text-muted); }
 .text-xs      { font-size: 0.78rem; }
 
 /* ============================================================================
@@ -2493,8 +2527,9 @@ body.sidebar-open .sidebar-backdrop {
 }
 .msg-item:hover { background: var(--kinjo-bg-light); }
 .msg-item.unread {
+  /* The tinted background already marks unread; the 3px edge repeated it. */
   background: var(--kinjo-primary-50);
-  border-inline-start: 3px solid var(--kinjo-primary);
+  font-weight: var(--kinjo-font-weight-semibold, 600);
 }
 .msg-avatar {
   width: 38px;
@@ -2517,7 +2552,7 @@ body.sidebar-open .sidebar-backdrop {
   white-space: nowrap;
   max-width: 100%;
 }
-.msg-time { font-size: 0.72rem; color: var(--kinjo-text-muted); white-space: nowrap; }
+.msg-time { font-size: 0.75rem; color: var(--kinjo-text-muted); white-space: nowrap; }
 .msg-body-content { white-space: pre-line; line-height: 1.7; }
 
 /* Small avatar circles used in child/attendance list rows */
@@ -2527,12 +2562,17 @@ body.sidebar-open .sidebar-backdrop {
 /* ============================================================================
    Card band — RTL-safe coloured inline-start border for stat/KPI cards
    ============================================================================ */
-.card-band-primary { border-inline-start: 4px solid var(--kinjo-primary) !important; }
-.card-band-success { border-inline-start: 4px solid var(--kinjo-success) !important; }
-.card-band-danger  { border-inline-start: 4px solid var(--kinjo-danger)  !important; }
-.card-band-warning { border-inline-start: 4px solid var(--kinjo-warning) !important; }
-.card-band-info    { border-inline-start: 4px solid var(--kinjo-info)    !important; }
-.card-band-purple  { border-inline-start: 4px solid #6f42c1 !important; }
+/* These were 4px coloured edges applied as a utility -- decoration by
+   construction, since the class says nothing about state. They now tint the
+   surface. .card-band-purple additionally carried a raw #6f42c1, a sixth brand
+   colour in a product whose tokens say not to add a fifth; it maps onto the
+   canonical info role instead. */
+.card-band-primary { background: var(--kinjo-primary-light) !important; }
+.card-band-success { background: var(--kinjo-success-light) !important; }
+.card-band-danger  { background: var(--kinjo-danger-light)  !important; }
+.card-band-warning { background: var(--kinjo-warning-light) !important; }
+.card-band-info    { background: var(--kinjo-info-light)    !important; }
+.card-band-purple  { background: var(--kinjo-info-light)    !important; }
 
 /* ============================================================================
    Additional text-colour utilities (non-Bootstrap colours)
@@ -2543,7 +2583,7 @@ body.sidebar-open .sidebar-backdrop {
 /* ============================================================================
    Badge size variants
    ============================================================================ */
-.badge-xs { font-size: 0.65rem; }
+.badge-xs { font-size: 0.75rem; }
 .badge-lg { font-size: 1.1rem; padding: 0.375rem 1rem; border-radius: 50px; }
 
 /* ============================================================================
@@ -2626,7 +2666,7 @@ body.sidebar-open .sidebar-backdrop {
 
 .sidebar-section-title {
   color: var(--kinjo-sidebar-muted) !important;
-  font-size: 0.6875rem !important;
+  font-size: 0.75rem !important;
   letter-spacing: 0.07em !important;
   font-weight: 700 !important;
   text-transform: uppercase;
@@ -2678,7 +2718,7 @@ body.sidebar-open .sidebar-backdrop {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
@@ -2713,21 +2753,9 @@ body.sidebar-open .sidebar-backdrop {
   position: relative;
   overflow: hidden;
 }
-.stat-card::before {
-  content: '';
-  position: absolute;
-  inset-inline-start: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  border-radius: 4px 0 0 4px;
-  background: var(--kinjo-primary);
-}
-.stat-card.success::before { background: var(--kinjo-success); }
-.stat-card.warning::before { background: var(--kinjo-warning); }
-.stat-card.danger::before  { background: var(--kinjo-danger); }
-.stat-card.info::before    { background: var(--kinjo-info); }
-[dir="rtl"] .stat-card::before { border-radius: 0 4px 4px 0; }
+/* The .stat-card::before stripe was removed with the border above: it drew a
+   second 4px coloured edge on the same side of the same card. State now reads
+   from the card's tinted surface. */
 
 .stat-card:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.10), 0 8px 32px rgba(0,0,0,0.07) !important;
@@ -2835,14 +2863,14 @@ body.sidebar-open .sidebar-backdrop {
   font-weight: 700;
   font-size: 0.9rem;
   background: #e8eef7;
-  color: #64748b;
+  color: var(--kinjo-color-text-secondary);
   flex-shrink: 0;
   margin-bottom: 0.1rem;
   border: 2px solid transparent;
   transition: all 0.18s ease;
 }
 .attendance-cell .att-name {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--kinjo-text-secondary);
   line-height: 1.2;
@@ -3624,7 +3652,6 @@ body.sidebar-open .sidebar-backdrop {
   background: rgba(255, 255, 255, 0.14);
 }
 
-<<<<<<< HEAD
 /* ---- MFA QR image -------------------------------------------------------
    Sizing lives here rather than in a style attribute on the tag. The element
    ships with a transparent 1x1 placeholder and the real QR is set by JS, so it

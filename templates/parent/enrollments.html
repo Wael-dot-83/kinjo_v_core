@@ -29,8 +29,8 @@
 <!-- Status Summary Cards -->
 <div class="row g-3 mb-4" id="statusSummary">
     <div class="col-6 col-md-3">
-        <div class="parent-card p-3 text-center">
-            <div class="parent-avatar parent-avatar-md bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-2">
+        <div class="parent-child-card p-3 text-center">
+            <div class="avatar-md bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
                 <i class="bi bi-file-earmark-stack fs-5"></i>
             </div>
             <h3 class="fw-bold mb-0 text-dark" id="countTotal">0</h3>
@@ -38,8 +38,8 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="parent-card p-3 text-center">
-            <div class="parent-avatar parent-avatar-md bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-2">
+        <div class="parent-child-card p-3 text-center">
+            <div class="avatar-md bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
                 <i class="bi bi-check-circle-fill fs-5"></i>
             </div>
             <h3 class="fw-bold mb-0 text-success" id="countActive">0</h3>
@@ -47,8 +47,8 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="parent-card p-3 text-center">
-            <div class="parent-avatar parent-avatar-md bg-warning bg-opacity-10 text-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-2">
+        <div class="parent-child-card p-3 text-center">
+            <div class="avatar-md bg-warning bg-opacity-10 text-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
                 <i class="bi bi-hourglass-split fs-5"></i>
             </div>
             <h3 class="fw-bold mb-0 text-warning" id="countPending">0</h3>
@@ -56,8 +56,8 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="parent-card p-3 text-center">
-            <div class="parent-avatar parent-avatar-md bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-2">
+        <div class="parent-child-card p-3 text-center">
+            <div class="avatar-md bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
                 <i class="bi bi-x-circle-fill fs-5"></i>
             </div>
             <h3 class="fw-bold mb-0 text-danger" id="countRejected">0</h3>
@@ -70,14 +70,14 @@
 <div class="parent-report-card">
     <div class="card-header bg-transparent py-3 border-bottom d-flex align-items-center justify-content-between">
         <h5 class="fw-bold mb-0 text-dark">
-            <i class="bi bi-journal-text me-2" style="color: var(--parent-accent);"></i>
+            <i class="bi bi-journal-text me-2 text-primary"></i>
             {{ _('Applications List') }}
         </h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table parent-table align-middle mb-0">
-                <thead>
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
                     <tr>
                         <th class="py-3 px-4">#</th>
                         <th class="py-3 px-4">{{ _('Child Name') }}</th>
@@ -97,10 +97,6 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/parent-design-system.css') }}?v=1.0" />
 {% endblock %}
 
 {% block extra_js %}
@@ -158,14 +154,12 @@
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="5" class="text-center py-5">
-                            <div class="parent-empty">
-                                <div class="parent-empty-icon"><i class="bi bi-inbox"></i></div>
-                                <h6 class="fw-bold mb-1">${T('لا توجد طلبات تسجيل حالياً', 'No enrollment applications')}</h6>
-                                <p class="text-muted small mb-3">${T('يمكنك تسجيل طفل في الحضانة بسهولة وفي أي وقت.', 'You can register your child easily at any time.')}</p>
-                                <a href="/enroll" class="btn btn-primary rounded-pill px-4 shadow-sm">
-                                    <i class="bi bi-plus-circle me-2"></i>${T('تقديم طلب جديد', 'Submit New Application')}
-                                </a>
-                            </div>
+                            <i class="bi bi-inbox fs-1 text-muted d-block mb-3 opacity-25"></i>
+                            <h6 class="fw-bold mb-1">${T('لا توجد طلبات تسجيل حالياً', 'No enrollment applications')}</h6>
+                            <p class="text-muted small mb-3">${T('يمكنك تسجيل طفل في الحضانة بسهولة وفي أي وقت.', 'You can register your child easily at any time.')}</p>
+                            <a href="/enroll" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                                <i class="bi bi-plus-circle me-2"></i>${T('تقديم طلب جديد', 'Submit New Application')}
+                            </a>
                         </td>
                     </tr>
                 `;

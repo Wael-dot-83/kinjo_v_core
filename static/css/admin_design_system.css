@@ -3,12 +3,19 @@
    ============================================================================ */
 :root {
   /* Chart / data-vis palette — WCAG AA contrast ≥ 4.5:1 on white */
-  --chart-color-1: #2b3a67;
-  --chart-color-2: #0d7377;
-  --chart-color-3: #f59e0b;
-  --chart-color-4: #dc2626;
-  --chart-color-5: #7c3aed;
-  --chart-color-6: #065f46;
+  --chart-color-1: #2b3a67; /* deep navy     */
+  --chart-color-2: #0d7377; /* teal          */
+  --chart-color-3: #f59e0b; /* amber warning */
+  --chart-color-4: #dc2626; /* red error     */
+  --chart-color-5: #7c3aed; /* violet        */
+  --chart-color-6: #065f46; /* emerald dark  */
+
+  /* Arabic/RTL typography stack */
+  /* Aliases. The canonical stacks live in design-tokens.css; these names are
+     kept so existing rules keep working, but they no longer carry their own
+     opinion. They used to lead with Cairo, which this shell never loads. */
+  --font-arabic: var(--kinjo-font-family-ar);
+  --font-latin: var(--kinjo-font-family-en);
 
   /* Sidebar layout token */
   --admin-sidebar-width: 280px;
@@ -16,45 +23,58 @@
   /* Focus ring — visible keyboard navigation */
   --focus-ring: 0 0 0 3px rgba(30, 64, 175, 0.45);
 
-  /* Typography stack aliases — single source of truth is design-tokens.css */
-  --font-family-ar: var(--kinjo-font-family-ar);
-  --font-family-en: var(--kinjo-font-family-en);
-  --font-family-mono: var(--kinjo-font-family-mono, "JetBrains Mono", "Fira Code", monospace);
-  --font-family-base: var(--kinjo-font-family-ar);
-  --font-family-ltr: var(--kinjo-font-family-en);
+  /* Primary Palette */
+  /* Interaction colour. Single source of truth is --kinjo-action in
+     design-tokens.css — see the brand-vs-action note there before changing it.
+     The literals are fallbacks for the few pages that skip design-tokens.css. */
+  --color-primary: var(--kinjo-action);
+  --color-primary-hover: var(--kinjo-action-hover);
+  --color-primary-light: #dbeafe;
+  --color-primary-surface: #f8fafc;
+  --color-primary-accent: #b49b3b;
+  --color-primary-accent-hover: #967f2e;
+  --color-primary-accent-light: #d6c56b;
 
-  /* Type scale aliases — single source of truth is design-tokens.css */
-  --text-xs: var(--kinjo-font-size-xs);
-  --text-sm: var(--kinjo-font-size-sm);
-  --text-base: var(--kinjo-font-size-base);
-  --text-lg: var(--kinjo-font-size-lg);
-  --text-xl: var(--kinjo-font-size-xl);
-  --text-2xl: var(--kinjo-font-size-2xl);
-  --text-3xl: var(--kinjo-font-size-3xl);
+  /* Secondary Palette */
+  --color-secondary: var(--kinjo-action);
+  --color-secondary-hover: #1d4ed8;
+  --color-secondary-light: #dbeafe;
+  --color-secondary-surface: #f8fafc;
 
-  /* Font weight aliases — single source of truth is design-tokens.css */
-  --font-weight-regular: var(--kinjo-font-weight-normal);
-  --font-weight-medium: var(--kinjo-font-weight-medium);
-  --font-weight-semibold: var(--kinjo-font-weight-semibold);
-  --font-weight-bold: var(--kinjo-font-weight-bold);
+  /* Semantic Colors */
+  --color-success: #16a34a;
+  --color-success-hover: #15803d;
+  --color-success-light: #dcfce7;
+  --color-success-dark: #166534;
 
-  /* Motion aliases — single source of truth is design-tokens.css */
-  --transition-fast: var(--kinjo-transition-fast);
-  --transition-normal: var(--kinjo-transition-normal);
-  --transition-slow: var(--kinjo-transition-slow);
+  --color-warning: #f59e0b;
+  --color-warning-hover: #d97706;
+  --color-warning-light: #fef3c7;
+  --color-warning-dark: #b45309;
 
-  /* Shadow aliases — single source of truth is design-tokens.css */
-  --shadow-sm: var(--kinjo-shadow-sm);
-  --shadow-md: var(--kinjo-shadow-md);
-  --shadow-lg: var(--kinjo-shadow-lg);
+  --color-error: #dc2626;
+  --color-error-hover: #b91c1c;
+  --color-error-light: #fee2e2;
+  --color-error-dark: #991b1b;
 
-  /* Radius aliases — single source of truth is design-tokens.css */
-  --radius-sm: var(--kinjo-radius-sm);
-  --radius-md: var(--kinjo-radius-md);
-  --radius-lg: var(--kinjo-radius-lg);
-  --radius-full: var(--kinjo-radius-full);
+  --color-info: var(--kinjo-action);
+  --color-info-hover: #1d4ed8;
+  --color-info-light: #dbeafe;
+  --color-info-dark: var(--kinjo-action);
 
-  /* Spacing scale (8pt system) — retained because it differs from the 4px kinjo scale */
+  /* Gray Scale */
+  --color-gray-50: #f8fafc;
+  --color-gray-100: #f1f5f9;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #cbd5e1;
+  --color-gray-400: #94a3b8;
+  --color-gray-500: var(--kinjo-color-text-secondary); /* was #6b7280: 3.9-4.34:1 as text on tinted surfaces */
+  --color-gray-600: #475569;
+  --color-gray-700: #334155;
+  --color-gray-800: #1e293b;
+  --color-gray-900: #111827;
+
+  /* Spacing Scale (8pt System) */
   --space-1: 8px;
   --space-2: 16px;
   --space-3: 24px;
@@ -66,17 +86,62 @@
   --space-9: 72px;
   --space-10: 80px;
 
-  /* Border widths */
+  /* Typography Scale */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 32px;
+
+  /* Font Families */
+  --font-family-ar: var(--kinjo-font-family-ar);
+  --font-family-en: var(--kinjo-font-family-en);
+  /* No monospace webfont is loaded anywhere in this product, so leading with
+     JetBrains Mono meant developers who have it installed saw a different
+     face from everyone else. System mono first is predictable. */
+  --font-family-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas,
+    "Liberation Mono", monospace;
+  --font-family-base: var(--font-family-ar);
+  --font-family-ltr: var(--font-family-en);
+}
+
+html[dir="ltr"] {
+  --font-family-base: var(--font-family-ltr);
+}
+
+:root {
+  /* Font Weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Motion Primitives */
+  --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 360ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.15);
+
+  /* Border Radii */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
   --border-width: 1px;
   --border-width-2: 2px;
   --border-width-4: 4px;
+  --z-sticky: 1020;
+  --z-modal: 1050;
+  --z-dropdown: 1000;
 
-  /* Z-index */
-  --z-sticky: var(--kinjo-z-sticky, 1020);
-  --z-modal: var(--kinjo-z-modal, 1050);
-  --z-dropdown: var(--kinjo-z-dropdown, 1000);
-
-  /* Backward-compatibility alias */
+  /* Backward-compatibility aliases */
   --color-primary-dark: var(--kinjo-action-hover);
 }
 /**
@@ -233,7 +298,7 @@ html[dir="ltr"] .sidebar {
 }
 
 .sidebar-profile-org {
-  font-size: 0.73rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #ffffff;
   line-height: 1.3;
@@ -243,7 +308,7 @@ html[dir="ltr"] .sidebar {
 }
 
 .sidebar-profile-dept {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.72);
   line-height: 1.3;
   margin-top: 1px;
@@ -407,7 +472,7 @@ html[dir="ltr"] .dropdown-menu {
   inset-block-start: 0;
   inset-block-end: 0;
   inset-inline-start: 0;
-  width: 1px;
+  width: 4px;
   background-color: var(--color-primary-dark);
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
@@ -1423,7 +1488,7 @@ html[dir="ltr"] .dropdown-menu {
   inset-inline-start: 0;
   top: 0;
   bottom: 0;
-  width: 1px;
+  width: 3px;
   background-color: var(--color-primary-dark);
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
@@ -1479,7 +1544,7 @@ html[dir="ltr"] .dropdown-menu {
 }
 
 .nav-chevron {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   opacity: 0.6;
   transition: transform var(--transition-fast);
   margin-inline-start: auto;
@@ -2933,7 +2998,7 @@ html[dir="ltr"] .dropdown-menu {
 .kd-kpi-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgb(0 0 0 / 0.1);
-  border-color: #94a3b8;
+  border-color: #556575;
   text-decoration: none;
   color: inherit;
 }
@@ -3121,7 +3186,7 @@ html[dir="ltr"] .dropdown-menu {
 }
 
 .kd-panel-badge {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   padding: 0.2rem 0.6rem;
   border-radius: 1rem;
@@ -3295,12 +3360,12 @@ html[dir="ltr"] .dropdown-menu {
 }
 
 .kd-alert-time {
-  font-size: 0.73rem;
+  font-size: 0.75rem;
   color: var(--color-gray-500);
 }
 
 .kd-alert-badge {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
   padding: 0.15rem 0.55rem;
   border-radius: 1rem;
@@ -3427,7 +3492,7 @@ html[dir="ltr"] .dropdown-menu {
   color: #f59e0b;
 }
 .kd-health-err i {
-  color: #ef4444;
+  color: #dc2626;
 }
 
 .kd-health-label {
@@ -4200,7 +4265,6 @@ html[dir="ltr"] .dropdown-menu {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   z-index: var(--z-tooltip);
-  backdrop-filter: blur(4px);
   pointer-events: none;
 }
 
@@ -4219,7 +4283,6 @@ html[dir="ltr"] .dropdown-menu {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  backdrop-filter: blur(4px);
   transition: border-color var(--transition-fast);
 }
 .compass-rose:hover {
@@ -4254,7 +4317,6 @@ html[dir="ltr"] .dropdown-menu {
   align-items: center;
   justify-content: center;
   transition: all var(--transition-fast);
-  backdrop-filter: blur(4px);
 }
 .map-ctrl-btn:hover {
   background: rgba(47, 125, 98, 0.18);
@@ -4924,7 +4986,6 @@ html[dir="ltr"] .dropdown-menu {
   pointer-events: none;
   display: none;
   min-width: 170px;
-  backdrop-filter: blur(10px);
   box-shadow: var(--shadow-md);
 }
 .tt-name {
@@ -5029,7 +5090,7 @@ html[dir="ltr"] .dropdown-menu {
 
 /* Icon sizing for map controls */
 .intel-btn-icon {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
 }
 
@@ -5447,8 +5508,6 @@ html[dir="ltr"] .dropdown-menu {
 /* Glassmorphism Classes */
 .glass-sidebar {
   background: rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border-inline-end: 1px solid rgba(255, 255, 255, 0.2) !important;
   box-shadow: 20px 40px 40px rgba(30, 64, 175, 0.1) !important;
 }
@@ -5475,8 +5534,6 @@ html[dir="ltr"] .dropdown-menu {
   min-width: 0;
   word-wrap: break-word;
   background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   background-clip: border-box;
   border: 1px solid rgba(255, 255, 255, 0.5);
   box-shadow: 0 4px 20px rgba(0, 40, 142, 0.05);
@@ -5488,8 +5545,6 @@ html[dir="ltr"] .dropdown-menu {
 
 .glass-header {
   background: rgba(248, 249, 255, 0.8) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(196, 197, 213, 0.3) !important;
 }
 
@@ -5512,8 +5567,6 @@ html[dir="ltr"] .dropdown-menu {
   --bs-card-bg: transparent;
   --bs-card-img-overlay-padding: 1rem;
   background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   background-clip: border-box;
   border: 1px solid rgba(255, 255, 255, 0.5);
   box-shadow: 0 4px 20px rgba(0, 40, 142, 0.05);
@@ -5528,9 +5581,12 @@ html[dir="ltr"] .dropdown-menu {
 }
 
 .admin-card {
-  background: rgba(255, 255, 255, 0.9) !important;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  /* Was a translucent white surface with a blurred backdrop -- glassmorphism,
+     which impeccable.style names as an anti-pattern, on the primary admin
+     surface. An opaque surface also gives the text over it a predictable
+     contrast backing instead of whatever happens to be scrolling behind. */
+  background: var(--kinjo-color-bg-surface) !important;
+  border: 1px solid var(--kinjo-color-border-subtle) !important;
   box-shadow: 0 4px 20px rgba(0, 40, 142, 0.05) !important;
   border-radius: 0.5rem !important;
   transition:
@@ -5890,7 +5946,7 @@ html[dir="ltr"] .dropdown-menu {
   border: 1px solid var(--slate-200);
   border-radius: var(--r-full);
   padding: 0.35rem 0.75rem;
-  font: 500 0.6875rem/1 var(--font-ar);
+  font: 500 0.75rem/1 var(--font-ar);
   color: var(--kinjo-color-text-secondary, #475569);
   cursor: pointer;
   transition: all 0.12s ease;
@@ -5960,7 +6016,7 @@ html[dir="ltr"] .dropdown-menu {
   border: 1.5px solid var(--slate-200);
   border-radius: var(--r-sm);
   padding: 0.35rem 0.55rem;
-  font: 500 0.6875rem/1 var(--font-ar);
+  font: 500 0.75rem/1 var(--font-ar);
   color: var(--kinjo-color-text-secondary, #475569);
   cursor: pointer;
   transition: all 0.12s ease;
@@ -6306,7 +6362,7 @@ html[dir="ltr"] .dropdown-menu {
 }
 
 .ce-data-table th {
-  font: 600 0.6875rem/1 var(--font-ar);
+  font: 600 0.75rem/1 var(--font-ar);
   color: var(--slate-500);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -6317,7 +6373,6 @@ html[dir="ltr"] .dropdown-menu {
   position: sticky;
   top: 0;
   z-index: 10;
-  backdrop-filter: saturate(180%) blur(4px);
 }
 
 .ce-data-table th:hover {
@@ -6331,7 +6386,7 @@ html[dir="ltr"] .dropdown-menu {
 }
 
 .ce-data-table th .sort-icon {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   margin-inline-start: 0.25rem;
   opacity: 0.4;
   transition: opacity 0.2s ease;
@@ -6452,7 +6507,7 @@ html[dir="ltr"] .dropdown-menu {
 
 /* Enhanced Scope Badge */
 .ce-scope-badge {
-  font: 600 0.6875rem/1 var(--font-ar);
+  font: 600 0.75rem/1 var(--font-ar);
   padding: 0.2rem 0.6rem;
   border-radius: var(--r-full);
   font-weight: 600;
@@ -6858,4 +6913,83 @@ html[dir="ltr"] .dropdown-menu {
 .form-check-input:focus {
   border-color: var(--kinjo-action);
   box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.25);
+}
+
+/* ---- Bordered containers must inset their content -----------------------
+   These wrappers draw a boundary (border and/or background). Most get their
+   inset from a __body/__header child; used without one, their text landed
+   flush against the border line -- measured at padding 0 on all four sides on
+   the admin dashboard and charts pages.
+
+   The :has() guards mean a card that already has a structured child is left
+   alone, so padding is never applied twice. Spacing comes from the canonical
+   token: an earlier attempt used --sp-4, which is defined only in
+   admin_analytics_v2.css, so on pages that do not load that sheet the
+   declaration was invalid and silently dropped. */
+.admin-card-header,
+.admin-card-body,
+.admin-card-footer {
+  padding: var(--kinjo-spacing-4);
+}
+.admin-card-header {
+  padding-bottom: var(--kinjo-spacing-3);
+}
+/* A card used without the header/body pattern still needs an inset of its own. */
+.admin-card:not(:has(> .admin-card-header)):not(:has(> .admin-card-body)):not(:has(> .card-body)) {
+  padding: var(--kinjo-spacing-4);
+}
+.card:not(:has(> .card-body)):not(:has(> .card-header)):not(:has(> .list-group)):not(:has(> img)):not(:has(> table)) {
+  padding: var(--kinjo-spacing-4);
+}
+
+/* Bootstrap neutral text roles ------------------------------------------
+   Bootstrap's secondary grey measures 4.45:1 on this product's warm
+   canvas and its muted grey is lighter still -- both just under the 4.5 floor,
+   which is why they surfaced on the analytics pages rather than anywhere
+   obvious. Mapping the roles onto canonical tokens fixes every instance at
+   once instead of restyling buttons one at a time. */
+.btn.btn-outline-secondary,
+.btn.btn-secondary {
+  /* Two things had to be right here. Bootstrap resolves button colour through
+     --bs-btn-color, so a plain `color:` never applies; and Bootstrap's own
+     stylesheet loads AFTER this one, so a single-class selector loses on order.
+     Matching both classes wins on specificity regardless of load order. */
+  --bs-btn-color: var(--kinjo-color-text-secondary);
+  --bs-btn-hover-color: var(--kinjo-color-text-inverse);
+}
+.btn-link.text-secondary,
+.text-secondary {
+  color: var(--kinjo-color-text-secondary) !important;   /* Bootstrap utilities are !important */
+}
+/* Bootstrap's default link blue measures 4.27:1 on this product's warm
+   canvas -- marginally under the floor. Same specificity note as above. */
+.btn.btn-link,
+a.text-primary,
+p.text-primary,
+span.text-primary,
+div.text-primary,
+h1.text-primary, h2.text-primary, h3.text-primary,
+.small.text-primary,
+.text-primary,
+.link-primary {
+  /* Bootstrap's colour utilities are declared !important, so nothing short of
+     !important overrides them. Matching their weight is the correct move here
+     rather than escalating specificity further. */
+  --bs-link-color-rgb: 10, 88, 202;
+  color: var(--kinjo-color-link-accessible) !important;
+}
+.text-muted {
+  color: var(--kinjo-color-text-muted);
+}
+
+/* az-card inset providers ------------------------------------------------
+   Same shape as the .admin-card case: the card delegates its inset to
+   __header/__body, but those are styled in admin_analytics_v2.css using --sp-*
+   tokens that do not resolve on every page that renders the card, so the
+   declarations were dropped and the content sat flush against the border.
+   Canonical spacing, in the sheet the admin shell always loads. */
+.az-card__header,
+.az-card__body,
+.az-card__footer {
+  padding: var(--kinjo-spacing-4);
 }

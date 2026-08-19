@@ -1,336 +1,313 @@
-/* static/css/parent-profile.css - KinJo Parent Profile UI System
-   Uses unified tokens from parent-design-system.css */
+  .parent-profile-shell {
+    --profile-ink: #16342c;
+    --profile-muted: #64748b;
+    --profile-surface: #ffffff;
+    --profile-surface-soft: #f6fbf8;
+    --profile-border: rgba(31, 94, 71, 0.12);
+    --profile-shadow: 0 24px 60px rgba(20, 44, 37, 0.08);
+    --profile-accent: var(--kinjo-brand);
+    --profile-accent-soft: #dcefe7;
+    --profile-warm: #c98743;
+    --profile-hero-pos: top right;
+  }
 
-.parent-profile-shell {
-  --profile-ink: var(--parent-ink);
-  --profile-muted: var(--parent-muted);
-  --profile-surface: var(--parent-surface);
-  --profile-surface-soft: var(--parent-surface-soft);
-  --profile-border: var(--parent-border);
-  --profile-shadow: var(--parent-shadow);
-  --profile-accent: var(--parent-accent);
-  --profile-accent-soft: var(--parent-accent-soft);
-  --profile-warm: var(--parent-warm);
-  --profile-hero-pos: var(--parent-hero-pos);
-}
-
-.parent-profile-shell .profile-hero,
-.parent-profile-shell .profile-card,
-.parent-profile-shell .profile-side-card {
-  background: var(--profile-surface);
-  border: 1px solid var(--profile-border);
-  border-radius: var(--parent-radius);
-  box-shadow: var(--profile-shadow);
-}
-
-.parent-profile-shell .profile-hero {
-  overflow: hidden;
-  background:
-    radial-gradient(
-      circle at var(--profile-hero-pos),
-      rgba(201, 135, 67, 0.18),
-      transparent 28%
-    ),
-    linear-gradient(135deg, #163d2e 0%, var(--kinjo-brand) 55%, #2f7d62 100%);
-  color: #fff;
-}
-
-.parent-profile-shell .profile-hero .text-muted,
-.parent-profile-shell .profile-hero .profile-kicker,
-.parent-profile-shell .profile-hero .profile-subcopy {
-  color: rgba(255, 255, 255, 0.82) !important;
-}
-
-.parent-profile-shell .profile-kicker {
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.parent-profile-shell .profile-avatar {
-  width: 4.75rem;
-  height: 4.75rem;
-  border-radius: var(--parent-radius);
-  display: grid;
-  place-items: center;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(12px);
-  font-size: 2rem;
-}
-
-.parent-profile-shell .profile-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  border-radius: var(--parent-radius-pill);
-  padding: 0.55rem 0.9rem;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  font-size: 0.92rem;
-  font-weight: 600;
-}
-
-.parent-profile-shell .profile-chip i {
-  font-size: 0.95rem;
-}
-
-.parent-profile-shell .profile-meta-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-.parent-profile-shell .profile-meta-card {
-  padding: 1rem;
-  border-radius: var(--parent-radius-sm);
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  min-height: 100%;
-}
-
-.parent-profile-shell .profile-meta-label {
-  display: block;
-  margin-bottom: 0.35rem;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.74);
-}
-
-.parent-profile-shell .profile-card,
-.parent-profile-shell .profile-side-card {
-  padding: 1.5rem;
-}
-
-.parent-profile-shell .profile-card-header,
-.parent-profile-shell .profile-side-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
-}
-
-.parent-profile-shell .profile-card-title {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  color: var(--profile-ink);
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
-}
-
-.parent-profile-shell .profile-card-icon {
-  width: 2.6rem;
-  height: 2.6rem;
-  border-radius: 0.95rem;
-  display: grid;
-  place-items: center;
-  background: var(--profile-accent-soft);
-  color: var(--profile-accent);
-  flex: 0 0 auto;
-}
-
-.parent-profile-shell .profile-card-subtitle,
-.parent-profile-shell .profile-side-subtitle,
-.parent-profile-shell .profile-help,
-.parent-profile-shell .profile-field-label,
-.parent-profile-shell .profile-stat-label {
-  color: var(--profile-muted);
-}
-
-.parent-profile-shell .profile-info-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-.parent-profile-shell .profile-field {
-  padding: 1rem;
-  border-radius: var(--parent-radius-sm);
-  background: var(--profile-surface-soft);
-  border: 1px solid var(--profile-border);
-  min-height: 100%;
-}
-
-.parent-profile-shell .profile-field-label {
-  font-size: 0.8rem;
-  margin-bottom: 0.35rem;
-}
-
-.parent-profile-shell .profile-field-value {
-  font-weight: 700;
-  color: var(--profile-ink);
-  word-break: break-word;
-}
-
-.parent-profile-shell .profile-legal-name {
-  line-height: 1.7;
-}
-
-.parent-profile-shell .profile-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
-}
-
-.parent-profile-shell .profile-stat {
-  padding: 1rem;
-  border-radius: var(--parent-radius-sm);
-  background: linear-gradient(180deg, var(--profile-surface), var(--profile-surface-soft));
-  border: 1px solid var(--profile-border);
-}
-
-.parent-profile-shell .profile-stat-value {
-  color: var(--profile-ink);
-  font-size: 1.25rem;
-  font-weight: 800;
-}
-
-.parent-profile-shell .profile-progress {
-  height: 0.6rem;
-  background: var(--profile-border);
-  border-radius: var(--parent-radius-pill);
-  overflow: hidden;
-}
-
-.parent-profile-shell .profile-progress > span {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, var(--kinjo-brand) 0%, var(--profile-warm) 100%);
-  border-radius: inherit;
-  transition: width var(--kinjo-transition-normal);
-}
-
-.parent-profile-shell .profile-side-card {
-  position: sticky;
-  top: 1.5rem;
-}
-
-.parent-profile-shell .profile-summary-list,
-.parent-profile-shell .profile-link-list {
-  display: grid;
-  gap: 0.85rem;
-}
-
-.parent-profile-shell .profile-summary-item,
-.parent-profile-shell .profile-link-item {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 0.95rem 1rem;
-  border-radius: var(--parent-radius-sm);
-  background: var(--profile-surface-soft);
-  border: 1px solid var(--profile-border);
-  color: var(--profile-ink);
-  text-decoration: none;
-}
-
-.parent-profile-shell .profile-summary-item i,
-.parent-profile-shell .profile-link-item i {
-  width: 2rem;
-  height: 2rem;
-  display: grid;
-  place-items: center;
-  border-radius: 0.75rem;
-  background: var(--profile-surface);
-  color: var(--profile-accent);
-}
-
-.parent-profile-shell .profile-link-item:hover {
-  border-color: rgba(31, 94, 71, 0.22);
-  transform: translateY(-1px);
-  color: var(--profile-ink);
-}
-
-.parent-profile-shell .lang-toggle {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.6rem;
-}
-
-.parent-profile-shell .lang-toggle .btn {
-  border-radius: 0.9rem;
-  padding-top: 0.7rem;
-  padding-bottom: 0.7rem;
-  font-weight: 700;
-}
-
-.parent-profile-shell .form-control,
-.parent-profile-shell .form-select,
-.parent-profile-shell .form-check-input {
-  border-radius: var(--parent-radius-sm);
-}
-
-.parent-profile-shell .form-control,
-.parent-profile-shell .form-select {
-  border-color: var(--profile-border);
-  padding-top: 0.78rem;
-  padding-bottom: 0.78rem;
-}
-
-.parent-profile-shell .form-control:focus,
-.parent-profile-shell .form-select:focus {
-  border-color: rgba(31, 94, 71, 0.35);
-  box-shadow: 0 0 0 0.25rem rgba(31, 94, 71, 0.12);
-}
-
-.parent-profile-shell .btn-soft {
-  background: var(--profile-accent-soft);
-  color: var(--profile-accent);
-  border: 1px solid var(--profile-border);
-}
-
-.parent-profile-shell .btn-soft:hover {
-  background: #cde4db;
-  color: #163d2e;
-}
-
-.parent-profile-shell .profile-section-actions {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.parent-profile-shell .profile-inline-note {
-  border-radius: var(--parent-radius-sm);
-  padding: 0.85rem 1rem;
-  background: #f8f2eb;
-  color: #7a4d21;
-  border: 1px solid rgba(201, 135, 67, 0.2);
-}
-
-.parent-profile-shell .profile-alert {
-  border-radius: var(--parent-radius);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-}
-
-@media (max-width: 991.98px) {
+  .parent-profile-shell .profile-hero,
+  .parent-profile-shell .profile-card,
   .parent-profile-shell .profile-side-card {
-    position: static;
+    background: var(--profile-surface);
+    border: 1px solid var(--profile-border);
+    border-radius: 1.5rem;
+    box-shadow: var(--profile-shadow);
   }
 
-  .parent-profile-shell .profile-meta-grid,
-  .parent-profile-shell .profile-info-grid,
-  .parent-profile-shell .profile-stats {
-    grid-template-columns: 1fr;
+  .parent-profile-shell .profile-hero {
+    overflow: hidden;
+    background:
+      radial-gradient(
+        circle at var(--profile-hero-pos),
+        rgba(201, 135, 67, 0.18),
+        transparent 28%
+      ),
+      linear-gradient(135deg, #163d2e 0%, var(--kinjo-brand) 55%, #2f7d62 100%);
+    color: #fff;
   }
-}
+
+  .parent-profile-shell .profile-hero .text-muted,
+  .parent-profile-shell .profile-hero .profile-kicker,
+  .parent-profile-shell .profile-hero .profile-subcopy {
+    color: rgba(255, 255, 255, 0.82) !important;
+  }
+
+  .parent-profile-shell .profile-kicker {
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  .parent-profile-shell .profile-avatar {
+    width: 4.75rem;
+    height: 4.75rem;
+    border-radius: 1.5rem;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    font-size: 2rem;
+  }
+
+  .parent-profile-shell .profile-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    padding: 0.55rem 0.9rem;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
+
+  .parent-profile-shell .profile-chip i {
+    font-size: 0.95rem;
+  }
+
+  .parent-profile-shell .profile-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .parent-profile-shell .profile-meta-card {
+    padding: 1rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    min-height: 100%;
+  }
+
+  .parent-profile-shell .profile-meta-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.74);
+  }
+
+  .parent-profile-shell .profile-card,
+  .parent-profile-shell .profile-side-card {
+    padding: 1.4rem;
+  }
+
+  .parent-profile-shell .profile-card-header,
+  .parent-profile-shell .profile-side-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .parent-profile-shell .profile-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--profile-ink);
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .parent-profile-shell .profile-card-icon {
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 0.95rem;
+    display: grid;
+    place-items: center;
+    background: var(--profile-accent-soft);
+    color: var(--profile-accent);
+    flex: 0 0 auto;
+  }
+
+  .parent-profile-shell .profile-card-subtitle,
+  .parent-profile-shell .profile-side-subtitle,
+  .parent-profile-shell .profile-help,
+  .parent-profile-shell .profile-field-label,
+  .parent-profile-shell .profile-stat-label {
+    color: var(--profile-muted);
+  }
+
+  .parent-profile-shell .profile-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .parent-profile-shell .profile-field {
+    padding: 1rem;
+    border-radius: 1rem;
+    background: var(--profile-surface-soft);
+    border: 1px solid rgba(31, 94, 71, 0.08);
+    min-height: 100%;
+  }
+
+  .parent-profile-shell .profile-field-label {
+    font-size: 0.8rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .parent-profile-shell .profile-field-value {
+    font-weight: 700;
+    color: var(--profile-ink);
+    word-break: break-word;
+  }
+
+  .parent-profile-shell .profile-legal-name {
+    line-height: 1.7;
+  }
+
+  .parent-profile-shell .profile-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+  }
+
+  .parent-profile-shell .profile-stat {
+    padding: 1rem;
+    border-radius: 1rem;
+    background: linear-gradient(180deg, #ffffff, #f8fbfa);
+    border: 1px solid rgba(31, 94, 71, 0.08);
+  }
+
+  .parent-profile-shell .profile-stat-value {
+    color: var(--profile-ink);
+    font-size: 1.25rem;
+    font-weight: 800;
+  }
+
+  .parent-profile-shell .profile-progress {
+    height: 0.6rem;
+    background: #e5ece8;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .parent-profile-shell .profile-progress > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--kinjo-brand) 0%, #c98743 100%);
+    border-radius: inherit;
+    
+  }
+
+  .parent-profile-shell .profile-side-card {
+    position: sticky;
+    top: 1.5rem;
+  }
+
+  .parent-profile-shell .profile-summary-list,
+  .parent-profile-shell .profile-link-list {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .parent-profile-shell .profile-summary-item,
+  .parent-profile-shell .profile-link-item {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.95rem 1rem;
+    border-radius: 1rem;
+    background: var(--profile-surface-soft);
+    border: 1px solid rgba(31, 94, 71, 0.08);
+    color: var(--profile-ink);
+    text-decoration: none;
+  }
+
+  .parent-profile-shell .profile-summary-item i,
+  .parent-profile-shell .profile-link-item i {
+    width: 2rem;
+    height: 2rem;
+    display: grid;
+    place-items: center;
+    border-radius: 0.75rem;
+    background: #fff;
+    color: var(--profile-accent);
+  }
+
+  .parent-profile-shell .profile-link-item:hover {
+    border-color: rgba(31, 94, 71, 0.22);
+    transform: translateY(-1px);
+  }
+
+  .parent-profile-shell .lang-toggle {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .parent-profile-shell .lang-toggle .btn {
+    border-radius: 0.9rem;
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+    font-weight: 700;
+  }
+
+  .parent-profile-shell .form-control,
+  .parent-profile-shell .form-select,
+  .parent-profile-shell .form-check-input {
+    border-radius: 0.9rem;
+  }
+
+  .parent-profile-shell .form-control,
+  .parent-profile-shell .form-select {
+    border-color: rgba(31, 94, 71, 0.16);
+    padding-top: 0.78rem;
+    padding-bottom: 0.78rem;
+  }
+
+  .parent-profile-shell .form-control:focus,
+  .parent-profile-shell .form-select:focus {
+    border-color: rgba(31, 94, 71, 0.35);
+    box-shadow: 0 0 0 0.25rem rgba(31, 94, 71, 0.12);
+  }
+
+  .parent-profile-shell .btn-soft {
+    background: var(--profile-accent-soft);
+    color: var(--profile-accent);
+    border: 1px solid rgba(31, 94, 71, 0.08);
+  }
+
+  .parent-profile-shell .btn-soft:hover {
+    background: #cde4db;
+    color: #163d2e;
+  }
+
+  .parent-profile-shell .profile-section-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .parent-profile-shell .profile-inline-note {
+    border-radius: 1rem;
+    padding: 0.85rem 1rem;
+    background: #f8f2eb;
+    color: #7a4d21;
+    border: 1px solid rgba(201, 135, 67, 0.2);
+  }
+
+  @media (max-width: 991.98px) {
+    .parent-profile-shell .profile-side-card {
+      position: static;
+    }
+
+    .parent-profile-shell .profile-meta-grid,
+    .parent-profile-shell .profile-info-grid,
+    .parent-profile-shell .profile-stats {
+      grid-template-columns: 1fr;
+    }
+  }
 
 [dir="rtl"] .parent-profile-shell {
   --profile-hero-pos: top left;
-}
-
-[data-theme="dark"] .parent-profile-shell {
-  --profile-surface: #1e293b;
-  --profile-surface-soft: #0f172a;
-  --profile-border: rgba(255, 255, 255, 0.12);
-  --profile-accent-soft: rgba(16, 185, 129, 0.2);
-  --profile-muted: #94a3b8;
-}
-
-[data-theme="dark"] .parent-profile-shell .profile-inline-note {
-  background: rgba(201, 135, 67, 0.15);
-  color: #fcd34d;
 }

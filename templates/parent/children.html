@@ -31,25 +31,21 @@
     <!-- Skeleton Shimmer Loader -->
     <div class="col-md-6 col-lg-4">
         <div class="parent-child-card p-4 text-center">
-            <div class="parent-skeleton rounded-circle mx-auto mb-3" style="width: 72px; height: 72px;"></div>
-            <div class="parent-skeleton w-75 mx-auto mb-2" style="height: 20px;"></div>
-            <div class="parent-skeleton w-50 mx-auto mb-3" style="height: 14px;"></div>
-            <div class="parent-skeleton w-100 mb-2" style="height: 36px;"></div>
+            <div class="skeleton-box rounded-circle mx-auto mb-3" style="width: 72px; height: 72px;"></div>
+            <div class="skeleton-box w-75 mx-auto mb-2" style="height: 20px;"></div>
+            <div class="skeleton-box w-50 mx-auto mb-3" style="height: 14px;"></div>
+            <div class="skeleton-box w-100 mb-2" style="height: 36px;"></div>
         </div>
     </div>
     <div class="col-md-6 col-lg-4 d-none d-md-block">
         <div class="parent-child-card p-4 text-center">
-            <div class="parent-skeleton rounded-circle mx-auto mb-3" style="width: 72px; height: 72px;"></div>
-            <div class="parent-skeleton w-75 mx-auto mb-2" style="height: 20px;"></div>
-            <div class="parent-skeleton w-50 mx-auto mb-3" style="height: 14px;"></div>
-            <div class="parent-skeleton w-100 mb-2" style="height: 36px;"></div>
+            <div class="skeleton-box rounded-circle mx-auto mb-3" style="width: 72px; height: 72px;"></div>
+            <div class="skeleton-box w-75 mx-auto mb-2" style="height: 20px;"></div>
+            <div class="skeleton-box w-50 mx-auto mb-3" style="height: 14px;"></div>
+            <div class="skeleton-box w-100 mb-2" style="height: 36px;"></div>
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/parent-design-system.css') }}?v=1.0" />
 {% endblock %}
 
 {% block extra_js %}
@@ -130,12 +126,12 @@
                 container.innerHTML = `
                     <div class="col-12">
                         <div class="parent-child-card p-5 text-center border-dashed">
-                            <div class="parent-avatar parent-avatar-lg bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3">
+                            <div class="avatar-lg bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 72px; height: 72px;">
                                 <i class="bi bi-person-plus fs-1"></i>
                             </div>
                             <h4 class="fw-bold mb-2">${T('لم تقم بتسجيل أي طفل بعد', 'No children registered yet')}</h4>
                             <p class="text-muted mb-4 max-w-md mx-auto">${T('ابدأ بتسجيل طفلك في إحدى الحضانات المعتمدة للاستفادة من كامل خدمات المنصة.', 'Start by enrolling your child in a kindergarten to benefit from all services.')}</p>
-                            <a href="/enroll" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                            <a href="/enroll" class="btn btn-primary rounded-pill px-4 shadow">
                                 <i class="bi bi-plus-circle me-2"></i>${T('تسجيل طفل جديد', 'Register New Child')}
                             </a>
                         </div>
@@ -156,7 +152,7 @@
                 </div>
             `;
 
-            container.innerHTML = summaryHtml + children.map((child, idx) => {
+            container.innerHTML = summaryHtml + children.map(child => {
                 const age = calculateAge(child.date_of_birth);
                 const isFemale = (child.gender || '').toUpperCase() === 'FEMALE';
                 const genderText = isFemale ? T('أنثى', 'Female') : T('ذكر', 'Male');
@@ -183,7 +179,7 @@
                 }
 
                 return `
-                <div class="col-md-6 col-lg-4 parent-animate-in parent-animate-in-delay-${Math.min(idx, 4)}">
+                <div class="col-md-6 col-lg-4">
                     <div class="parent-child-card h-100">
                         <div class="p-4 flex-grow-1">
                             <div class="d-flex align-items-start justify-content-between mb-3">
@@ -192,8 +188,8 @@
                                 </div>
                                 <div>
                                     ${child.profile_complete
-                                        ? `<span class="parent-badge-soft parent-badge-soft-success rounded-pill px-3 py-1" title="${T('مكتمل', 'Complete')}"><i class="bi bi-check-circle me-1"></i>${T('مكتمل', 'Complete')}</span>`
-                                        : `<span class="parent-badge-soft parent-badge-soft-warning rounded-pill px-3 py-1" title="${T('غير مكتمل', 'Incomplete')}"><i class="bi bi-exclamation-circle me-1"></i>${T('غير مكتمل', 'Incomplete')}</span>`
+                                        ? `<span class="badge bg-success-subtle text-success rounded-pill px-3 py-1" title="${T('مكتمل', 'Complete')}"><i class="bi bi-check-circle me-1"></i>${T('مكتمل', 'Complete')}</span>`
+                                        : `<span class="badge bg-warning-subtle text-warning rounded-pill px-3 py-1" title="${T('غير مكتمل', 'Incomplete')}"><i class="bi bi-exclamation-circle me-1"></i>${T('غير مكتمل', 'Incomplete')}</span>`
                                     }
                                 </div>
                             </div>
@@ -231,16 +227,12 @@
         } catch (error) {
             console.error('Error loading children:', error);
             container.innerHTML = `
-                <div class="col-12 text-center py-5">
-                    <div class="parent-card p-5 border-dashed">
-                        <div class="parent-avatar parent-avatar-lg bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-3">
-                            <i class="bi bi-exclamation-triangle fs-1"></i>
-                        </div>
-                        <p class="fw-bold mb-3">${T('خطأ في تحميل بيانات الأطفال', 'Error loading children data')}</p>
-                        <button class="btn btn-outline-primary rounded-pill px-4" onclick="loadChildren()">
-                            <i class="bi bi-arrow-clockwise me-1"></i>${T('إعادة المحاولة', 'Retry')}
-                        </button>
-                    </div>
+                <div class="col-12 text-center text-danger py-5">
+                    <i class="bi bi-exclamation-triangle fs-1 d-block mb-3"></i>
+                    <p>${T('خطأ في تحميل بيانات الأطفال', 'Error loading children data')}</p>
+                    <button class="btn btn-outline-primary rounded-pill px-4" onclick="loadChildren()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>${T('إعادة المحاولة', 'Retry')}
+                    </button>
                 </div>
             `;
         }
