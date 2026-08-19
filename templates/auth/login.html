@@ -248,8 +248,9 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     margin-bottom: 0.4rem;
   }
   .auth-field label .req-star {
-    /* 3.76:1 on white as 14px text; the -text sibling measures 4.83:1. */
-    color: var(--kinjo-color-danger-text);
+    /* The -text token is 4.83:1 on white but only 4.33:1 on this page's
+       cream ground; -text-strong restores the margin. */
+    color: var(--kinjo-color-danger-text-strong);
     margin-inline-start: 0.2rem;
   }
 
@@ -367,7 +368,8 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
 
   .af-hint {
     font-size: 0.8125rem;
-    color: #66747a;
+    /* was #66747a: 4.34:1 on this page's cream ground, not on white. */
+    color: var(--kinjo-color-neutral-text);
     margin-top: 0.3125rem;
     display: flex;
     align-items: baseline;
@@ -413,7 +415,8 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   .auth-forgot-link {
     font-size: 0.875rem;
     font-weight: 500;
-    color: #d9652e;
+    /* was #d9652e: 3.22:1 on cream. Same burnt orange, dark enough to read. */
+    color: var(--kinjo-color-link-warm);
     text-decoration: none;
     border-radius: 0.25rem;
     padding: 0.125rem 0.25rem;
@@ -437,7 +440,8 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     align-items: baseline;
     gap: 0.3rem;
     font-size: 0.8125rem;
-    color: #66747a;
+    /* was #66747a: 4.34:1 on this page's cream ground, not on white. */
+    color: var(--kinjo-color-neutral-text);
     margin: -1.1rem 0 1.4rem;
   }
   .auth-remember-hint i {
@@ -451,7 +455,11 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     border: none;
     border-radius: 0.625rem;
     background: linear-gradient(135deg, #ff9c6c, #ffd36b);
-    color: #fff;
+    /* White on this gradient measures 1.42:1 at its gold end -- on the primary
+       action of the most-visited page in the product. The gold is the auth
+       identity and stays; the text goes dark, which reads 7:1 at the orange end
+       and 11:1 at the gold end. Same call as the impersonation banner. */
+    color: var(--kinjo-color-text-primary);
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
@@ -521,10 +529,12 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   .auth-register-row {
     text-align: center;
     font-size: 0.875rem;
-    color: #66747a;
+    /* was #66747a: 4.34:1 on this page's cream ground, not on white. */
+    color: var(--kinjo-color-neutral-text);
   }
   .auth-register-link {
-    color: #d9652e;
+    /* 3.22:1 on this page's cream ground, same as the forgot-password link. */
+    color: var(--kinjo-color-link-warm);
     font-weight: 600;
     text-decoration: none;
     margin-inline-start: 0.25rem;
@@ -612,7 +622,8 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   }
   .auth-footer-nav a {
     font-size: 0.8125rem;
-    color: #66747a;
+    /* was #66747a: 4.34:1 on this page's cream ground, not on white. */
+    color: var(--kinjo-color-neutral-text);
     text-decoration: none;
     padding: 0.25rem 0.625rem;
     border-radius: 0.25rem;
@@ -636,7 +647,8 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   }
   .auth-copyright {
     font-size: 0.78rem;
-    color: #66747a;
+    /* was #66747a: 4.34:1 on this page's cream ground, not on white. */
+    color: var(--kinjo-color-neutral-text);
     margin: 0;
   }
 

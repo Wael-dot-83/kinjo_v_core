@@ -51,12 +51,18 @@
   color: rgba(255,255,255,0.85);
 }
 .profile-hero-info { position: relative; z-index: 1; flex: 1 1 200px; }
-.profile-hero-name { font-size: 1.35rem; font-weight: 700; margin-bottom: .2rem; }
+/* Inherited a dark foreground onto the brand-green hero: measured 1.92:1
+   against a 3:1 floor at this size. The hero is dark, so the text is light. */
+.profile-hero-name { font-size: 1.35rem; font-weight: 700; margin-bottom: .2rem;
+  color: var(--kinjo-color-text-inverse); }
 .profile-hero-dept { font-size: .85rem; opacity: .82; margin-bottom: .55rem; }
 .profile-hero-badge {
   display: inline-block;
-  background: rgba(255,255,255,0.2);
-  border: 1px solid rgba(255,255,255,0.4);
+  /* A white veil over the green lightened the chip to the point that white
+     text on it measured 3.41:1. Darkening the veil instead keeps the chip
+     legible (white now reads ~9:1) without changing the hero's colour. */
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.35);
   border-radius: 20px;
   padding: .2rem .75rem;
   font-size: .78rem;

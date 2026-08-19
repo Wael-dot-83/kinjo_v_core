@@ -557,7 +557,10 @@ h6 {
 .sidebar-profile-name {
   font-weight: 600;
   font-size: 0.875rem;
-  color: #f9fafb;
+  /* #f9fafb is near-white and this sidebar is a light peach ground -- measured
+     1.02:1, i.e. the signed-in user's own name was effectively invisible. A
+     leftover from when this rail was dark. */
+  color: var(--kinjo-color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3725,6 +3728,14 @@ body.sidebar-open .sidebar-backdrop {
 /* Bootstrap's outline-secondary foreground is 4.45:1 on the light
    panel it sits in on /safety -- just under the floor, on a control ("clear
    filters") rather than decoration. */
+/* Bootstrap's outline-success foreground measures 4.34:1 on the very
+   light grounds these pages use -- a miss of 4%, on a control. */
+.btn-outline-success {
+  --bs-btn-color: var(--kinjo-color-success-text);
+  --bs-btn-hover-bg: var(--kinjo-color-success-text);
+  --bs-btn-hover-border-color: var(--kinjo-color-success-text);
+}
+
 .btn-outline-secondary {
   --bs-btn-color: var(--kinjo-color-neutral-text);
   --bs-btn-hover-bg: var(--kinjo-color-neutral-text);
@@ -3789,4 +3800,13 @@ body.sidebar-open .sidebar-backdrop {
    --------------------------------------------------------------------------- */
 [dir="rtl"] *:not([lang="en"]):not([lang="en"] *):not(.allow-tracking):not(.allow-tracking *) {
   letter-spacing: normal !important;
+}
+
+/* .text-warning is mapped to a dark amber for light surfaces (see above), which
+   inverts on a dark one: on the supervisor welcome banner's navy it measured
+   1.55:1. Dark panels that carry .text-warning need the on-dark variant, and
+   they have to be named -- CSS cannot ask whether a background is dark. */
+.welcome-banner-v2 .text-warning,
+.welcome-banner-v2 .text-warning i {
+  color: var(--kinjo-color-warning-on-dark) !important;
 }

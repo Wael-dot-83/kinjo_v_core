@@ -110,7 +110,10 @@
 .parent-hero-badge {
   background: rgba(255, 255, 255, 0.22);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  color: #ffffff;
+  /* A white veil over the amber hero lightens this chip, so white text on it
+     measured 1.82:1. Dark reads ~9:1 on the same chip and matches the hero's
+     stat values, which are dark for the same reason. */
+  color: var(--kinjo-color-text-primary);
   padding: 0.45rem 0.95rem;
   border-radius: 2rem;
   font-size: 0.85rem;
@@ -145,7 +148,10 @@
   font-size: 1.45rem;
   font-weight: 800;
   line-height: 1.1;
-  color: #ffffff;
+  /* White measured 1.88:1 over this hero's amber gradient, against a 3:1 floor
+     for text this size. Dark reads ~10:1 on the same amber and keeps the warm
+     hero intact. */
+  color: var(--kinjo-color-text-primary);
 }
 
 .parent-hero-stat-label {
@@ -371,7 +377,14 @@
    5. Help & Support Card
    ========================================== */
 .support-gradient-card {
-  background: linear-gradient(135deg, #059669 0%, #10B981 60%, #3B82F6 100%);
+  /* Was #059669 -> #10B981 -> #3B82F6, on which white measures 3.9:1, 2.54:1
+     and 3.6:1 -- it failed across the whole sweep, worst in the middle. These
+     are the same green-to-blue journey in the tokens already derived for
+     legible foregrounds, so white now reads 7:1, 5.5:1 and 8.7:1 across it. */
+  background: linear-gradient(135deg,
+      var(--kinjo-color-success-text-on-tint) 0%,
+      var(--kinjo-color-success-text) 55%,
+      var(--kinjo-action) 100%);
   color: #ffffff;
   border-radius: var(--parent-card-radius);
   padding: 1.75rem 1.5rem;

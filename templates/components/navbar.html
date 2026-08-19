@@ -262,7 +262,11 @@
                 </li>
                 {% if public_registration_enabled %}
                 <li class="nav-item">
-                    <a class="btn btn-outline-light btn-sm ms-2" href="/register">
+                    {# btn-outline-light gives near-white text, which is for a DARK navbar.
+   This navbar is light, so the "create account" CTA measured 1.19:1 --
+   effectively invisible on every page that renders this component.
+   btn-outline-primary is the same shape in the action colour. #}
+                    <a class="btn btn-outline-primary btn-sm ms-2" href="/register">
                         <span data-i18n="nav.register">{% if ui_lang == 'en' %}Create account{% else %}إنشاء حساب{% endif %}</span>
                     </a>
                 </li>

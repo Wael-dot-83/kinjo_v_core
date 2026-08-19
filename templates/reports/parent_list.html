@@ -60,7 +60,10 @@ endblock %} {% block extra_css %}
     gap: 0.5rem;
     padding: 0.6rem 1rem;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.12);
+    /* A 12% white veil lifts the dark-green hero enough that white text on this
+       chip measured 3.71:1. Darkening the veil instead keeps the chip readable
+       (white returns to ~7:1) without touching the hero's colour. */
+    background: rgba(0, 0, 0, 0.18);
     border: 1px solid rgba(255, 255, 255, 0.18);
     font-weight: 700;
   }

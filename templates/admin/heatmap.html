@@ -244,7 +244,13 @@
 .kpi-strip { display:grid; grid-template-columns:repeat(6,minmax(128px,1fr)); gap:0.75rem; padding:1rem 1.25rem; background:#0a1423; border-bottom:1px solid rgba(148,163,184,0.12); }
 .kpi-card { min-width:0; border-color:rgba(148,163,184,0.15); background:linear-gradient(180deg,rgba(15,23,42,0.92),rgba(15,23,42,0.66)); box-shadow:none; }
 .kpi-card:hover { transform:translateY(-1px); border-color:rgba(45,212,191,0.28); box-shadow:0 10px 26px rgba(2,8,23,0.2); }
-.kpi-label { color:#556575; }
+/* #556575 measures ~3.06:1 against this strip's dark ground at 12.4px, under
+   the 4.5:1 floor. It went unmeasured for a long time because the contrast
+   harness treats a background-image as indeterminate and .kpi-card is painted
+   with a gradient -- Chromium reported the gradient and the element was
+   skipped, Firefox reported a translucent colour and composited it, which is
+   how the failure finally surfaced. The token is 8.65:1 here. */
+.kpi-label { color: var(--kinjo-color-text-muted-on-dark); }
 .kpi-value { color:#f8fafc; font-size:1.35rem; }
 .kpi-sub { color:#7f8da3; }
 .cs-scene { margin:0; min-height:560px; border-bottom:1px solid rgba(148,163,184,0.12); background:#07101d; }

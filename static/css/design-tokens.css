@@ -46,6 +46,12 @@
   --kinjo-color-danger-text-strong: #b91c1c;/* 6.47:1 on white, for status words */
   --kinjo-color-success-text-on-tint: #036347;  /* 5.81:1 on the success tint */
   --kinjo-color-warning-text-on-tint: #7d5408;  /* 5.53:1 on the amber tint */
+  /* The tint/white variants above go the wrong way on a dark ground: the
+     dark amber measured 1.55:1 on the supervisor banner's navy. 6.5:1 there. */
+  --kinjo-color-warning-on-dark: #fbbf24;
+  /* The deep end of the supervisor banner's sweep. Dark enough that both
+     white (7.6:1) and the on-dark amber (4.6:1) stay legible over it. */
+  --kinjo-color-teal-deep: #115e59;
   --kinjo-color-neutral-text: #4b5563;      /* 7.56:1 on white */
   /* Status TINTS -- the surfaces the *-text-on-tint foregrounds are measured
      against. These already existed as literals inside .k-badge-* rules; naming
@@ -53,6 +59,10 @@
      inventing a new one. */
   --kinjo-color-success-tint: #d1fae5;
   --kinjo-color-danger-tint: #fee2e2;
+  /* The auth pages sit on a warm cream ground, where the blue link token
+     fights the orange identity. This is the same burnt orange, dark enough to
+     read: 5.56:1 on that cream. */
+  --kinjo-color-link-warm: #9a4a16;
   --kinjo-color-link-accessible: #0a58ca;   /* 6.12:1 on the warm canvas;
                                                Bootstrap's #0d6efd is 4.27:1 */
   --kinjo-color-info: #3b82f6;

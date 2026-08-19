@@ -48,12 +48,92 @@ CONTRAST_JS = r"""
   // guess instead of being composited over the header. Only a background IMAGE
   // is still indeterminate: a gradient or photo has no single colour.
   const over = (fg, bg) => fg.rgb.map((c, i) => c * fg.a + bg[i] * (1 - fg.a));
+
+  // A background IMAGE used to abort the whole measurement. That was too
+  // blunt: nearly every dark panel in this app is painted with a linear
+  // gradient, so those nodes were reported "indeterminate" and silently never
+  // checked -- 29 on /admin/heatmap alone. A real 3.06:1 failure on
+  // .kpi-label hid there until Firefox happened to report the same card as a
+  // translucent colour instead of a gradient and composited it.
+  //
+  // A gradient has no single colour, so instead of guessing an average this
+  // returns EVERY colour stop as a candidate ground and the caller takes the
+  // worst ratio. That is the honest reading: text over a gradient has to be
+  // legible against the whole gradient, not against its mean.
+  //
+  // Anything with no parseable colour stops -- url(), image-set(), a
+  // cross-origin texture -- is still genuinely indeterminate and still bails.
+  // background-image can hold SEVERAL layers, comma-separated, painted first
+  // = topmost. Splitting has to respect parens: gradients are full of commas.
+  const splitLayers = s => {
+    const out = []; let depth = 0, cur = '';
+    for (const ch of s) {
+      if (ch === '(') depth++;
+      if (ch === ')') depth--;
+      if (ch === ',' && depth === 0) { out.push(cur); cur = ''; continue; }
+      cur += ch;
+    }
+    if (cur.trim()) out.push(cur);
+    return out.map(x => x.trim()).filter(Boolean);
+  };
+
+  const layerStops = layer => {
+    if (!/gradient\(/.test(layer)) return null;            // url(), image-set()
+    const found = layer.match(/rgba?\([^)]+\)/g);
+    if (!found || !found.length) return null;
+    const stops = found.map(parse).filter(Boolean);
+    return stops.length ? stops : null;
+  };
+
+  // Composite the layers BOTTOM-UP over whatever is behind them. This is the
+  // part that has to be right: a top layer's `transparent` stop reveals the
+  // layer BELOW it, not the page canvas. Treating every stop as if it sat
+  // directly on the parent reported the dark-green /my-reports hero as
+  // near-white and its white heading as 1.05:1, which was a harness bug, not
+  // a page defect -- .reports-hero is
+  //   radial-gradient(..., rgba(201,135,67,.2), transparent 28%),
+  //   linear-gradient(135deg, #163d2e, #1f5e47, #2f7d62)
+  // and the dark green underneath is what the text actually sits on.
+  const compositeLayers = (cssImage, behindGrounds) => {
+    const layers = splitLayers(cssImage);
+    const parsed = layers.map(layerStops);
+    if (parsed.some(x => x === null)) return null;          // an opaque image: unknowable
+    let grounds = behindGrounds.slice();
+    for (let i = parsed.length - 1; i >= 0; i--) {          // bottom layer first
+      const next = [];
+      for (const g of grounds) {
+        for (const s of parsed[i]) {
+          next.push(s.a > 0.999 ? s.rgb : over(s, g));
+        }
+      }
+      // Keep the extremes rather than every combination: the darkest and the
+      // lightest candidate bound the contrast range, and the count would
+      // otherwise multiply out layer by layer.
+      next.sort((a, b) => lum(a) - lum(b));
+      grounds = next.length > 6 ? [next[0], next[Math.floor(next.length/2)], next[next.length-1]] : next;
+    }
+    return grounds;
+  };
+
   const backing = el => {
     const stack = [];
     let n = el;
     while (n && n !== document.documentElement) {
       const cs = getComputedStyle(n);
-      if (cs.backgroundImage && cs.backgroundImage !== 'none') return { i: true };
+      if (cs.backgroundImage && cs.backgroundImage !== 'none') {
+        // Resolve what sits BEHIND this element first; it may itself be a
+        // gradient (nested panels are common here), so normalise to a list.
+        const behind = n.parentElement ? backing(n.parentElement) : { rgb: [255, 255, 255] };
+        if (behind.i) return { i: true };
+        const behindGrounds = behind.grounds ? behind.grounds : [behind.rgb];
+        const composed = compositeLayers(cs.backgroundImage, behindGrounds);
+        if (!composed) return { i: true };                  // genuinely unknowable
+        const grounds = composed.map(base => {
+          for (let k = stack.length - 1; k >= 0; k--) base = over(stack[k], base);
+          return base;
+        });
+        return { grounds };
+      }
       const b = parse(cs.backgroundColor);
       if (b && b.a > 0.999) {                     // opaque: stop here
         let base = b.rgb;
@@ -91,12 +171,19 @@ CONTRAST_JS = r"""
     const sel = el.tagName.toLowerCase() +
                 (el.className ? '.' + String(el.className).split(' ').filter(Boolean)[0] : '');
     if (bg.i) { indet.push(sel); return; }
-    const L1 = lum(fg.rgb), L2 = lum(bg.rgb);
-    const ratio = (Math.max(L1,L2) + 0.05) / (Math.min(L1,L2) + 0.05);
+    const L1 = lum(fg.rgb);
+    // Over a gradient, take the WORST stop: the text has to work everywhere.
+    const grounds = bg.grounds ? bg.grounds : [bg.rgb];
+    let ratio = Infinity, worst = grounds[0];
+    for (const g of grounds) {
+      const L2 = lum(g);
+      const r = (Math.max(L1,L2) + 0.05) / (Math.min(L1,L2) + 0.05);
+      if (r < ratio) { ratio = r; worst = g; }
+    }
     const px = parseFloat(cs.fontSize), bold = parseInt(cs.fontWeight) >= 700;
     const need = (px >= 24 || (px >= 18.66 && bold)) ? 3 : 4.5;
     if (ratio < need) fails.push({ ratio: +ratio.toFixed(2), need,
-        fg: cs.color, bg: 'rgb(' + bg.rgb.join(', ') + ')', px, sel,
+        fg: cs.color, bg: 'rgb(' + worst.join(', ') + ')', px, sel,
         text: t.slice(0, 24) });
   });
 

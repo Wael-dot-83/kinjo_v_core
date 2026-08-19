@@ -11,7 +11,12 @@
     gap: 1.25rem;
   }
   .welcome-banner-v2 {
-    background: linear-gradient(135deg, var(--kinjo-action-hover) 0%, #3b82f6 50%, #0d9488 100%);
+    /* Was ... #3b82f6 50%, #0d9488 100%. Those two stops are too light to
+       carry the banner's own foregrounds: white measured 3.68:1 on the blue
+       and the attention count 2.2:1. Darkening the sweep fixes both at the
+       surface instead of patching each piece of text on top of it -- white now
+       reads 8.7:1 and 7.6:1, the amber count 5.3:1 and 4.6:1. */
+    background: linear-gradient(135deg, var(--kinjo-action-hover) 0%, var(--kinjo-action) 50%, var(--kinjo-color-teal-deep) 100%);
     border-radius: 1rem;
     padding: 1.5rem;
     color: #ffffff;
