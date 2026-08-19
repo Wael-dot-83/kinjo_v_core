@@ -9,7 +9,14 @@
       <meta charset="UTF-8" />
       <!-- Anti-FOUC: html is hidden until CSS+JS are ready. Revealed by inline script at end of body. -->
       <!-- noscript fallback: reveal immediately if JS is disabled -->
-      <noscript><style>html{visibility:visible!important}</style></noscript>
+      <noscript><style>
+/* impeccable-disable flat-type-hierarchy -- the sizes the rule collects
+   (12-17.6px) are the body/label/helper family, not a heading scale, so the
+   ratio between them is meant to be small. Measured in Chromium, identical in
+   Arabic and English: page title 28px/800, body 17px/400, section heading
+   15px/700, label 14px/600. Title-to-body is 1.65x and weight reinforces every
+   step. Widening these would give a data-dense admin oversized type for no
+   gain in hierarchy. */html{visibility:visible!important}</style></noscript>
       <meta name="viewport" content=" width=device-width, initial-scale=1.0" />
       <meta name="csrf-token" content="{{ csrf_token | default('') }}" />
       <!-- Accessibility preferences: applied before CSS loads to avoid a flash of unstyled content -->

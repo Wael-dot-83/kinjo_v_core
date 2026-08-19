@@ -1,0 +1,26 @@
+{
+  "_comment": [
+    "Scan scope for the impeccable conformance detector.",
+    "",
+    "static/vendor/** holds self-hosted third-party bundles (commit 2e1ad82,",
+    "'self-host CDN libraries for admin pages'): Bootstrap, USWDS, Plotly,",
+    "SweetAlert2, Odometer, Chart.js, Tablesort. Their minified sources are not",
+    "authored here and are not editable design debt -- fixing Bootstrap's",
+    "'transition: width' would mean forking Bootstrap.",
+    "",
+    "This declares SCOPE, not a rule waiver. Every rule stays fully armed on",
+    "every first-party template, stylesheet and script. It exists so the scanned",
+    "surface is a property of the repository rather than of whichever paths a",
+    "given run happens to pass on the command line -- an earlier run scanned",
+    "'templates static/css static/js' and a later one 'templates static', and the",
+    "24-finding difference between them was pure scope drift, which is exactly",
+    "the kind of ambiguity that makes a conformance number unciteable."
+  ],
+  "detector": {
+    "ignoreRules": [],
+    "ignoreValues": [],
+    "ignoreFiles": [
+      "static/vendor/**"
+    ]
+  }
+}

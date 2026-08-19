@@ -6981,3 +6981,15 @@ h1.text-primary, h2.text-primary, h3.text-primary,
 .text-muted {
   color: var(--kinjo-color-text-muted);
 }
+
+/* az-card inset providers ------------------------------------------------
+   Same shape as the .admin-card case: the card delegates its inset to
+   __header/__body, but those are styled in admin_analytics_v2.css using --sp-*
+   tokens that do not resolve on every page that renders the card, so the
+   declarations were dropped and the content sat flush against the border.
+   Canonical spacing, in the sheet the admin shell always loads. */
+.az-card__header,
+.az-card__body,
+.az-card__footer {
+  padding: var(--kinjo-spacing-4);
+}

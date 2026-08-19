@@ -199,6 +199,11 @@
 </div>
 
 <style>
+/* impeccable-disable gpt-thin-border-wide-shadow -- .roster-bar is
+   `position: sticky; bottom: 0; z-index: 5`, so it genuinely floats above
+   scrolling content. Its upward shadow encodes that elevation rather than
+   decorating a flat surface, which is the case the rule is aimed at. Verified
+   in the browser: the bar overlays the roster while the list scrolls beneath. */
 /* The roster is a form the supervisor works down at speed, so the row is the
    unit of design: one line per child, mood reachable in a single tap, and the
    fields that are usually left alone visually quieter than the ones that are

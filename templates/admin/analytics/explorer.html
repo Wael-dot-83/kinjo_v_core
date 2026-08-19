@@ -43,10 +43,14 @@
   @media (max-width: 992px) { .gx-shell { grid-template-columns: 1fr; } }
 
   .gx-panel {
+    /* Was a 1px hairline plus a 24px-blur shadow: two boundary strategies on
+       one flat surface. These panels sit on the page ground rather than
+       floating above another plane, so the defined edge is the honest cue and
+       the diffuse elevation goes. --gx-shadow is kept for anything that
+       genuinely overlays, such as the dropdown below. */
     background: var(--gx-surface);
     border: 1px solid var(--gx-line);
     border-radius: var(--gx-radius);
-    box-shadow: var(--gx-shadow);
   }
   .gx-panel + .gx-panel { margin-top: 16px; }
   .gx-panel__head {

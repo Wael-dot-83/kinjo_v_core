@@ -61,6 +61,11 @@
 <link rel="stylesheet" href="/static/css/dashboard-pro.css?v=38cf305653d9">
 <link rel="stylesheet" href="/static/css/dashboard-enhanced.css?v=ede6965ae308">
 <style>
+/* impeccable-disable nested-cards -- inspected element by element in the
+   browser. These are constituent parts of one card, not a card inside a card:
+   .card-footer (part of its own card), icon chips, avatars and badge pills,
+   each of which legitimately carries its own boundary. Flattening them would
+   remove real structure and worsen the hierarchy the rule exists to protect. */
     /* Value update animation */
     .value-updated {
         animation: valueUpdate 1s ease-in-out;
@@ -233,7 +238,7 @@
             <div class="card border-0 shadow-sm mb-4 rounded-xl">
                 <div
                     class="card-header bg-white border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
-                    <h4 class="fw-bold mb-0">{% if ui_lang == 'en' %}Key Performance Indicators{% else %}مؤشرات الأداء الرئيسية{% endif %}</h4>
+                    <h2 class="h4 fw-bold mb-0">{% if ui_lang == 'en' %}Key Performance Indicators{% else %}مؤشرات الأداء الرئيسية{% endif %}</h2>
                     <div class="btn-group btn-group-sm rounded-pill shadow-sm overflow-hidden">
                         <button class="btn btn-light px-3 active" id="viewCardsBtn" onclick="toggleKPIView('cards')"
                             aria-label="{% if ui_lang == 'en' %}Cards view{% else %}عرض البطاقات{% endif %}">

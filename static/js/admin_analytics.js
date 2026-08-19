@@ -3078,7 +3078,7 @@ function _renderStatusMatrix(enrollments) {
         <div class="progress" style="height:4px;"
              role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"
              aria-label="${label}: ${pct}%">
-          <div class="progress-bar" style="width:${pct}%;background:${s.color};transition:width .4s ease;"></div>
+          <div class="progress-bar" style="width:${pct}%;background:${s.color};"></div>
         </div>
       </div>`;
   }).join("");
@@ -3161,7 +3161,7 @@ function _renderRoleBreakdown(byRole) {
           <div class="progress" style="height:4px;"
                role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"
                aria-label="${label}: ${pct}%">
-            <div class="progress-bar" style="width:${pct}%;background:${r.color};transition:width .4s ease;"></div>
+            <div class="progress-bar" style="width:${pct}%;background:${r.color};"></div>
           </div>
         </div>
       </div>`;
@@ -3605,7 +3605,7 @@ function _renderCompletenessPanel(comp) {
         <div class="progress" style="height:5px;"
              role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"
              aria-label="${label}: ${pct.toFixed(1)}%">
-          <div class="progress-bar" style="width:${pct}%;background:${color};transition:width .5s ease;"></div>
+          <div class="progress-bar" style="width:${pct}%;background:${color};"></div>
         </div>
       </div>`;
   }).join("");
