@@ -93,12 +93,26 @@ jobs:
           fetch-depth: 0
 
       - name: Build the release tarball from this exact commit
-        # git archive, not a copy of the runner's working tree: it emits precisely
-        # what is committed, so an untracked or ignored file can never ride along
-        # into production. .env is intentionally absent and lives only on the box.
+        # Through the canonical producer, never `git archive` directly.
+        #
+        # git archive applies the PRODUCER's core.autocrlf, and this project has
+        # two producers: this ubuntu-latest runner and a Windows workstation with
+        # core.autocrlf=true. One commit therefore exported two different
+        # artifacts -- 1,263 of 3,950 files diverged -- which made release
+        # identity a function of who ran the build, and left the Plotly SRI
+        # matching only one of the two byte-sets.
+        #
+        # The builder pins the conversion settings on the command line, where
+        # they outrank any global or repo config, so the artifact is the
+        # committed blob bytes on every machine. It also refuses a short SHA.
+        #
+        # Still git archive underneath: it emits precisely what is committed, so
+        # an untracked or ignored file can never ride along into production.
+        # .env is intentionally absent and lives only on the box.
         run: |
-          git archive --format=tar -o /tmp/deploy.tar HEAD
-          echo "RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          RELEASE_SHA="$(git rev-parse HEAD)"
+          bash scripts/build_release_artifact.sh "$RELEASE_SHA" /tmp/deploy.tar
+          echo "RELEASE_SHA=$RELEASE_SHA" >> "$GITHUB_ENV"
           ls -l /tmp/deploy.tar
 
       - name: Configure SSH

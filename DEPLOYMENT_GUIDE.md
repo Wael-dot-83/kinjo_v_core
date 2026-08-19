@@ -88,7 +88,8 @@ cd /opt/kinjo
 From your workstation, ship the current commit:
 
 ```bash
-git archive --format=tar -o /tmp/deploy.tar HEAD
+SHA="$(git rev-parse HEAD)"
+scripts/build_release_artifact.sh "$SHA" /tmp/deploy.tar
 scp /tmp/deploy.tar deploy@<droplet-ip>:/tmp/deploy.tar
 ssh deploy@<droplet-ip> 'tar xf /tmp/deploy.tar -C /opt/kinjo'
 ```
@@ -156,10 +157,11 @@ deploys cannot race. (Two did, and took production down twice on 2026-08-12.)
 
 ```bash
 # from the workstation, on the commit you intend to ship
-git archive --format=tar -o /tmp/deploy.tar HEAD
+SHA="$(git rev-parse HEAD)"
+scripts/build_release_artifact.sh "$SHA" /tmp/deploy.tar
 scp /tmp/deploy.tar deploy@<droplet-ip>:/tmp/deploy.tar
 ssh deploy@<droplet-ip> \
-  "bash /opt/kinjo/scripts/deploy_locked.sh /tmp/deploy.tar $(git rev-parse HEAD)"
+  "bash /opt/kinjo/scripts/deploy_locked.sh /tmp/deploy.tar $SHA"
 ```
 
 Exit codes: `0` deployed and verified · `75` another deploy holds the lock,
@@ -169,6 +171,23 @@ The script auto-detects `docker-compose.edge.yml` and includes it. Set
 `KINJO_EDGE=0` only if you deliberately run without the TLS edge — omitting it
 while nginx is deployed would remove the nginx container as an orphan and take
 the site offline.
+
+> **Build only through `scripts/build_release_artifact.sh`.**
+> A bare `git archive` applies the *producer's* `core.autocrlf`, and this project
+> has two producers: a Windows workstation with `core.autocrlf=true` and a
+> `runs-on: ubuntu-latest` workflow. One commit therefore exported two different
+> artifacts -- 1,263 of 3,950 files diverged -- so "this SHA reproduces this
+> artifact" was not a fact. Worse, the self-hosted Plotly `integrity` digest
+> matched only the Windows byte-set; the first release built on Linux would have
+> shipped the other one and Chromium would have refused to execute Plotly on the
+> Charts Explorer.
+>
+> The builder pins the conversion settings on the command line, where they
+> outrank any global or repository config, so canonical release bytes are the
+> committed Git blob bytes on every machine. It also refuses a short SHA.
+> Enforced by `tests/test_release_artifact_determinism.py` (which builds under a
+> hostile `core.autocrlf=true` and proves a naive `git archive` really does
+> diverge) and `tests/test_vendor_sri.py`.
 
 > **Deploy from an explicit commit, not from whatever `main` happens to be.**
 > `git archive HEAD` ships your local checkout; a stale or unmerged local `main`
