@@ -372,11 +372,21 @@ if [[ "$EDGE_OVERLAY_ACTIVE" == "1" ]] && docker inspect "$NGINX_CONTAINER" >/de
 fi
 
 if [[ "$EDGE_OVERLAY_ACTIVE" == "1" ]]; then
-  if curl -sSf -o /dev/null --max-time 10 https://127.0.0.1/health \
-       --resolve "${KINJO_DOMAIN:-localhost}:443:127.0.0.1" 2>/dev/null; then
-    log "edge: https certificate/name check OK"
+  # -k, not -f: the origin presents a Cloudflare Origin CA certificate, which is
+  # deliberately NOT signed by a public CA -- only Cloudflare trusts it. Chain
+  # verification against the system trust store therefore fails by design and
+  # always has. The old -sSf probe printed "https health probe failed ... check
+  # certificate validity" on every deploy while TLS was perfectly healthy, which
+  # is worse than no check: a warning that always fires teaches people to stop
+  # reading warnings. What is worth asserting is that nginx terminates TLS on
+  # 443 and serves the app at all, so check the status code with verification
+  # off and name exactly which property was proved.
+  https_code="$(curl -sSk -o /dev/null -w '%{http_code}' --max-time 10 \
+       https://127.0.0.1/health --resolve "${KINJO_DOMAIN:-localhost}:443:127.0.0.1" 2>/dev/null || true)"
+  if [[ "$https_code" == "200" ]]; then
+    log "edge: nginx terminates TLS on 443 and serves the app (HTTP $https_code; chain not verified -- Cloudflare Origin CA)"
   else
-    log "WARNING: https health probe failed -- check 'docker logs kinjo_nginx' and certificate validity"
+    log "WARNING: nginx did not serve the app over TLS on 443 (got '${https_code:-no response}') -- check 'docker logs kinjo_nginx'"
   fi
 fi
 
