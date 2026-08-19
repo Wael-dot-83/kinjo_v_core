@@ -3743,10 +3743,23 @@ body.sidebar-open .sidebar-backdrop {
 /* ---------------------------------------------------------------------------
    Arabic tracking invariant.
 
-   Arabic is a cursive script: its letters join. letter-spacing pulls those
-   joins apart, and negative tracking crushes them. Tracking that flatters a
-   Latin small-caps label therefore damages Arabic text, and Arabic is this
-   product's default language.
+   Arabic is a cursive script: its letters join, and CSS Text says a UA should
+   not insert spacing where that would sever a cursive connection.
+
+   MEASURED, because the obvious story turned out to be wrong. Chromium honours
+   that rule completely: at 32px, letter-spacing:4px adds +0.00px to the advance
+   width of a joined word, to a word containing non-joiners, and to Arabic-Indic
+   digits. It only lands where the run is not cursive -- +8px across two word
+   spaces, +16px on the Latin in "KPI لوحة". So the tracking on these selectors
+   was NOT breaking joins in Chromium; it was widening word gaps slightly and
+   tracking Latin fragments embedded in Arabic strings.
+
+   The rule stays for three reasons, none of which is "joins were breaking":
+   a declaration that does nothing inside Arabic words is noise that invites
+   someone to "fix" it by raising the value; the effects it DOES have -- uneven
+   word gaps, tracked Latin inside an Arabic sentence -- are unwanted; and
+   suppression inside cursive runs is engine behaviour this project has only
+   verified in Chromium (WebKit and Firefox were not installed to test).
 
    Measured in Chromium across 18 routes before writing this rule: 142 Arabic
    text nodes were receiving non-normal tracking, from 25 distinct CSS rules --

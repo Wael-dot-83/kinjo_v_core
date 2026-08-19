@@ -115,10 +115,21 @@ Three rules that do not apply to Latin type:
    loses anything. Use `rem`, never `em`, for anything near the floor —
    Bootstrap's `.badge { font-size: .75em }` compounded to **10.5px** inside a
    14px block.
-2. **`letter-spacing` breaks cursive joins.** Arabic letters connect; tracking
-   pulls them apart and negative tracking crushes them. Tracking that flatters
-   Latin small-caps labels actively damages Arabic. Guarded on `.badge`;
-   see Do's & Don'ts for the open work.
+2. **Don't declare `letter-spacing` on Arabic.** The common claim is that it
+   breaks cursive joins. Measured in Chromium at 32px, it does not: `4px`
+   tracking adds **+0.00px** to `الحضانة`, to `دار` (which contains
+   non-joiners), and to `٢٠٢٦`. Chromium suppresses letter-spacing inside
+   cursive runs, as CSS Text directs. Where it *does* land is word gaps
+   (`+8px` across two spaces) and Latin embedded in Arabic (`+16px` on the
+   `KPI` in `KPI لوحة`).
+
+   So the rule is enforced not because joins were visibly breaking in Chromium
+   — they were not — but because the declaration is inert where it looks
+   meaningful, produces uneven word gaps and tracked Latin fragments where it
+   is not, and depends on engine behaviour this project has verified only in
+   Chromium. `[dir="rtl"]` text is pinned to `letter-spacing: normal`, with
+   `lang="en"` and `.allow-tracking` as the documented escapes.
+   Enforced by `tests/test_arabic_typography.py`.
 3. **`text-transform: uppercase` is inert.** Arabic has no letter case, so it
    silently does nothing while changing the Latin around it.
 
@@ -212,16 +223,15 @@ shadows in the auth templates are focus rings, not decorative glows.
 
 ### Known open work
 
-First-party CSS carries **96 non-normal `letter-spacing` declarations** with no
-RTL guard beyond the one on `.badge`. Measured in-browser: **142 Arabic text
-nodes across 18 routes** receive tracking. The damage concentrates on small
-labels — `sidebar-section-title` 0.84px at 12px, `th` 0.96px at 12px,
-`filter-label` 1.17px at 13px — plus negative tracking on
-`page-header-title` (`-0.42px`) and `card-title` (`-0.15px`). Most `.btn` hits
-are 0.13–0.16px and imperceptible.
+**Engine coverage.** The Arabic tracking behaviour above is measured in
+Chromium only — WebKit and Firefox are not installed in this environment. If
+either applies letter-spacing inside cursive runs, the guard is doing more work
+there than it is here. Worth measuring before assuming either way.
 
-Note that the detector's `wide-tracking` and `extreme-negative-tracking` rules
-read **clean** here: they are script-agnostic and calibrated for Latin. Arabic
-breaks below their threshold. This is a script-specific extension of the
-standard, not a violation of it — and a reason not to treat a clean scan as the
-whole truth.
+**Detector blind spot, restated accurately.** `wide-tracking` and
+`extreme-negative-tracking` read clean on this repository because they are
+calibrated for Latin, and the values here (0.01–0.09em) sit below their
+thresholds. That was how 142 Arabic nodes carrying tracking went unreported.
+The lesson is not that the scan was hiding broken glyphs — it was not — but
+that a clean scan is scoped to the rules someone wrote, and Arabic-specific
+questions need Arabic-specific gates.

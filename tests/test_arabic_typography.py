@@ -1,17 +1,25 @@
 """Arabic text must render with normal tracking. Enforced, not documented.
 
-Arabic is a cursive script -- its letters join -- and `letter-spacing` pulls
-those joins apart while negative tracking crushes them. Arabic is this
-product's default language, so this is a defect on the primary surface, not a
-refinement.
+Arabic is a cursive script and CSS Text directs a UA not to insert spacing
+where that would sever a cursive connection. Arabic is this product's default
+language, so how tracking behaves on it is a primary-surface question.
 
-The reason this file exists rather than a line in DESIGN.md: the conformance
-detector reports this repository clean, and it is wrong to. Its `wide-tracking`
-and `extreme-negative-tracking` rules are script-agnostic and calibrated for
-Latin, where 0.05em is unremarkable. Measured in Chromium across 18 routes,
-142 Arabic text nodes were rendering with tracking from 25 distinct CSS rules,
-every one of them below those Latin thresholds. A green scan said nothing was
-wrong.
+What this gate is NOT: a claim that Arabic glyphs were rendering disconnected.
+That was the original hypothesis and measurement contradicted it. In Chromium
+at 32px, `letter-spacing: 4px` adds +0.00px to a joined word, to a word with
+non-joiners, and to Arabic-Indic digits; it lands only on word gaps (+8px
+across two spaces) and on Latin embedded in Arabic (+16px on "KPI").
+
+What it is: an invariant that Arabic text carries no tracking declaration at
+all -- because the declaration is inert exactly where it looks meaningful,
+because where it does land it produces uneven word gaps and tracked Latin
+fragments inside Arabic sentences, and because suppression inside cursive runs
+is engine behaviour verified here only in Chromium.
+
+It also exists because the conformance detector reports this repository clean.
+`wide-tracking` and `extreme-negative-tracking` are calibrated for Latin, and
+the 25 rules that put tracking on 142 Arabic nodes all sat below their
+thresholds. A clean scan is scoped to the rules someone wrote.
 
 So the gate has to be script-aware, and it has to be falsifiable. Three cases:
 
@@ -52,9 +60,11 @@ def test_the_rtl_tracking_guard_is_present_in_the_shipped_stylesheet():
     css = CSS.read_text(encoding="utf-8")
 
     assert GUARD_SELECTOR in css, (
-        "the RTL tracking guard is gone from kinjo.css. Without it, any rule "
-        "that sets letter-spacing reaches Arabic text and breaks its cursive "
-        "joins. 25 such rules existed when the guard was written."
+        "the RTL tracking guard is gone from kinjo.css. Without it, tracking "
+        "reaches Arabic text again -- uneven word gaps, tracked Latin fragments "
+        "inside Arabic sentences, and a declaration whose effect depends on "
+        "engine behaviour this project has only verified in Chromium. "
+        "25 rules were putting tracking on Arabic when the guard was written."
     )
     guard = css[css.index(GUARD_SELECTOR):]
     guard = guard[:guard.index("}") + 1]
