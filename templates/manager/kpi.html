@@ -266,9 +266,9 @@ actions=refresh_action
        to `|| s`, which printed the raw English key ("gray", "insufficient_data") into the
        Arabic UI. Nothing here ever echoes the key back. */
     const KPI_STATUS = {
-        green:             { color: '#10b981', badge: 'text-bg-success text-white', ar: 'جيد',              en: 'Good' },
+        green:             { color: 'var(--kinjo-color-success-text)', badge: 'text-bg-success text-white', ar: 'جيد',              en: 'Good' },
         amber:             { color: '#f59e0b', badge: 'bg-gold text-dark',          ar: 'تحذير',            en: 'Warning' },
-        red:               { color: '#ef4444', badge: 'text-bg-secondary text-white', ar: 'تنبيه',          en: 'Alert' },
+        red:               { color: 'var(--kinjo-color-danger-text-strong)', badge: 'text-bg-secondary text-white', ar: 'تنبيه',          en: 'Alert' },
         gray:              { color: '#6b7280', badge: 'text-bg-light text-dark',    ar: 'لا توجد بيانات',   en: 'No Data' },
         insufficient_data: { color: '#6b7280', badge: 'text-bg-light text-dark',    ar: 'بيانات غير كافية', en: 'Insufficient Data' },
     };
@@ -413,7 +413,11 @@ actions=refresh_action
         const PR_LABEL = IS_AR
             ? { high: 'عالية', medium: 'متوسطة', low: 'منخفضة' }
             : { high: 'High', medium: 'Medium', low: 'Low' };
-        const PR_COLOR = { high: '#ef4444', medium: '#f59e0b', low: '#10b981' };
+        /* Text-safe status tones: the fill palette measures 3.76:1 (red),
+   2.15:1 (amber) and 2.54:1 (green) when rendered as words. */
+        const PR_COLOR = { high: 'var(--kinjo-color-danger-text-strong)',
+                          medium: 'var(--kinjo-color-warning-text)',
+                          low: 'var(--kinjo-color-success-text)' };
 
         list.innerHTML = items.map(it => `
             <div class="p-3 border-bottom-1 border-base-lighter kpi-action-${it.priority}">

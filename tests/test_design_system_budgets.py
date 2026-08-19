@@ -241,7 +241,12 @@ INLINE_SCRIPT = re.compile(r"<script\b(?![^>]*\bsrc=)[^>]*>(.*?)</script>", re.S
 # it to a file under static/js would reintroduce the failure it exists to
 # prevent: an external script that fails to fetch or parse never runs, and the
 # page stays hidden. A failsafe cannot depend on the thing it is insuring.
-MAX_INLINE_SCRIPT_KB = 963
+# Raised 963 -> 964 for the text-safe status palettes on the KPI pages. Those
+# pages render status words with a colour chosen in JS, and the fill palette
+# they used measured 2.15-3.76:1 as text. The accessible parallel palette has
+# to live beside the logic that picks it; moving it to a cached file would
+# separate the two halves of one decision for ~1 KB.
+MAX_INLINE_SCRIPT_KB = 964
 
 
 def test_inline_script_weight_does_not_grow():

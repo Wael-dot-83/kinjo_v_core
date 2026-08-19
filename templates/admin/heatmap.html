@@ -329,6 +329,30 @@
 .rankings-table-wrap .text-muted, .rankings-table-wrap td, .rank-code {
   color: var(--panel-muted);
 }
+
+/* ── Dark-surface text policy ──────────────────────────────────────
+   The rules above were authored against a light ground and are then re-skinned
+   dark. Several never got an on-dark override, so their muted greys and status
+   red kept light-ground values on a near-black panel: measured 3.74:1, 3.08:1,
+   2.89:1 and 3.69:1 against a 4.5 floor. On a dark surface muted text has to go
+   lighter, not darker. Values come from design-tokens.css. */
+.cs-left, .intel-panel, .cs-left-head, .cs-risk-filter, .cs-layer-toggles,
+.rankings-table-wrap, .heatmap-shell {
+  --panel-muted: var(--kinjo-color-text-muted-on-dark);
+}
+.cs-toggle-label,
+.legend-label,
+.rankings-subtitle,
+.kpi-sub,
+.cs-left span, .intel-panel span, .rankings-table-wrap span,
+.cs-left small, .intel-panel small, .rankings-table-wrap small,
+.cs-left .text-muted, .intel-panel .text-muted, .rankings-table-wrap .text-muted,
+.rankings-table-wrap td, .rank-code {
+  color: var(--kinjo-color-text-muted-on-dark);
+}
+.compare-up, .compare-down.is-bad, .cs-left .text-danger, .intel-panel .text-danger {
+  color: var(--kinjo-color-danger-on-dark);
+}
 </style>
 {% endblock %}
 
@@ -723,7 +747,7 @@
    served by the very app that renders this tag, so the attribute protects
    nothing here while carrying real outage risk. Its bytes are already pinned
    by the content-hash ?v=. Vendor CDN scripts keep their SRI. #}
-<script defer src="/static/js/jordan_cesium_map.js?v=5d068ba30fca" charset="utf-8"></script>
+<script defer src="/static/js/jordan_cesium_map.js?v=76bc693113ef" charset="utf-8"></script>
 
 {# ── Graceful degradation: if the Google Maps key is missing or unauthorized,
      suppress Google's raw error dialog / "for development only" watermarks and

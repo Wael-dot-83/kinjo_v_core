@@ -139,7 +139,7 @@
                             <i class="bi bi-calendar-check-fill text-success" aria-hidden="true"></i>
                         </div>
                     </div>
-                    <div class="display-6 fw-800" id="netAttRate" style="color:#10b981;">—</div>
+                    <div class="display-6 fw-800" id="netAttRate" style="color:var(--kinjo-color-success-text);">—</div>
                     <div class="progress mt-2" style="height:4px;">
                         <div class="progress-bar bg-success" id="netAttBar" role="progressbar"
                              aria-label="{% if ui_lang == 'en' %}Average Attendance{% else %}متوسط الحضور{% endif %}"
@@ -157,7 +157,7 @@
                         </div>
                         <div class="rounded-circle d-flex align-items-center justify-content-center"
                              style="width:36px;height:36px;background:#8b5cf618;">
-                            <i class="bi bi-people-fill" style="color:#8b5cf6;" aria-hidden="true"></i>
+                            <i class="bi bi-people-fill" style="color:#6d28d9;" aria-hidden="true"></i>
                         </div>
                     </div>
                     <div class="display-6 fw-800" id="netRatioRate" style="color:#8b5cf6;">—</div>
@@ -296,15 +296,15 @@
         <div class="card-footer py-2 d-flex align-items-center justify-content-between">
             <span class="text-muted small" id="tableFooter"></span>
             <div class="d-flex gap-2">
-                <span class="badge" style="background:#10b98133;color:#10b981;">
+                <span class="badge" style="background:#10b98133;color:var(--kinjo-color-success-text-on-tint);">
                     <i class="bi bi-circle-fill me-1" style="font-size:0.75rem;"></i>
                     {% if ui_lang == 'en' %}Green{% else %}ممتاز{% endif %}
                 </span>
-                <span class="badge" style="background:#f59e0b33;color:#d97706;">
+                <span class="badge" style="background:#f59e0b33;color:var(--kinjo-color-warning-text-on-tint);">
                     <i class="bi bi-circle-fill me-1" style="font-size:0.75rem;"></i>
                     {% if ui_lang == 'en' %}Amber{% else %}متوسط{% endif %}
                 </span>
-                <span class="badge" style="background:#ef444433;color:#dc2626;">
+                <span class="badge" style="background:#ef444433;color:var(--kinjo-color-danger-text-strong);">
                     <i class="bi bi-circle-fill me-1" style="font-size:0.75rem;"></i>
                     {% if ui_lang == 'en' %}Red{% else %}يحتاج تحسين{% endif %}
                 </span>
@@ -534,27 +534,27 @@
                 </td>
                 <td class="small text-muted">${esc(r.governorate)}</td>
                 <td class="text-center">
-                    <span class="small fw-600" style="color:${attColor(att)};">
+                    <span class="small fw-600" style="color:${attText(att)};">
                         ${att.toFixed(1)}%
                     </span>
                 </td>
                 <td class="text-center">
-                    <span class="small fw-600" style="color:${ratioColor(rat)};">
+                    <span class="small fw-600" style="color:${ratioText(rat)};">
                         ${rat.toFixed(1)}%
                     </span>
                 </td>
                 <td class="text-center">
-                    <span class="small fw-600" style="color:${incidentColor(inc)};">
+                    <span class="small fw-600" style="color:${incidentText(inc)};">
                         ${inc.toFixed(2)}
                     </span>
                 </td>
                 <td class="text-center">
-                    <span class="small fw-600" style="color:${bandColor(r.governance_band)};">
+                    <span class="small fw-600" style="color:${bandTextColor(r.governance_band)};">
                         ${gov.toFixed(1)}%
                     </span>
                 </td>
                 <td class="text-center">
-                    <span class="badge" style="background:${bandColor(r.governance_band)}22;color:${bandColor(r.governance_band)};font-size:0.75rem;">
+                    <span class="badge" style="background:${bandColor(r.governance_band)}22;color:${bandTextColor(r.governance_band)};font-size:0.75rem;">
                         ${bandLabel(r.governance_band)}
                     </span>
                 </td>
@@ -607,8 +607,20 @@
     };
 
     /* ── helpers ────────────────────────────────────────────────────── */
+    /* Two palettes on purpose. The first is tuned as FILL -- chart series,
+       badge backgrounds, dots -- where a light, saturated tone reads well. Used
+       as TEXT on white those same values measure 2.54:1 (green), 2.15:1 (amber)
+       and 3.76:1 (red) against a 4.5 floor, so anything rendered as words uses
+       the second palette. The bands stay visually distinct either way; this is
+       not a flattening of the status colours into one neutral. */
     function bandColor(b) {
         return { GREEN: '#10b981', AMBER: '#f59e0b', RED: '#ef4444', INSUFFICIENT: '#6b7280' }[b] || '#6b7280';
+    }
+    function bandTextColor(b) {
+        /* on white: 5.48 / 5.28 / 6.47 / 7.56 */
+        return { GREEN: 'var(--kinjo-color-success-text)', AMBER: 'var(--kinjo-color-warning-text)',
+                 RED: 'var(--kinjo-color-danger-text-strong)', INSUFFICIENT: 'var(--kinjo-color-neutral-text)'
+               }[b] || 'var(--kinjo-color-neutral-text)';
     }
     function bandLabel(b) {
         if (IS_EN) return { GREEN: 'Green', AMBER: 'Amber', RED: 'Red', INSUFFICIENT: 'Insufficient data' }[b] || b;
@@ -617,6 +629,12 @@
     function attColor(v)    { return v >= 85 ? '#10b981' : v >= 70 ? '#f59e0b' : '#ef4444'; }
     function ratioColor(v)  { return v >= 90 ? '#10b981' : v >= 70 ? '#f59e0b' : '#ef4444'; }
     function incidentColor(v) { return v <= 2 ? '#10b981' : v <= 5 ? '#f59e0b' : '#ef4444'; }
+    /* Text-safe counterparts; same thresholds, same meaning, legible as words. */
+    const OK='var(--kinjo-color-success-text)', WARN='var(--kinjo-color-warning-text)',
+          BAD='var(--kinjo-color-danger-text-strong)';
+    function attText(v)      { return v >= 85 ? OK : v >= 70 ? WARN : BAD; }
+    function ratioText(v)    { return v >= 90 ? OK : v >= 70 ? WARN : BAD; }
+    function incidentText(v) { return v <= 2 ? OK : v <= 5 ? WARN : BAD; }
     function fmt(v) { return (v ?? 0).toFixed(1); }
     function truncate(s, n) { s = s || ''; return s.length > n ? s.slice(0, n) + '…' : s; }
     function esc(s) {

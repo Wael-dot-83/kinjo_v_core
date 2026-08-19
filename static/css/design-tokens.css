@@ -33,6 +33,21 @@
      muted tones measure 3.74:1 and 3.2:1 on the analytics panels' dark ground;
      this one measures 8.65:1 there. */
   --kinjo-color-text-muted-on-dark: #a8b6c8;
+
+  /* Status colours are tuned as fills on light surfaces. As TEXT they need
+     separate values, and a dark surface needs different ones again -- a colour
+     that passes on white generally fails on near-black and vice versa. Measured
+     against the analytics panels' darkest and lightest dark grounds. */
+  --kinjo-color-danger-on-dark: #f87171;    /* 6.26:1 min across dark grounds */
+  --kinjo-color-success-text: #047857;      /* 5.48:1 on white; the fill green
+                                               measures 2.54:1 as text */
+  --kinjo-color-warning-text: #92620a;      /* 5.28:1 on white; fill amber 2.15:1 */
+  --kinjo-color-danger-text-strong: #b91c1c;/* 6.47:1 on white, for status words */
+  --kinjo-color-success-text-on-tint: #036347;  /* 5.81:1 on the success tint */
+  --kinjo-color-warning-text-on-tint: #7d5408;  /* 5.53:1 on the amber tint */
+  --kinjo-color-neutral-text: #4b5563;      /* 7.56:1 on white */
+  --kinjo-color-link-accessible: #0a58ca;   /* 6.12:1 on the warm canvas;
+                                               Bootstrap's #0d6efd is 4.27:1 */
   --kinjo-color-info: #3b82f6;
   
   /* Page canvas — a warm off-white. The previous #f8fafc was blue-tinted (its blue

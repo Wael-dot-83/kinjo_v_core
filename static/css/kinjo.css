@@ -53,7 +53,8 @@
   --kinjo-bg-dark: #0f172a;
   --kinjo-text-primary: #1e293b;
   --kinjo-text-secondary: #64748b;
-  --kinjo-text-muted: #64748b;
+  /* was #64748b: 3.9-4.27:1 as text on this file's tinted surfaces */
+  --kinjo-text-muted: #475569;
   /* Aliases, not copies — same reason as --kinjo-bg-light above. These held their
      own #e2e8f0 / #f1f5f9 and were free to drift from the tokens they mirror. */
   --kinjo-border-color: var(--kinjo-color-border);
@@ -921,7 +922,6 @@ body.sidebar-open .sidebar-backdrop {
   font-size: 0.8125rem;
   color: var(--kinjo-text-muted);
   font-weight: 500;
-  text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
@@ -2833,7 +2833,7 @@ body.sidebar-open .sidebar-backdrop {
   font-weight: 700;
   font-size: 0.9rem;
   background: #e8eef7;
-  color: #64748b;
+  color: var(--kinjo-color-text-secondary);
   flex-shrink: 0;
   margin-bottom: 0.1rem;
   border: 2px solid transparent;

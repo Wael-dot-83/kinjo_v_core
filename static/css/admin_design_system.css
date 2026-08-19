@@ -68,7 +68,7 @@
   --color-gray-200: #e5e7eb;
   --color-gray-300: #cbd5e1;
   --color-gray-400: #94a3b8;
-  --color-gray-500: #6b7280;
+  --color-gray-500: var(--kinjo-color-text-secondary); /* was #6b7280: 3.9-4.34:1 as text on tinted surfaces */
   --color-gray-600: #475569;
   --color-gray-700: #334155;
   --color-gray-800: #1e293b;
@@ -5581,7 +5581,12 @@ html[dir="ltr"] .dropdown-menu {
 }
 
 .admin-card {
-  /* Was rgba white +  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  /* Was a translucent white surface with a blurred backdrop -- glassmorphism,
+     which impeccable.style names as an anti-pattern, on the primary admin
+     surface. An opaque surface also gives the text over it a predictable
+     contrast backing instead of whatever happens to be scrolling behind. */
+  background: var(--kinjo-color-bg-surface) !important;
+  border: 1px solid var(--kinjo-color-border-subtle) !important;
   box-shadow: 0 4px 20px rgba(0, 40, 142, 0.05) !important;
   border-radius: 0.5rem !important;
   transition:
@@ -6935,4 +6940,44 @@ html[dir="ltr"] .dropdown-menu {
 }
 .card:not(:has(> .card-body)):not(:has(> .card-header)):not(:has(> .list-group)):not(:has(> img)):not(:has(> table)) {
   padding: var(--kinjo-spacing-4);
+}
+
+/* Bootstrap neutral text roles ------------------------------------------
+   Bootstrap's secondary grey measures 4.45:1 on this product's warm
+   canvas and its muted grey is lighter still -- both just under the 4.5 floor,
+   which is why they surfaced on the analytics pages rather than anywhere
+   obvious. Mapping the roles onto canonical tokens fixes every instance at
+   once instead of restyling buttons one at a time. */
+.btn.btn-outline-secondary,
+.btn.btn-secondary {
+  /* Two things had to be right here. Bootstrap resolves button colour through
+     --bs-btn-color, so a plain `color:` never applies; and Bootstrap's own
+     stylesheet loads AFTER this one, so a single-class selector loses on order.
+     Matching both classes wins on specificity regardless of load order. */
+  --bs-btn-color: var(--kinjo-color-text-secondary);
+  --bs-btn-hover-color: var(--kinjo-color-text-inverse);
+}
+.btn-link.text-secondary,
+.text-secondary {
+  color: var(--kinjo-color-text-secondary) !important;   /* Bootstrap utilities are !important */
+}
+/* Bootstrap's default link blue measures 4.27:1 on this product's warm
+   canvas -- marginally under the floor. Same specificity note as above. */
+.btn.btn-link,
+a.text-primary,
+p.text-primary,
+span.text-primary,
+div.text-primary,
+h1.text-primary, h2.text-primary, h3.text-primary,
+.small.text-primary,
+.text-primary,
+.link-primary {
+  /* Bootstrap's colour utilities are declared !important, so nothing short of
+     !important overrides them. Matching their weight is the correct move here
+     rather than escalating specificity further. */
+  --bs-link-color-rgb: 10, 88, 202;
+  color: var(--kinjo-color-link-accessible) !important;
+}
+.text-muted {
+  color: var(--kinjo-color-text-muted);
 }

@@ -367,7 +367,7 @@ async function fetchMapData() {
     const tbody = document.querySelector('#rankingsTable tbody');
     if (tbody) {
       tbody.innerHTML = `
-        <tr><td colspan="8" style="text-align:center;padding:2rem;color:#64748b">
+        <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--kinjo-color-text-muted-on-dark)">
           <div>تعذر تحميل بيانات المحافظات</div>
           <button class="cc-btn" style="margin-top:.75rem" onclick="retryFetchMapData()">
             <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> إعادة المحاولة
@@ -638,7 +638,7 @@ function renderRadarChart(perfIndicators) {
 
   return `
     <div style="display:flex;flex-direction:column;align-items:center;padding:.5rem 0 .25rem">
-      <div style="font-size:0.75rem;color:#64748b;margin-bottom:.25rem;letter-spacing:.03em">مخطط الأداء الشعاعي</div>
+      <div style="font-size:0.75rem;color:var(--kinjo-color-text-muted-on-dark);margin-bottom:.25rem;letter-spacing:.03em">مخطط الأداء الشعاعي</div>
       <svg width="${SZ}" height="${SZ}" viewBox="0 0 ${SZ} ${SZ}" style="overflow:visible" aria-hidden="true">
         ${grid}${axes}
         <polygon points="${poly}" fill="${fc}" fill-opacity=".18" stroke="${fc}" stroke-width="1.5" stroke-linejoin="round"/>
@@ -844,7 +844,7 @@ function renderCitySection(cityData, errorMsg) {
            onkeydown="if(event.key==='Enter'||event.key===' ')selectCity('${safeCity}')">
         <div class="city-row-name">
           <span>${cityName}</span>${critLabel}
-          <div style="font-size:0.75rem;color:#64748b;margin-top:1px">${kgLabel}${stLabel}</div>
+          <div style="font-size:0.75rem;color:var(--kinjo-color-text-muted-on-dark);margin-top:1px">${kgLabel}${stLabel}</div>
         </div>
         <div class="city-row-score">
           <div class="mini-bar-track" style="width:52px">
@@ -978,7 +978,7 @@ function populateGovList(govs) {
     const cls     = riskClass(score);
     const govJson = JSON.stringify(g).replace(/"/g, '&quot;');
     const kgLabel = g.kg_count != null
-      ? `<span style="font-size:0.75rem;color:#64748b">${g.kg_count} منشأة</span>` : '';
+      ? `<span style="font-size:0.75rem;color:var(--kinjo-color-text-muted-on-dark)">${g.kg_count} منشأة</span>` : '';
     return `
       <div class="cs-gov-item" data-slug="${g.slug}" data-risk-class="${cls}"
            tabindex="0" role="button"
@@ -1076,7 +1076,7 @@ function populateRankings(govs) {
   });
 
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:#64748b">
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--kinjo-color-text-muted-on-dark)">
       لا توجد نتائج مطابقة للبحث
     </td></tr>`;
     return;
@@ -1092,7 +1092,7 @@ function populateRankings(govs) {
     const indVal  = CsApp.currentInd && CsApp.currentInd !== 'overall_risk'
       ? (g.main_indicators?.[CsApp.currentInd] ?? null) : null;
     const indCell = indVal != null
-      ? `<small style="color:#64748b">${IND_LABELS[CsApp.currentInd]?.ar || CsApp.currentInd}: ${indVal.toFixed(0)}</small>`
+      ? `<small style="color:var(--kinjo-color-text-muted-on-dark)">${IND_LABELS[CsApp.currentInd]?.ar || CsApp.currentInd}: ${indVal.toFixed(0)}</small>`
       : '';
 
     const diff = score - avgRisk;

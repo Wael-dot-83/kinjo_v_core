@@ -79,7 +79,7 @@ block extra_head %}
   }
   .ce-source-card__count {
     font: 600 0.75rem/1.45 var(--font-ar);
-    color: var(--slate-400);
+    color: var(--kinjo-color-text-muted);
   }
   .ce-presets {
     display: flex;
@@ -191,7 +191,7 @@ block extra_head %}
   }
   .ce-empty-state__hint {
     font: 400 0.8125rem/1.5 var(--font-ar);
-    color: var(--slate-400);
+    color: var(--kinjo-color-text-muted);
     max-width: 400px;
     margin-bottom: 1.25rem;
   }
@@ -274,10 +274,10 @@ block extra_head %}
      the spectrum, the source cards and the figure itself. */
   #chartsExplorerRoot,
   .ce-hero {
-    --ce-rose: #c2564b;      /* incidents      */
+    --ce-rose: #a8402f;      /* incidents      */
     --ce-saffron: #e0912f;   /* attendance     */
     --ce-olive: #6b8e4e;     /* daily reports  */
-    --ce-teal: #2e7d8f;      /* enrollments    */
+    --ce-teal: #22647a;      /* enrollments    */
     --ce-plum: #6b4e7d;      /* kindergartens  */
     --ce-ink: #2b2118;
     --ce-sand: #faf6f0;
@@ -349,7 +349,7 @@ block extra_head %}
   }
   .ce-source-card.is-active {
     border-color: var(--card-hue, var(--ce-teal));
-    background: color-mix(in srgb, var(--card-hue, #2e7d8f) 10%, transparent);
+    background: color-mix(in srgb, var(--card-hue, #22647a) 10%, transparent);
   }
   .ce-source-card.is-active i,
   .ce-source-card.is-active .ce-source-card__label {
@@ -473,7 +473,7 @@ block extra_head %}
   }
   .ce-rec-chip__confidence {
     font-size: var(--kinjo-font-size-xs, 0.75rem);
-    color: var(--slate-400);
+    color: var(--kinjo-color-text-muted);
   }
   .ce-breadcrumbs {
     font: 500 0.8125rem/1.45 var(--font-ar);
@@ -582,7 +582,7 @@ block extra_head %}
   }
   .ce-kpi-strip__delta--up { color: #16a34a; }
   .ce-kpi-strip__delta--down { color: #dc2626; }
-  .ce-kpi-strip__delta--flat { color: var(--slate-400); }
+  .ce-kpi-strip__delta--flat { color: var(--kinjo-color-text-muted); }
 
   /* ── Enhanced Chart Annotations ────────────────────────────────────────── */
   .ce-annotation-bar {
@@ -630,7 +630,10 @@ block extra_head %}
     border-radius: var(--r-lg);
     box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
   }
-  @supports not (    }
+  /* Was `@supports not (backdrop-filter: ...)` providing an opaque fallback for
+     a glass card. The glass is gone, so the fallback is simply the style. */
+  .ce-glass-card {
+    background: var(--kinjo-color-bg-surface);
   }
 
   /* ── Collapsible Sidebar Toggle ────────────────────────────────────────── */
@@ -709,7 +712,8 @@ block extra_head %}
     border-radius: var(--r-full);
     padding: 0.3rem 0.75rem;
     font: 600 0.75rem/1.45 var(--font-ar);
-    color: var(--slate-500);
+    /* --slate-500 measured 4.34:1 here, just under the floor. */
+    color: var(--kinjo-color-text-secondary);
     cursor: pointer;
     transition: all 0.15s;
     white-space: nowrap;
@@ -2159,10 +2163,10 @@ block extra_head %}
   }
 
   var SOURCE_HUES = {
-    incidents: '#c2564b', attendance: '#e0912f', daily_reports: '#6b8e4e',
-    enrollments: '#2e7d8f', kindergartens: '#6b4e7d'
+    incidents: '#a8402f', attendance: '#e0912f', daily_reports: '#6b8e4e',
+    enrollments: '#22647a', kindergartens: '#6b4e7d'
   };
-  var PALETTE = ['#2e7d8f','#c2564b','#6b8e4e','#e0912f','#6b4e7d','#a4735c','#3f6d5f','#8c5a7a'];
+  var PALETTE = ['#22647a','#a8402f','#6b8e4e','#e0912f','#6b4e7d','#a4735c','#3f6d5f','#8c5a7a'];
 
   function sourceColorway(source) {
     var lead = SOURCE_HUES[source];
