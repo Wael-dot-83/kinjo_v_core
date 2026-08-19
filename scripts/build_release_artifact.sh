@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# THE canonical Kinjo release artifact producer. Every production deployment
+# THE canonical KinJo release artifact producer. Every production deployment
 # must obtain its tarball from this script, on any machine.
 #
 # WHY THIS EXISTS

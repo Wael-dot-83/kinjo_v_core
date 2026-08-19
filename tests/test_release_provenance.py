@@ -41,7 +41,9 @@ REQUIRED_FIELDS = ("sha", "tarball_sha256", "tree_digest", "deployed_at", "artif
 
 def _git(*args):
     return subprocess.run(
-        ["git", "-C", str(ROOT), *args], capture_output=True, timeout=300
+        ["git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "-C", str(ROOT), *args],
+        capture_output=True,
+        timeout=300,
     ).stdout
 
 
