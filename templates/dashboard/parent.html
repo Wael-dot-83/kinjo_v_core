@@ -5,15 +5,15 @@
 
 {% block content %}
 <!-- Personalized Hero Banner -->
-<div class="parent-hero-banner mb-4">
+<div class="parent-hero-banner mb-4 parent-animate-in">
     <div class="row align-items-center g-3">
         <div class="col-lg-7">
-            <div class="parent-hero-badge mb-2">
-                <i class="bi bi-calendar3 me-1"></i>
+            <div class="parent-hero-badge mb-3">
+                <i class="bi bi-calendar3"></i>
                 <span id="heroDateStr">{{ today.strftime('%Y-%m-%d') if today else '' }}</span>
             </div>
             <h1 class="parent-hero-title">
-                <span id="heroGreetingIcon"><i class="bi bi-sun-fill text-warning"></i></span>
+                <span id="heroGreetingIcon"><i class="bi bi-sun-fill"></i></span>
                 <span id="heroGreetingText">{{ _('Welcome back,') }}</span>
                 <span>{{ current_user.first_name or current_user.full_name or current_user.username or _('Parent') }}</span>
             </h1>
@@ -56,18 +56,18 @@
     <!-- Skeleton Loading Placeholder -->
     <div class="col-md-6 col-lg-4">
         <div class="parent-child-card p-4 text-center">
-            <div class="skeleton-box rounded-circle mx-auto mb-3" style="width: 72px; height: 72px;"></div>
-            <div class="skeleton-box w-75 mx-auto mb-2" style="height: 20px;"></div>
-            <div class="skeleton-box w-50 mx-auto mb-3" style="height: 14px;"></div>
-            <div class="skeleton-box w-100 mb-2" style="height: 36px;"></div>
+            <div class="parent-skeleton rounded-circle mx-auto mb-3" style="width: 72px; height: 72px;"></div>
+            <div class="parent-skeleton w-75 mx-auto mb-2" style="height: 20px;"></div>
+            <div class="parent-skeleton w-50 mx-auto mb-3" style="height: 14px;"></div>
+            <div class="parent-skeleton w-100 mb-2" style="height: 36px;"></div>
         </div>
     </div>
     <div class="col-md-6 col-lg-4 d-none d-md-block">
         <div class="parent-child-card p-4 text-center">
-            <div class="skeleton-box rounded-circle mx-auto mb-3" style="width: 72px; height: 72px;"></div>
-            <div class="skeleton-box w-75 mx-auto mb-2" style="height: 20px;"></div>
-            <div class="skeleton-box w-50 mx-auto mb-3" style="height: 14px;"></div>
-            <div class="skeleton-box w-100 mb-2" style="height: 36px;"></div>
+            <div class="parent-skeleton rounded-circle mx-auto mb-3" style="width: 72px; height: 72px;"></div>
+            <div class="parent-skeleton w-75 mx-auto mb-2" style="height: 20px;"></div>
+            <div class="parent-skeleton w-50 mx-auto mb-3" style="height: 14px;"></div>
+            <div class="parent-skeleton w-100 mb-2" style="height: 36px;"></div>
         </div>
     </div>
 </div>
@@ -130,9 +130,9 @@
                 <div id="latestReports">
                     <!-- Loading Shimmer -->
                     <div class="p-4 text-center">
-                        <div class="skeleton-box w-100 mb-3" style="height: 48px;"></div>
-                        <div class="skeleton-box w-100 mb-3" style="height: 48px;"></div>
-                        <div class="skeleton-box w-100" style="height: 48px;"></div>
+                        <div class="parent-skeleton w-100 mb-3" style="height: 48px;"></div>
+                        <div class="parent-skeleton w-100 mb-3" style="height: 48px;"></div>
+                        <div class="parent-skeleton w-100" style="height: 48px;"></div>
                     </div>
                 </div>
             </div>
@@ -195,6 +195,10 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/parent-design-system.css') }}?v=1.0" />
 {% endblock %}
 
 {% block extra_js %}
@@ -305,9 +309,14 @@
             console.error('Error loading parent dashboard:', error);
             document.getElementById('childrenCards').innerHTML = `
                 <div class="col-12">
-                    <div class="alert alert-danger d-flex align-items-center rounded-3 shadow-sm">
-                        <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
-                        <div>${parentText('common.load_error', 'حدث خطأ أثناء تحميل بيانات أطفالك. يرجى إعادة المحاولة.', 'An error occurred while loading your children data. Please retry.')}</div>
+                    <div class="parent-card p-5 text-center border-dashed">
+                        <div class="parent-avatar parent-avatar-lg bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3">
+                            <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+                        </div>
+                        <h4 class="fw-bold mb-2">${parentText('common.load_error', 'حدث خطأ أثناء تحميل بيانات أطفالك. يرجى إعادة المحاولة.', 'An error occurred while loading your children data. Please retry.')}</h4>
+                        <button class="btn btn-primary rounded-pill px-4 shadow-sm mt-3" onclick="loadParentDashboard()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>${parentText('common.retry', 'إعادة المحاولة', 'Retry')}
+                        </button>
                     </div>
                 </div>`;
         }
@@ -320,13 +329,13 @@
             container.innerHTML = `
                 <div class="col-12">
                     <div class="parent-child-card p-5 text-center border-dashed">
-                        <div class="avatar-lg bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 72px; height: 72px;">
+                        <div class="parent-avatar parent-avatar-lg bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3">
                             <i class="bi bi-person-plus fs-1"></i>
                         </div>
                         <h4 class="fw-bold mb-2">${parentText('dashboard.parent.no_children', 'لم تقم بتسجيل أي طفل بعد', 'You have not enrolled any child yet')}</h4>
                         <p class="text-muted mb-4 max-w-md mx-auto">${parentText('dashboard.parent.start_enrollment', 'ابدأ بتسجيل طفلك في إحدى الحضانات المعتمدة للاستفادة من كامل خدمات المنصة.', 'Start by enrolling your child in an accredited kindergarten to benefit from all platform services.')}</p>
                         <div>
-                            <a href="/enroll" class="btn btn-primary btn-lg rounded-pill px-4 shadow">
+                            <a href="/enroll" class="btn btn-primary btn-lg rounded-pill px-4 shadow-sm">
                                 <i class="bi bi-plus-circle me-2"></i>${parentText('dashboard.parent.enroll_child', 'تسجيل طفل جديد', 'Enroll New Child')}
                             </a>
                         </div>
@@ -336,7 +345,7 @@
             return;
         }
 
-        container.innerHTML = children.map(child => {
+        container.innerHTML = children.map((child, idx) => {
             const isPresent = child.attendance_today && child.attendance_today.checked_in && !child.attendance_today.checked_out;
             const isFemale = (child.gender || '').toUpperCase() === 'FEMALE';
             const avatarIcon = 'bi-emoji-smile-fill';
@@ -344,16 +353,13 @@
             const hasReport = child.latest_report_date === SERVER_TODAY;
 
             return `
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4 parent-animate-in parent-animate-in-delay-${Math.min(idx, 4)}">
                 <div class="parent-child-card ${isPresent ? 'is-present' : ''}">
                     <div class="p-4 text-center flex-grow-1">
-                        <div class="child-avatar-ring ${genderThemeClass}">
+                        <div class="child-avatar-ring ${genderThemeClass} mx-auto mb-3">
                             <i class="bi ${avatarIcon}"></i>
                             ${isPresent ? `
-                                <div class="child-presence-badge" title="${parentText('attendance.present', 'حاضر اليوم', 'Present Today')}">
-                                    <span class="pulse-dot-green"></span>
-                                    <span>${parentText('attendance.present', 'حاضر', 'Present')}</span>
-                                </div>
+                                <span class="child-presence-badge">${parentText('attendance.present', 'حاضر', 'Present')}</span>
                             ` : ''}
                         </div>
                         <h4 class="fw-bold mb-1 text-dark">${escHtml(child.first_name)} ${escHtml(child.last_name || '')}</h4>
@@ -374,11 +380,11 @@
                     </div>
                     ${hasReport ? `
                         <div class="child-card-report-banner" onclick="viewChildTodayReport(${child.id})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
-                            <span class="d-flex align-items-center">
-                                <i class="bi bi-stars text-warning me-2 fs-5"></i>
+                            <span class="d-flex align-items-center gap-2">
+                                <i class="bi bi-stars text-warning"></i>
                                 ${parentText('dashboard.parent.today_report_available', 'تقرير اليوم جاهز للعرض', 'Today report is ready')}
                             </span>
-                            <i class="bi bi-arrow-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %}-short fs-4"></i>
+                            <i class="bi bi-arrow-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %}-short"></i>
                         </div>
                     ` : ''}
                 </div>
@@ -392,19 +398,19 @@
 
         if (!reports || reports.length === 0) {
             container.innerHTML = `
-                <div class="text-center py-5 text-muted">
-                    <i class="bi bi-journal-x d-block fs-1 mb-2 opacity-25 text-secondary"></i>
+                <div class="parent-empty">
+                    <div class="parent-empty-icon"><i class="bi bi-journal-x"></i></div>
                     <h6 class="fw-bold mb-1">${parentText('dashboard.parent.no_reports', 'لا توجد تقارير يومية حالياً', 'No daily reports available')}</h6>
-                    <small>${parentText('dashboard.parent.reports_hint', 'ستظهر التقارير اليومية هنا فور اعتمادها من الحضانة.', 'Daily reports will appear here once approved by the kindergarten.')}</small>
+                    <small class="text-muted d-block">${parentText('dashboard.parent.reports_hint', 'ستظهر التقارير اليومية هنا فور اعتمادها من الحضانة.', 'Daily reports will appear here once approved by the kindergarten.')}</small>
                 </div>
             `;
             return;
         }
 
         container.innerHTML = reports.map((report, idx) => `
-            <div class="parent-report-item d-flex align-items-center justify-content-between">
+            <div class="parent-report-item d-flex align-items-center justify-content-between parent-animate-in parent-animate-in-delay-${Math.min(idx, 4)}">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="avatar-md bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; min-width: 44px;">
+                    <div class="parent-avatar parent-avatar-md bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center">
                         <i class="bi bi-journal-richtext fs-5"></i>
                     </div>
                     <div>
@@ -447,41 +453,41 @@
         bodyEl.innerHTML = `
             <div class="row g-3 mb-4">
                 <div class="col-6 col-md-3 text-center">
-                    <div class="bg-light p-3 rounded-3">
-                        <span class="d-block text-muted small mb-1">${parentText('report.mood', 'المزاج العام', 'Mood')}</span>
+                    <div class="parent-field">
+                        <span class="parent-field-label">${parentText('report.mood', 'المزاج العام', 'Mood')}</span>
                         <span class="fw-bold text-dark fs-5">${escHtml(report.mood || '😊')}</span>
                     </div>
                 </div>
                 <div class="col-6 col-md-3 text-center">
-                    <div class="bg-light p-3 rounded-3">
-                        <span class="d-block text-muted small mb-1">${parentText('report.meals', 'الوجبات', 'Meals')}</span>
+                    <div class="parent-field">
+                        <span class="parent-field-label">${parentText('report.meals', 'الوجبات', 'Meals')}</span>
                         <span class="fw-bold text-success fs-6">${escHtml(report.meals || parentText('report.meals_good', 'ممتاز 🍏', 'Good 🍏'))}</span>
                     </div>
                 </div>
                 <div class="col-6 col-md-3 text-center">
-                    <div class="bg-light p-3 rounded-3">
-                        <span class="d-block text-muted small mb-1">${parentText('report.nap', 'قيلولة', 'Nap')}</span>
+                    <div class="parent-field">
+                        <span class="parent-field-label">${parentText('report.nap', 'قيلولة', 'Nap')}</span>
                         <span class="fw-bold text-info fs-6">${escHtml(report.nap_time || parentText('report.nap_normal', 'ساعة و 30 دقيقة 😴', '1h 30m 😴'))}</span>
                     </div>
                 </div>
                 <div class="col-6 col-md-3 text-center">
-                    <div class="bg-light p-3 rounded-3">
-                        <span class="d-block text-muted small mb-1">${parentText('common.status', 'الحالة', 'Status')}</span>
+                    <div class="parent-field">
+                        <span class="parent-field-label">${parentText('common.status', 'الحالة', 'Status')}</span>
                         <div>${getStatusBadge(report.status)}</div>
                     </div>
                 </div>
             </div>
 
             <div class="mb-3">
-                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-puzzle me-1"></i> ${parentText('report.activities', 'الأنشطة اليومية', 'Daily Activities')}</h6>
-                <div class="p-3 bg-light rounded-3 text-dark">
+                <h6 class="fw-bold mb-2" style="color: var(--parent-accent);"><i class="bi bi-puzzle me-1"></i> ${parentText('report.activities', 'الأنشطة اليومية', 'Daily Activities')}</h6>
+                <div class="parent-field">
                     ${escHtml(report.activities || parentText('report.no_activities', 'تم تنفيذ الأنشطة المنهجية اليومية واللعب التفاعلي.', 'Daily curriculum activities and interactive play.'))}
                 </div>
             </div>
 
             <div>
-                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-chat-quote me-1"></i> ${parentText('report.teacher_notes', 'ملاحظات المعلمة', 'Teacher Notes')}</h6>
-                <div class="p-3 bg-light rounded-3 text-dark">
+                <h6 class="fw-bold mb-2" style="color: var(--parent-accent);"><i class="bi bi-chat-quote me-1"></i> ${parentText('report.teacher_notes', 'ملاحظات المعلمة', 'Teacher Notes')}</h6>
+                <div class="parent-field">
                     ${escHtml(report.notes || parentText('report.no_notes', 'لا توجد ملاحظات إضافية لهذا اليوم.', 'No additional notes for today.'))}
                 </div>
             </div>
