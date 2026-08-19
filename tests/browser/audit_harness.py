@@ -95,7 +95,13 @@ CONTRAST_JS = r"""
   //   linear-gradient(135deg, #163d2e, #1f5e47, #2f7d62)
   // and the dark green underneath is what the text actually sits on.
   const compositeLayers = (cssImage, behindGrounds) => {
-    const layers = splitLayers(cssImage);
+    // `none` is a layer that paints NOTHING -- it is not an unknowable image.
+    // .admin-page-header computes to `linear-gradient(...), none`, and treating
+    // that trailing `none` as unparseable made layerStops bail, so the whole
+    // header came back indeterminate: 2 nodes per engine on /admin/dashboard
+    // (h1.admin-page-title, p.admin-page-subtitle) were never measured at all.
+    // Dropping it is the correct semantics and keeps a real url() bailing.
+    const layers = splitLayers(cssImage).filter(l => l !== 'none');
     const parsed = layers.map(layerStops);
     if (parsed.some(x => x === null)) return null;          // an opaque image: unknowable
     let grounds = behindGrounds.slice();

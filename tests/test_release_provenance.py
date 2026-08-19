@@ -277,3 +277,113 @@ def test_release_endpoint_reports_absence_plainly(client, admin_user):
     else:
         for field in ("sha", "tarball_sha256", "tree_digest"):
             assert body.get(field), f"recorded release is missing {field}"
+
+
+# ---------------------------------------------------------------------------
+# The escape path that hid a real defect for an entire release cycle.
+#
+# `test_recorded_sha_reproduces_its_own_digest` is the assertion that turns the
+# recorded SHA from a claim into a fact -- and it calls pytest.skip whenever no
+# RELEASE.json is reachable. That is every workstation (no /opt/kinjo, no
+# release file in a dev checkout) and every CI runner. Production has the file
+# but never runs the suite. So the load-bearing assertion had never executed
+# anywhere, and reported `8 passed, 1 skipped` while the skipped one was the
+# whole point.
+#
+# Underneath it sat a real defect: the digest was computed with `find` over
+# $APP_DIR, which is a working directory rather than a release. At 2cbbf00
+# /opt/kinjo held 9,077 files in that scope against an artifact of 3,948 --
+# node_modules/, __pycache__, backups/, logs/ and .env.bak-* files. Production
+# was byte-identical to 2cbbf00 across all 3,948 artifact files, zero drift,
+# and the digests still disagreed.
+#
+# These two need no deployed host, so the proof cannot skip its way to green.
+# ---------------------------------------------------------------------------
+
+def _artifact_scoped_digest(app_dir, members):
+    """The deploy script's digest, scoped to the artifact's own file list."""
+    lines = []
+    for rel in sorted(members):
+        if rel in (".env", "RELEASE.json") or rel.startswith("data/"):
+            continue
+        f = app_dir / rel
+        if not f.is_file():
+            continue
+        lines.append(f"{hashlib.sha256(f.read_bytes()).hexdigest()}  ./{rel}\n")
+    return hashlib.sha256("".join(sorted(lines)).encode()).hexdigest()
+
+
+def test_tree_digest_is_scoped_to_the_artifact_not_the_whole_app_dir():
+    """Static guard: the scope must come from the tarball, not from `find`.
+
+    A digest over $APP_DIR can never reproduce from `git archive <sha>`, which
+    is the only property that makes the recorded SHA checkable.
+    """
+    src = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+    block = src[src.index("TREE_DIGEST="):][:900]
+    assert 'tar tf "$TARBALL"' in block, (
+        "tree_digest is no longer enumerated from the release artifact. Scoped "
+        "to $APP_DIR it also hashes node_modules/, __pycache__, backups/ and "
+        "logs/, so it becomes a function of host state and cannot reproduce "
+        "from the commit it claims to be."
+    )
+    assert "find ." not in block, (
+        "tree_digest walks the filesystem again; that is the defect this scope "
+        "replaced"
+    )
+
+
+# Two full extractions of a ~3,950-file archive plus three hash passes; the
+# suite-wide 30s cap is for unit tests, and this is deliberately end-to-end.
+@pytest.mark.timeout(300)
+def test_artifact_scoped_digest_survives_host_noise_and_reproduces(tmp_path):
+    """End-to-end, with no deployed host: extraction + noise still reproduces.
+
+    Builds a real `git archive`, extracts it the way the deploy does, then adds
+    exactly the kind of untracked files production accumulates. The digest must
+    still equal the one computed from the commit -- and the old whole-tree
+    approach must NOT, or this control would prove nothing.
+    """
+    import tarfile
+
+    head = _git("rev-parse", "--verify", "--quiet", "HEAD^{commit}").decode().strip()
+    if not head:
+        pytest.skip("no HEAD commit")
+
+    blob = _git("archive", "--format=tar", head)
+    assert blob, "git archive produced nothing"
+
+    app_dir = tmp_path / "opt_kinjo"
+    app_dir.mkdir()
+    with tarfile.open(fileobj=__import__("io").BytesIO(blob)) as tf:
+        tf.extractall(app_dir, filter="data")
+        members = [m.name for m in tf.getmembers() if m.isfile()]
+
+    # Exactly what /opt/kinjo carries that no release ever shipped.
+    for noise in ("node_modules/x/index.js", "__pycache__/m.cpython-313.pyc",
+                  "logs/app.log", ".env.bak-20260817", "backups/db.sql"):
+        f = app_dir / noise
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(b"not part of any release\n")
+    (app_dir / ".env").write_bytes(b"SECRET=x\n")
+
+    expected = _tree_digest_for(head)
+    assert expected, "could not compute the reference digest"
+
+    assert _artifact_scoped_digest(app_dir, members) == expected, (
+        "the artifact-scoped digest did not reproduce the commit's digest even "
+        "though every artifact file is byte-identical -- reproduction is the "
+        "one property that makes a recorded SHA evidence rather than a claim"
+    )
+
+    # Falsification: the scope this replaced must genuinely fail here.
+    whole_tree = []
+    for f in sorted(p for p in app_dir.rglob("*") if p.is_file()):
+        rel = f.relative_to(app_dir).as_posix()
+        if rel in (".env", "RELEASE.json") or rel.startswith("data/"):
+            continue
+        whole_tree.append(f"{hashlib.sha256(f.read_bytes()).hexdigest()}  ./{rel}\n")
+    assert hashlib.sha256("".join(sorted(whole_tree)).encode()).hexdigest() != expected, (
+        "hashing the whole app dir produced the same digest as the artifact, so "
+        "this control cannot detect the defect it exists to pin"
+    )

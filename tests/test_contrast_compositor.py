@@ -205,3 +205,61 @@ def test_an_unparseable_background_image_stays_indeterminate():
         "text over a raster background was given a definite contrast ratio; a "
         "bitmap has no single colour and must stay indeterminate"
     )
+
+
+# --------------------------------------------------------------------------
+# `none` is a layer that paints nothing -- not an image nobody can read.
+# --------------------------------------------------------------------------
+
+NONE_LAYER = """<!doctype html><html lang="ar" dir="rtl"><head><style>
+  body { background: #faf9f6; margin: 0; }
+  .admin-page-header {
+    padding: 32px;
+    background-image: linear-gradient(135deg, #0b1524 0%, #163d2e 100%), none;
+  }
+  .admin-page-header h1 { color: #ffffff; font-size: 24px; margin: 0; }
+  .admin-page-header p  { color: #e2e8f0; font-size: 15px; margin: 8px 0 0; }
+</style></head><body>
+  <header class="admin-page-header">
+    <h1>لوحة التحكم</h1><p>نظرة عامة على النشاط</p>
+  </header>
+</body></html>"""
+
+
+def test_a_none_layer_does_not_make_the_whole_stack_indeterminate():
+    """The /admin/dashboard case: `linear-gradient(...), none`.
+
+    `none` is a perfectly parseable layer that contributes nothing. Treating it
+    as an unreadable image made layerStops bail for the entire element, so the
+    header came back indeterminate -- 2 nodes per engine, on all three engines,
+    never measured at all. Indeterminate must mean "genuinely unknowable", or
+    it becomes a place for real surfaces to hide.
+    """
+    data = _measure(NONE_LAYER)
+    assert data["indeterminate"] == 0, (
+        "a background-image whose only unparseable layer is the literal `none` "
+        "was reported indeterminate; `none` paints nothing and must be dropped, "
+        "not treated as an opaque texture"
+    )
+    hits = [f for f in data["fails"] if "لوحة" in f["text"] or "نظرة" in f["text"]]
+    assert not hits, (
+        f"light text on a dark header was flagged as failing: {hits}. If the "
+        "`none` layer were composited as a ground, the dark gradient beneath it "
+        "would be lost."
+    )
+
+
+def test_a_real_image_layer_still_bails():
+    """Control: dropping `none` must not make url() readable by accident."""
+    html = """<!doctype html><html lang="en"><head><style>
+      body { background: #ffffff; margin: 0; }
+      .hero { padding: 30px;
+        background-image: linear-gradient(135deg, #0b1524, #163d2e),
+          url('data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=='); }
+      .hero span { color: #9a9a9a; font-size: 16px; }
+    </style></head><body><div class="hero"><span>Over an image</span></div></body></html>"""
+    data = _measure(html)
+    assert data["indeterminate"] >= 1, (
+        "a real raster layer stopped being reported as indeterminate; only the "
+        "literal `none` may be dropped"
+    )

@@ -280,10 +280,38 @@ TARBALL_SHA="$(sha256sum "$TARBALL" | awk '{print $1}')"
 #
 # tests/test_release_provenance.py mirrors this exactly; a difference between
 # the two would surface as a digest mismatch that looks like tampering.
+#
+# SCOPE: the files the ARTIFACT ships, enumerated from the tarball itself --
+# not everything under $APP_DIR. /opt/kinjo is a working directory, not a
+# release: at 2cbbf00 it held 9,077 files in the old find's scope against an
+# artifact of 3,948. The 5,129 extras were node_modules/ (2,145), __pycache__
+# (1,810), untracked static/ (977), mobile/, backups/, logs/, secrets/ and six
+# .env.bak-* files -- none of them from any release.
+#
+# That made the digest a function of host state, so it could never reproduce
+# from `git archive <sha>` -- the single property that makes the recorded SHA
+# checkable rather than merely claimed. Measured 2026-08-19: production was
+# byte-identical to 2cbbf00 across all 3,948 artifact files, zero drift, and
+# the two digests still disagreed (b8741e08... on disk vs e04dd7a1... from the
+# commit). Same commit, no drift, different answer.
+#
+# It stayed invisible because the one assertion that checks reproduction skips
+# whenever no RELEASE.json is reachable -- which is every workstation, and
+# production never runs the suite. tests/test_release_provenance.py now carries
+# a synthetic control that exercises this path with no deployed host.
+#
+# Scoping to `tar tf` makes reproduction hold by construction and still
+# describes what is on disk for every file the release governs. Verified
+# against live production before it was written: the artifact-scoped digest of
+# `git archive 2cbbf00` and of /opt/kinjo agree exactly (e04dd7a1...).
 TREE_DIGEST="$(cd "$APP_DIR" \
-  && find . -type f -not -path './.git/*' -not -name '.env' -not -name 'RELEASE.json' \
-          -not -path './data/*' -print0 \
-  | xargs -0 sha256sum \
+  && tar tf "$TARBALL" \
+  | grep -v '/$' \
+  | sed 's|^\./||' \
+  | grep -Ev '^(\.env|RELEASE\.json)$' \
+  | grep -v '^data/' \
+  | awk '{print "./" $0}' \
+  | LC_ALL=C sort | tr '\n' '\0' | xargs -0 sha256sum \
   | awk '{h=$1; p=substr($0, length(h)+3); print h "  " p}' \
   | LC_ALL=C sort | sha256sum | awk '{print $1}')"
 # Jordan time (UTC+3): this host runs UTC, and every operational timestamp in

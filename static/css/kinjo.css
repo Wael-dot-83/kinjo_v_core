@@ -3742,6 +3742,46 @@ body.sidebar-open .sidebar-backdrop {
   --bs-btn-hover-border-color: var(--kinjo-color-neutral-text);
 }
 
+/* Bootstrap's outline variants paint the FILL value as the foreground, which is
+   the one thing the palette says never to do. Two of them reach live controls:
+
+     .btn-outline-warning  amber fill on the near-white admin canvas = 1.62:1
+     .btn-outline-danger   red fill on the light manager panel      = 4.33:1
+
+   The first is the bulk "تعليق" (suspend) control and the per-row reset-password
+   icons on /admin/users; the second is "إزالة" (remove) on /manager/supervisors.
+   Both are destructive actions, so they are the last things on the page that
+   should be hard to read. Measured identically in Chromium, Firefox and WebKit,
+   so this is the colour, not an engine artifact.
+
+   These two surfaces were simply never in the audit's route list, which is why
+   four earlier sweeps reported zero. */
+.btn-outline-warning {
+  --bs-btn-color: var(--kinjo-color-warning-text);
+  --bs-btn-border-color: var(--kinjo-color-warning-text);
+  --bs-btn-hover-bg: var(--kinjo-color-warning-text);
+  --bs-btn-hover-border-color: var(--kinjo-color-warning-text);
+  --bs-btn-active-bg: var(--kinjo-color-warning-text);
+  --bs-btn-active-border-color: var(--kinjo-color-warning-text);
+}
+
+.btn-outline-danger {
+  --bs-btn-color: var(--kinjo-color-danger-text-strong);
+  --bs-btn-border-color: var(--kinjo-color-danger-text-strong);
+  --bs-btn-hover-bg: var(--kinjo-color-danger-text-strong);
+  --bs-btn-hover-border-color: var(--kinjo-color-danger-text-strong);
+  --bs-btn-active-bg: var(--kinjo-color-danger-text-strong);
+  --bs-btn-active-border-color: var(--kinjo-color-danger-text-strong);
+}
+
+/* `code` inherits Bootstrap's 0.875em, and on /admin/users it sits inside a
+   <small> that is itself 0.875em: 14 x .875 x .875 = 10.72px, under the 12px
+   floor where Arabic loses its dots. Identical failure to `.badge`, which
+   compounded to 10.5px for the same reason. rem cannot compound. */
+code {
+  font-size: var(--kinjo-font-size-xs);
+}
+
 .btn-danger {
   --bs-btn-bg: var(--kinjo-color-danger-action);
   --bs-btn-border-color: var(--kinjo-color-danger-action);
