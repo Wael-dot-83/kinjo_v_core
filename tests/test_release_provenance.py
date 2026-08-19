@@ -123,17 +123,19 @@ def _tree_digest_for(ref):
     if not blob:
         return None
     lines = []
-    with tempfile.TemporaryDirectory() as td:
-        with tarfile.open(fileobj=__import__("io").BytesIO(blob)) as tf:
-            # filter="data" is required from Python 3.14 and silences the
-            # deprecation warning this suite escalates to an error.
-            tf.extractall(td, filter="data")
-        base = Path(td)
-        for path in sorted(p for p in base.rglob("*") if p.is_file()):
-            rel = path.relative_to(base).as_posix()
+    with tarfile.open(fileobj=__import__("io").BytesIO(blob)) as tf:
+        for member in tf.getmembers():
+            if not member.isfile():
+                continue
+            rel = member.name.replace("\\", "/")
+            if rel.startswith("./"):
+                rel = rel[2:]
             if rel in (".env", "RELEASE.json") or rel.startswith("data/"):
                 continue
-            h = hashlib.sha256(path.read_bytes()).hexdigest()
+            f = tf.extractfile(member)
+            if f is None:
+                continue
+            h = hashlib.sha256(f.read()).hexdigest()
             lines.append(f"{h}  ./{rel}\n")
     joined = "".join(sorted(lines)).encode()
     return hashlib.sha256(joined).hexdigest()
