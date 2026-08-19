@@ -24,8 +24,8 @@
 <!-- Stat Summary Cards -->
 <div class="row g-3 mb-4" id="attendanceSummary">
     <div class="col-6 col-md-3">
-        <div class="parent-child-card p-3 text-center">
-            <div class="avatar-md bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
+        <div class="parent-card p-3 text-center">
+            <div class="parent-avatar parent-avatar-md bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-2">
                 <i class="bi bi-list-check fs-5"></i>
             </div>
             <h3 class="fw-bold mb-0 text-dark" id="countTotal">0</h3>
@@ -33,8 +33,8 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="parent-child-card p-3 text-center">
-            <div class="avatar-md bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
+        <div class="parent-card p-3 text-center">
+            <div class="parent-avatar parent-avatar-md bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-2">
                 <i class="bi bi-check-circle-fill fs-5"></i>
             </div>
             <h3 class="fw-bold mb-0 text-success" id="countPresent">0</h3>
@@ -42,8 +42,8 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="parent-child-card p-3 text-center">
-            <div class="avatar-md bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
+        <div class="parent-card p-3 text-center">
+            <div class="parent-avatar parent-avatar-md bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-2">
                 <i class="bi bi-x-circle-fill fs-5"></i>
             </div>
             <h3 class="fw-bold mb-0 text-danger" id="countAbsent">0</h3>
@@ -51,8 +51,8 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="parent-child-card p-3 text-center">
-            <div class="avatar-md bg-warning bg-opacity-10 text-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
+        <div class="parent-card p-3 text-center">
+            <div class="parent-avatar parent-avatar-md bg-warning bg-opacity-10 text-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-2">
                 <i class="bi bi-clock-history fs-5"></i>
             </div>
             <h3 class="fw-bold mb-0 text-warning" id="countLate">0</h3>
@@ -62,23 +62,23 @@
 </div>
 
 <!-- Filters Bar -->
-<div class="parent-report-card p-3 mb-4">
+<div class="parent-section mb-4">
     <div class="row g-3 align-items-center">
         <div class="col-12 col-md-4">
             <label class="form-label small text-muted fw-semibold mb-1">{{ _('Select Child:') }}</label>
-            <select class="form-select rounded-pill" id="childFilter">
+            <select class="form-select parent-form-control" id="childFilter">
                 <option value="">{{ _('All Children') }}</option>
             </select>
         </div>
         <div class="col-12 col-md-4">
             <label class="form-label small text-muted fw-semibold mb-1">{{ _('Filter by Date:') }}</label>
-            <input type="date" class="form-control rounded-pill" id="dateFilter">
+            <input type="date" class="form-control parent-form-control" id="dateFilter">
         </div>
         <div class="col-12 col-md-4 d-flex align-items-end gap-2" style="padding-top: 1.6rem;">
-            <button class="btn btn-primary rounded-pill px-4 flex-grow-1" onclick="loadAttendance()">
+            <button class="btn btn-primary parent-btn rounded-pill px-4 flex-grow-1" onclick="loadAttendance()">
                 <i class="bi bi-funnel me-1"></i>{{ _('Filter') }}
             </button>
-            <button class="btn btn-outline-secondary rounded-pill px-3" onclick="resetFilters()" aria-label="{{ _('Reset filters') }}" title="{{ _('Reset filters') }}">
+            <button class="btn btn-outline-secondary parent-btn rounded-pill px-3" onclick="resetFilters()" aria-label="{{ _('Reset filters') }}" title="{{ _('Reset filters') }}">
                 <i class="bi bi-arrow-counterclockwise"></i>
             </button>
         </div>
@@ -88,12 +88,12 @@
 <!-- Attendance Table -->
 <div class="parent-report-card">
     <div class="card-header bg-transparent py-3 border-bottom">
-        <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-journal-text me-2 text-primary"></i>{{ _('Attendance Logs') }}</h5>
+        <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-journal-text me-2" style="color: var(--parent-accent);"></i>{{ _('Attendance Logs') }}</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="bg-light">
+            <table class="table parent-table align-middle mb-0">
+                <thead>
                     <tr>
                         <th class="py-3 px-4">#</th>
                         <th class="py-3 px-4">{{ _('Child') }}</th>
@@ -115,6 +115,10 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/parent-design-system.css') }}?v=1.0" />
 {% endblock %}
 
 {% block extra_js %}
@@ -210,9 +214,11 @@
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="7" class="text-center py-5">
-                            <i class="bi bi-calendar-x fs-1 text-muted d-block mb-3 opacity-25"></i>
-                            <h6 class="fw-bold mb-1">${T('لا توجد سجلات حضور', 'No attendance records found')}</h6>
-                            <small class="text-muted">${T('جرب اختيار طفل آخر أو مسح تاريخ الفلتر.', 'Try selecting another child or clearing the date filter.')}</small>
+                            <div class="parent-empty">
+                                <div class="parent-empty-icon"><i class="bi bi-calendar-x"></i></div>
+                                <h6 class="fw-bold mb-1">${T('لا توجد سجلات حضور', 'No attendance records found')}</h6>
+                                <small class="text-muted d-block">${T('جرب اختيار طفل آخر أو مسح تاريخ الفلتر.', 'Try selecting another child or clearing the date filter.')}</small>
+                            </div>
                         </td>
                     </tr>
                 `;

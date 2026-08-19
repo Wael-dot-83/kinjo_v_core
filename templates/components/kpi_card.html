@@ -8,25 +8,6 @@
 {% set badge_variant = 'success' if band == 'GREEN' else 'warning' if band == 'AMBER' else 'danger' if band == 'RED' else 'secondary' %}
 {% set display_value = ('غير متاح' if ui_lang != 'en' else 'N/A') if not has_data else value %}
 
-{# Confidence badge color #}
-{% if confidence == 'high' %}
-  {% set conf_color = 'text-success' %}
-  {% set conf_icon = 'bi-check-circle-fill' %}
-  {% set conf_label = 'عينة كافية' if ui_lang != 'en' else 'High Confidence' %}
-{% elif confidence == 'medium' %}
-  {% set conf_color = 'text-warning' %}
-  {% set conf_icon = 'bi-exclamation-circle-fill' %}
-  {% set conf_label = 'عينة متوسطة' if ui_lang != 'en' else 'Medium Confidence' %}
-{% elif confidence == 'low' %}
-  {% set conf_color = 'text-danger' %}
-  {% set conf_icon = 'bi-exclamation-triangle-fill' %}
-  {% set conf_label = 'عينة صغيرة' if ui_lang != 'en' else 'Small Sample' %}
-{% else %}
-  {% set conf_color = 'text-secondary' %}
-  {% set conf_icon = 'bi-question-circle-fill' %}
-  {% set conf_label = 'بيانات غير كافية' if ui_lang != 'en' else 'Insufficient Data' %}
-{% endif %}
-
 {# Trend icon and color #}
 {% if trend == 'up' %}
   {% set trend_icon = 'bi-arrow-up-short' %}
@@ -46,20 +27,12 @@
                 {% if icon %}<i class="bi {{ icon }} me-1" aria-hidden="true"></i>{% endif %}
                 {{ title }}
             </h6>
-            <div class="d-flex align-items-center gap-1">
-                {% if confidence %}
-                <span data-bs-toggle="tooltip" title="{{ conf_label }}" tabindex="0" role="img">
-                    <i class="bi {{ conf_icon }} small {{ conf_color }}" aria-hidden="true"></i>
-                    <span class="visually-hidden">{{ conf_label }}</span>
-                </span>
-                {% endif %}
-                {% if tooltip %}
-                <span data-bs-toggle="tooltip" title="{{ tooltip }}" tabindex="0" role="img">
-                    <i class="bi bi-info-circle text-muted" aria-hidden="true"></i>
-                    <span class="visually-hidden">{{ tooltip }}</span>
-                </span>
-                {% endif %}
-            </div>
+            {% if tooltip %}
+            <span data-bs-toggle="tooltip" title="{{ tooltip }}" tabindex="0" role="img">
+                <i class="bi bi-info-circle text-muted" aria-hidden="true"></i>
+                <span class="visually-hidden">{{ tooltip }}</span>
+            </span>
+            {% endif %}
         </div>
         <div class="d-flex align-items-baseline gap-2">
             <span class="display-6 fw-bold text-dark" data-kpi-value>{{ display_value }}</span>
