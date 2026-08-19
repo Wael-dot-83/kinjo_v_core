@@ -392,7 +392,7 @@
 
 /* Zero-value breakdown rows: truthful but visually secondary. */
 .ncfa-row-zero td {
-  color: #94a3b8;
+  color: #556575;
 }
 
 .ncfa-loading,
@@ -486,7 +486,7 @@
   .ncfa-scope-field select:disabled{background:#1e293b;color:#64748b}
   .ncfa-scope-summary,.ncfa-kpi-card,.ncfa-chart-empty,.ncfa-empty{background:#0f172a;color:#e2e8f0;border-color:var(--kinjo-color-border)}
   .ncfa-kpi-card strong,.ncfa-chart-card h4,.ncfa-table-wrap h4{color:#f1f5f9}
-  .ncfa-kpi-card span{color:#94a3b8}
+  .ncfa-kpi-card span{color:#556575}
   .ncfa-data-table th{background:#0f172a;color:#f1f5f9;border-color:var(--kinjo-color-border)}
   .ncfa-data-table td{color:#e2e8f0;border-color:var(--kinjo-color-border-subtle)}
   .ncfa-evidence-note{background:#1e293b;color:#cbd5e1;border-color:var(--kinjo-color-border)}

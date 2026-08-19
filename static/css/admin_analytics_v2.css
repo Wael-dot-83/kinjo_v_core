@@ -985,7 +985,7 @@
 .gov-bar-fill {
   height: 100%;
   border-radius: var(--r-full);
-  transition: width 0.6s ease;
+  
 }
 .gov-bar-fill--green {
   background: var(--az-success);
@@ -1338,7 +1338,7 @@
 .dq-bar-fill {
   height: 100%;
   border-radius: var(--r-full);
-  transition: width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  
 }
 .data-health-widget {
   display: flex;
@@ -1365,7 +1365,7 @@
 .health-bar__fill {
   height: 100%;
   border-radius: var(--r-full);
-  transition: width 0.6s ease;
+  
 }
 .health-bar__val {
   font: 600 0.8125rem/1 var(--font-ar);
@@ -1417,7 +1417,7 @@
   height: 100%;
   background: var(--az-primary);
   border-radius: var(--r-full);
-  transition: width 0.6s ease;
+  
 }
 .funnel-step__count {
   font: 700 0.875rem/1 var(--font-ar);
@@ -1922,7 +1922,7 @@ a:focus-visible {
 .target-progress-fill {
   height: 100%;
   border-radius: var(--r-full);
-  transition: width 0.5s ease;
+  
 }
 .root-cause-factors {
   display: flex;

@@ -362,7 +362,7 @@
 #attendanceCard      { border-inline-start-color: #198754 !important; }
 #pendingEnrollmentsCard { border-inline-start-color: #f59e0b !important; }
 #pendingReportsCard  { border-inline-start-color: #2F7D62 !important; }
-#incidentsCard       { border-inline-start-color: #ef4444 !important; }
+#incidentsCard       { border-inline-start-color: #dc2626 !important; }
 
 /* 4. Quick access pill buttons — brand-aware hover */
 .quick-actions-bar .btn-white:hover {
@@ -662,7 +662,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
 
 .kpi-explain-badge { white-space: nowrap; }
 .kpi-explain-chevron {
-  color: #94a3b8; font-size: .8rem;
+  color: #556575; font-size: .8rem;
   transition: transform .25s ease;
   margin-inline-start: .25rem;
 }
@@ -686,7 +686,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .05em;
-  color: #94a3b8;
+  color: #556575;
   margin-bottom: .5rem;
 }
 
@@ -755,7 +755,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
 .kpi-explain-empty {
   text-align: center;
   padding: 2.5rem 1rem;
-  color: #94a3b8;
+  color: #556575;
   font-size: .9rem;
 }
 

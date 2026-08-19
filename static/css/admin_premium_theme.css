@@ -45,8 +45,11 @@
 
 /* Avatar lockup */
 .header-user-avatar {
-  background: #FF6B6B;
-  color: #FFFFFF;
+  /* Was coral #FF6B6B with white initials -- 2.78:1, under the 4.5 floor. The
+     design system already defines an accessible avatar pair (gold ground with
+     deep-green ink at 4.66:1); this theme was overriding it with a worse one. */
+  background: var(--admin-header-avatar-bg);
+  color: var(--admin-header-avatar-ink);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1);
   font-weight: 700;
 }

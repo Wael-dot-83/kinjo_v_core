@@ -196,7 +196,7 @@
     height: 100%;
     background: linear-gradient(90deg, var(--kinjo-brand) 0%, #c98743 100%);
     border-radius: inherit;
-    transition: width 0.25s ease;
+    
   }
 
   .parent-profile-shell .profile-side-card {

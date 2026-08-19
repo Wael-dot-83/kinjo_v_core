@@ -9,7 +9,7 @@
 
 {% block extra_head %}
 {{ super() }}
-<link rel="stylesheet" href="/static/css/kindergarten_detail.css?v=092a457547db">
+<link rel="stylesheet" href="/static/css/kindergarten_detail.css?v=3fbb3cfe22bc">
 {% endblock %}
 
 {% block footer %}{% endblock %}
@@ -166,7 +166,7 @@
         {% if kindergarten.license_valid_until %}
           <span style="font-size:1.1rem;">{{ kindergarten.license_valid_until | string | truncate(10, killwords=True, end='') }}</span>
         {% else %}
-          <span style="font-size:1.25rem; color:#94a3b8;">—</span>
+          <span style="font-size:1.25rem; color:#556575;">—</span>
         {% endif %}
       </div>
       <div class="kg-metric-subtitle">{% if ui_lang == 'en' %}License expiry date{% else %}تاريخ انتهاء الترخيص{% endif %}</div>

@@ -28,6 +28,11 @@
      must be read -- required-field markers, inline validation -- uses this
      darker sibling at 4.83:1. Same hue, same meaning, legible. */
   --kinjo-color-danger-text: #dc2626;
+
+  /* Muted text on a DARK surface has to go lighter, not darker. The light-ground
+     muted tones measure 3.74:1 and 3.2:1 on the analytics panels' dark ground;
+     this one measures 8.65:1 there. */
+  --kinjo-color-text-muted-on-dark: #a8b6c8;
   --kinjo-color-info: #3b82f6;
   
   /* Page canvas — a warm off-white. The previous #f8fafc was blue-tinted (its blue

@@ -59,7 +59,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/dashboard-pro.css?v=38cf305653d9">
-<link rel="stylesheet" href="/static/css/dashboard-enhanced.css?v=abd733f7520f">
+<link rel="stylesheet" href="/static/css/dashboard-enhanced.css?v=ede6965ae308">
 <style>
     /* Value update animation */
     .value-updated {
@@ -158,9 +158,9 @@
                     <span class="p-2 bg-danger-subtle rounded-circle">
                         <i class="bi bi-bell-fill text-danger"></i>
                     </span>
-                    <h5 class="card-title mb-0">
+                    <h2 class="h5 card-title mb-0">
                         {% if ui_lang == 'en' %}Smart Alerts{% else %}التنبيهات الذكية{% endif %}
-                    </h5>
+                    </h2>
                     <span class="badge rounded-pill ms-auto" id="alertCountBadge" style="display:none; background:var(--bs-danger);">0</span>
                     <small id="dashboardLastUpdated" class="text-muted ms-3" style="font-size:.75rem; white-space:nowrap;"></small>
                 </div>
@@ -282,7 +282,7 @@
             <!-- Proposed Actions Section -->
             <div class="card border-0 shadow-sm mb-4 rounded-xl">
                 <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
-                    <h5 class="fw-bold mb-0">{% if ui_lang == 'en' %}Suggested Improvement Actions{% else %}إجراءات مقترحة للتحسين{% endif %}</h5>
+                    <h2 class="h5 fw-bold mb-0">{% if ui_lang == 'en' %}Suggested Improvement Actions{% else %}إجراءات مقترحة للتحسين{% endif %}</h2>
                 </div>
                 <div class="card-body p-4">
                     <div class="row g-3" id="nextActionsContainer">
@@ -319,7 +319,7 @@
 
         <!-- Left Column: Status Widgets (Secondary Content) -->
         <div class="col-12 col-lg-4 order-lg-2">
-            <h5 class="fw-bold mb-3 px-2">{% if ui_lang == 'en' %}Current Status{% else %}الحالة الآن{% endif %}</h5>
+            <h2 class="h5 fw-bold mb-3 px-2">{% if ui_lang == 'en' %}Current Status{% else %}الحالة الآن{% endif %}</h2>
 
             <div class="row g-3">
                 <!-- Attendance Card -->
@@ -420,10 +420,10 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">
+                <h2 class="h5 card-title mb-0">
                     <i class="bi bi-bar-chart-line me-2"></i>
                     {% if ui_lang == 'en' %}System Overview{% else %}نظرة عامة على النظام{% endif %}
-                </h5>
+                </h2>
             </div>
             <div class="card-body">
                 <div class="row text-center g-4">
@@ -464,10 +464,10 @@
     <div class="col-12 col-lg-8">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
+                <h2 class="h5 card-title mb-0">
                     <i class="bi bi-graph-up me-2"></i>
                     {% if ui_lang == 'en' %}Weekly Attendance Rate{% else %}نسبة الحضور الأسبوعية{% endif %}
-                </h5>
+                </h2>
                 <div class="btn-group btn-group-sm">
                     <button class="btn btn-outline-secondary active" data-chart-type="line"
                         aria-label="{% if ui_lang == 'en' %}Line chart{% else %}عرض الرسم البياني كخط{% endif %}">{% if ui_lang == 'en' %}Line{% else %}خطي{% endif %}</button>
@@ -488,10 +488,10 @@
     <div class="col-12 col-lg-4">
         <div class="card h-100">
             <div class="card-header">
-                <h5 class="card-title mb-0">
+                <h2 class="h5 card-title mb-0">
                     <i class="bi bi-pie-chart me-2"></i>
                     {% if ui_lang == 'en' %}Enrollment Status{% else %}حالات التسجيل{% endif %}
-                </h5>
+                </h2>
             </div>
             <div class="card-body">
                 <div class="chart-container">
@@ -510,10 +510,10 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
-                <h5 class="card-title mb-0">
+                <h2 class="h5 card-title mb-0">
                     <i class="bi bi-speedometer2 me-2 text-primary"></i>
                     {% if ui_lang == 'en' %}Key Performance Indicators{% else %}مؤشرات الأداء الرئيسية{% endif %}
-                </h5>
+                </h2>
                 <div class="btn-group btn-group-sm mt-2" role="group">
                     <button type="button" class="btn btn-outline-primary active" onclick="toggleKPIView('cards')"
                         id="viewCardsBtn" title="{% if ui_lang == 'en' %}Cards view{% else %}عرض البطاقات{% endif %}">
@@ -657,7 +657,7 @@
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{% if ui_lang == 'en' %}KPI Explanations{% else %}شرح مؤشرات الأداء الرئيسية{% endif %}</h5>
+                <h2 class="h5 modal-title">{% if ui_lang == 'en' %}KPI Explanations{% else %}شرح مؤشرات الأداء الرئيسية{% endif %}</h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
@@ -680,7 +680,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="actionModalTitle">{% if ui_lang == 'en' %}Improvement Actions{% else %}إجراءات التحسين{% endif %}</h5>
+                <h2 class="h5 modal-title" id="actionModalTitle">{% if ui_lang == 'en' %}Improvement Actions{% else %}إجراءات التحسين{% endif %}</h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
@@ -704,7 +704,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{% if ui_lang == 'en' %}Data Validation Details{% else %}تفاصيل التحقق من البيانات{% endif %}</h5>
+                <h2 class="h5 modal-title">{% if ui_lang == 'en' %}Data Validation Details{% else %}تفاصيل التحقق من البيانات{% endif %}</h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
@@ -739,10 +739,10 @@
     <div class="col-12 col-md-6">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
+                <h2 class="h5 card-title mb-0">
                     <i class="bi bi-clock-history me-2"></i>
                     {% if ui_lang == 'en' %}Pending Reports{% else %}تقارير معلقة{% endif %}
-                </h5>
+                </h2>
                 <span class="badge rounded-pill" style="background:#fef3c7; color:#b45309;" id="pendingReportsListBadge">0</span>
             </div>
             <div class="card-body p-0">
@@ -766,10 +766,10 @@
     <div class="col-12 col-md-6">
         <div class="card h-100">
             <div class="card-header">
-                <h5 class="card-title mb-0">
+                <h2 class="h5 card-title mb-0">
                     <i class="bi bi-activity me-2"></i>
                     {% if ui_lang == 'en' %}Recent Activity{% else %}النشاط الأخير{% endif %}
-                </h5>
+                </h2>
             </div>
             <div class="card-body p-0">
                 <div class="list-group list-group-flush" id="recentActivityList">
@@ -805,10 +805,10 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
+                <h2 class="h5 card-title mb-0">
                     <i class="bi bi-bar-chart me-2"></i>
                     {% if ui_lang == 'en' %}Key Performance Indicators{% else %}مؤشرات الأداء الرئيسية{% endif %}
-                </h5>
+                </h2>
                 <a href="/kpi/dashboard" class="btn btn-sm btn-outline-primary" aria-label="{% if ui_lang == 'en' %}View KPI details{% else %}عرض تفاصيل مؤشرات الأداء الرئيسية{% endif %}">
                     {% if ui_lang == 'en' %}View Details{% else %}عرض التفاصيل{% endif %} <i class="bi bi-arrow-{{ 'left' if ui_dir == 'rtl' else 'right' }} ms-1"></i>
                 </a>
@@ -912,10 +912,10 @@
         <div class="card manager-section-card border-0 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="card-title mb-1">
+                    <h2 class="h5 card-title mb-1">
                         <i class="bi bi-journal-text me-2"></i>
                         {% if ui_lang == 'en' %}Daily Reports Management{% else %}إدارة التقارير اليومية{% endif %}
-                    </h5>
+                    </h2>
                     <p class="manager-section-subtitle mb-0">{% if ui_lang == 'en' %}Track unapproved reports with prioritization{% else %}متابعة التقارير غير المعتمدة مع تحديد الأولوية{% endif %}</p>
                 </div>
                 <button class="btn btn-sm btn-outline-primary" onclick="loadSubmittedReports()">
@@ -954,10 +954,10 @@
     <div class="col-12">
         <div class="card manager-section-card border-0 shadow-sm">
             <div class="card-header">
-                <h5 class="card-title mb-1">
+                <h2 class="h5 card-title mb-1">
                     <i class="bi bi-bar-chart me-2"></i>
                     {% if ui_lang == 'en' %}Supervisor Statistics{% else %}إحصائيات المشرفين{% endif %}
-                </h5>
+                </h2>
                 <p class="manager-section-subtitle mb-0">{% if ui_lang == 'en' %}Quick read on supervisor activity and activation rate{% else %}قراءة سريعة لنشاط المشرفين ومعدل التفعيل{% endif %}</p>
             </div>
             <div class="card-body">
@@ -978,10 +978,10 @@
         <div class="card manager-section-card border-0 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="card-title mb-1">
+                    <h2 class="h5 card-title mb-1">
                         <i class="bi bi-house-door me-2"></i>
                         {% if ui_lang == 'en' %}Class Management{% else %}إدارة الفصول{% endif %}
-                    </h5>
+                    </h2>
                     <p class="manager-section-subtitle mb-0">{% if ui_lang == 'en' %}Track capacity and enrollment per class in real-time{% else %}متابعة السعة والاستيعاب لكل فصل في الوقت الفعلي{% endif %}</p>
                 </div>
                 <button class="btn btn-sm btn-primary" onclick="showCreateClassModal()">
@@ -1023,10 +1023,10 @@
         <div class="card manager-section-card border-0 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="card-title mb-1">
+                    <h2 class="h5 card-title mb-1">
                         <i class="bi bi-people me-2"></i>
                         {% if ui_lang == 'en' %}Account Management{% else %}إدارة الحسابات{% endif %}
-                    </h5>
+                    </h2>
                     <p class="manager-section-subtitle mb-0">{% if ui_lang == 'en' %}Manage supervisors and parents with quick messaging access{% else %}إدارة المشرفين وأولياء الأمور مع وصول سريع للمراسلة{% endif %}</p>
                 </div>
                 <div class="btn-group manager-account-actions" role="group">
@@ -1119,14 +1119,14 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex flex-wrap align-items-center gap-2">
-                <h5 class="card-title mb-0 me-auto">
+                <h2 class="h5 card-title mb-0 me-auto">
                     <i class="bi bi-calendar-day me-2"></i>
                     {% if current_user.role.value == 'ADMIN' %}
                     {% if ui_lang == 'en' %}Kindergarten Overview - {{ today }}{% else %}نظرة عامة على الحضانات - {{ today }}{% endif %}
                     {% else %}
                     {% if ui_lang == 'en' %}Today's Overview - {{ today }}{% else %}نظرة عامة على اليوم - {{ today }}{% endif %}
                     {% endif %}
-                </h5>
+                </h2>
                 <!-- Table controls: search + action filter -->
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                     <input type="search" id="overviewTableSearch" class="form-control form-control-sm" style="width:180px;"
@@ -1211,10 +1211,10 @@
     <div class="col-12">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-primary bg-gradient text-white">
-                <h5 class="card-title mb-0">
+                <h2 class="h5 card-title mb-0">
                     <i class="bi bi-diagram-3 me-2"></i>
                     {% if ui_lang == 'en' %}Network Summary{% else %}ملخص الشبكة{% endif %}
-                </h5>
+                </h2>
             </div>
             <div class="card-body">
                 <div id="dsNetworkSummary" class="row row-cols-2 row-cols-md-5 g-3">
@@ -1230,10 +1230,10 @@
     <div class="col-12">
         <div class="card border-0 shadow-sm">
             <div class="card-header">
-                <h5 class="card-title mb-0">
+                <h2 class="h5 card-title mb-0">
                     <i class="bi bi-graph-up-arrow me-2 text-info"></i>
                     {% if ui_lang == 'en' %}Predictions &amp; Forecasts{% else %}التنبؤات والتوقعات{% endif %}
-                </h5>
+                </h2>
             </div>
             <div class="card-body">
                 <div id="dsPredictions" class="row g-3">
@@ -1250,10 +1250,10 @@
     <div class="col-12 col-xl-7">
         <div class="card h-100 border-0 shadow-sm">
             <div class="card-header">
-                <h5 class="card-title mb-0">
+                <h2 class="h5 card-title mb-0">
                     <i class="bi bi-geo-alt me-2 text-primary"></i>
                     {% if ui_lang == 'en' %}Geographic Distribution{% else %}التوزيع الجغرافي{% endif %}
-                </h5>
+                </h2>
             </div>
             <div class="card-body">
                 <div style="height: 280px; position: relative;">
@@ -1288,10 +1288,10 @@
     <div class="col-12 col-xl-5">
         <div class="card h-100 border-0 shadow-sm">
             <div class="card-header">
-                <h5 class="card-title mb-0">
+                <h2 class="h5 card-title mb-0">
                     <i class="bi bi-award me-2 text-success"></i>
                     {% if ui_lang == 'en' %}Performance Classification{% else %}تصنيف الأداء{% endif %}
-                </h5>
+                </h2>
             </div>
             <div class="card-body">
                 <div style="height: 240px; position: relative;">
@@ -1309,10 +1309,10 @@
     <div class="col-12 col-md-4">
         <div class="card h-100 border-0 shadow-sm">
             <div class="card-header">
-                <h5 class="card-title mb-0">
+                <h2 class="h5 card-title mb-0">
                     <i class="bi bi-bar-chart-steps me-2 text-warning"></i>
                     {% if ui_lang == 'en' %}Capacity Overview{% else %}نظرة على السعة{% endif %}
-                </h5>
+                </h2>
             </div>
             <div class="card-body">
                 <div style="height: 260px; position: relative;">
@@ -1326,10 +1326,10 @@
     <div class="col-12 col-md-4">
         <div class="card h-100 border-0 shadow-sm">
             <div class="card-header">
-                <h5 class="card-title mb-0">
+                <h2 class="h5 card-title mb-0">
                     <i class="bi bi-funnel me-2 text-primary"></i>
                     {% if ui_lang == 'en' %}Enrollment Pipeline{% else %}مسار التسجيل{% endif %}
-                </h5>
+                </h2>
             </div>
             <div class="card-body">
                 <div style="height: 260px; position: relative;">
@@ -1343,10 +1343,10 @@
     <div class="col-12 col-md-4">
         <div class="card h-100 border-0 shadow-sm">
             <div class="card-header">
-                <h5 class="card-title mb-0">
+                <h2 class="h5 card-title mb-0">
                     <i class="bi bi-people me-2 text-info"></i>
                     {% if ui_lang == 'en' %}Age Group Distribution{% else %}توزيع الفئات العمرية{% endif %}
-                </h5>
+                </h2>
             </div>
             <div class="card-body">
                 <div style="height: 260px; position: relative;">
@@ -1362,10 +1362,10 @@
     <div class="col-12">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-danger bg-gradient text-white">
-                <h5 class="card-title mb-0">
+                <h2 class="h5 card-title mb-0">
                     <i class="bi bi-shield-exclamation me-2"></i>
                     {% if ui_lang == 'en' %}Risk Assessment{% else %}تقييم المخاطر{% endif %}
-                </h5>
+                </h2>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">

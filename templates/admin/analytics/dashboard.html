@@ -5,7 +5,7 @@
 {% block title %}{% if ui_lang == 'en' %}Analytics Intelligence Center{% else %}مركز الذكاء التحليلي{% endif %} — KinJo{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/admin_analytics_v2.css?v=03cb23a4d4d1">
+<link rel="stylesheet" href="/static/css/admin_analytics_v2.css?v=76cb49181074">
 <style>
   /* Suppress Bootstrap's default card styling where we use az-card */
   .kpi-grid, .kpi-card { display: none !important; }
@@ -240,7 +240,7 @@
             </div>
             <div style="height:6px;background:var(--slate-100);border-radius:var(--r-full);overflow:hidden;margin-top:4px"
                  role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-              <div id="enrollmentRateBar" style="height:100%;width:0%;background:var(--kpi-accent-children);border-radius:var(--r-full);transition:width .6s ease"></div>
+              <div id="enrollmentRateBar" style="height:100%;width:0%;background:var(--kpi-accent-children);border-radius:var(--r-full);"></div>
             </div>
             <div class="kpi-sparkline-v2" data-metric="total_children" aria-hidden="true"></div>
           </article>

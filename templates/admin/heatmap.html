@@ -29,18 +29,18 @@
 .cc-status-strip { display:flex; gap:0.5rem; margin-top:0.75rem; flex-wrap:wrap; align-items:center; }
 .status-chip { padding:0.25rem 0.75rem; border-radius:9999px; font-size:0.8125rem; display:inline-flex; align-items:center; gap:0.375rem; }
 .status-chip.live  { background:rgba(34,197,94,0.15); color:#22c55e; }
-.status-chip.error { background:rgba(239,68,68,0.15); color:#ef4444; }
+.status-chip.error { background:rgba(239,68,68,0.15); color:#dc2626; }
 .status-chip.info  { background:rgba(255,255,255,0.08); color:#cbd5e1; }
 .live-dot { width:8px; height:8px; border-radius:50%; background:#22c55e; animation:dot-pulse 2s infinite; }
 @keyframes dot-pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
 .freshness-badge { font-size:0.75rem; color:#64748b; margin-inline-start:auto; }
 
 /* ── PAGE DESCRIPTION ────────────────────────────────────────────── */
-.page-desc { padding:0.5rem 1.5rem; font-size:0.8125rem; color:#94a3b8; line-height:1.6; border-bottom:1px solid rgba(255,255,255,0.06); background:rgba(0,0,0,0.2); }
+.page-desc { padding:0.5rem 1.5rem; font-size:0.8125rem; color:#556575; line-height:1.6; border-bottom:1px solid rgba(255,255,255,0.06); background:rgba(0,0,0,0.2); }
 
 /* ── FILTER BAR ──────────────────────────────────────────────────── */
 .cc-filters { padding:0.75rem 1.5rem; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap; background:rgba(255,255,255,0.02); }
-.filter-label { font-size:0.8125rem; color:#94a3b8; white-space:nowrap; }
+.filter-label { font-size:0.8125rem; color:#556575; white-space:nowrap; }
 .cc-select { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); color:#f1f5f9; border-radius:0.5rem; padding:0.375rem 0.75rem; font-size:0.875rem; min-width:140px; }
 .cc-select option { background:#163d2e; color:#f1f5f9; }
 .cc-btn { padding:0.375rem 0.875rem; border-radius:0.5rem; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.08); color:#e2e8f0; font-size:0.875rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.375rem; transition:background 0.12s; }
@@ -55,11 +55,11 @@
 .kpi-strip { display:flex; gap:0.5rem; padding:0.5rem 1rem; border-bottom:1px solid rgba(255,255,255,0.05); background:transparent; flex-wrap:wrap; }
 .kpi-card { box-shadow: 0 4px 15px rgba(0,0,0,0.2); flex:1; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:0.5rem; padding:0.625rem 0.875rem; min-width:110px; position:relative; }
 .kpi-card:hover { border-color: rgba(47,125,98,0.5); box-shadow: 0 0 15px rgba(47,125,98,0.2); background:rgba(255,255,255,0.07); }
-.kpi-label { font-size:0.75rem; color:#94a3b8; }
+.kpi-label { font-size:0.75rem; color:#556575; }
 .kpi-value { font-size:1.25rem; font-weight:700; margin-top:0.125rem; }
 .kpi-sub { font-size:0.75rem; color:rgba(255,255,255,0.4); margin-top:0.125rem; }
 .kpi-card-warn .kpi-value { color:#f97316; }
-.kpi-card-crit .kpi-value { color:#ef4444; }
+.kpi-card-crit .kpi-value { color:#dc2626; }
 
 /* ── 3-PANEL MAP SCENE ───────────────────────────────────────────── */
 .cs-scene { display:flex; height:calc(100vh - 320px); min-height:520px; }
@@ -82,7 +82,7 @@
 
 /* Layer toggles row (beneath map) */
 .cs-layer-toggles { padding:0.5rem 0.875rem; background:rgba(0,0,0,0.3); border-top:1px solid rgba(255,255,255,0.06); display:flex; gap:1.25rem; flex-wrap:wrap; border-inline-end:1px solid rgba(255,255,255,0.05); }
-.cs-toggle-label { display:flex; align-items:center; gap:0.45rem; font-size:0.8125rem; color:#94a3b8; cursor:pointer; user-select:none; }
+.cs-toggle-label { display:flex; align-items:center; gap:0.45rem; font-size:0.8125rem; color:#556575; cursor:pointer; user-select:none; }
 .cs-toggle-label input[type="checkbox"] { accent-color:var(--kinjo-brand); width:15px; height:15px; }
 
 /* Right panel — intel / detail */
@@ -95,13 +95,13 @@
 .intel-loading-spinner { width:28px; height:28px; border:2px solid rgba(255,255,255,0.1); border-top-color:#2F7D62; border-radius:50%; animation:spin 0.8s linear infinite; }
 .intel-loading-name { margin-top:0.75rem; font-weight:600; color:#f1f5f9; }
 .intel-error { text-align:center; padding:1.5rem; }
-.intel-error i { font-size:2rem; color:#ef4444; margin-bottom:0.5rem; display:block; }
-.intel-error p { margin:0.5rem 0 1rem; color:#94a3b8; font-size:0.875rem; }
+.intel-error i { font-size:2rem; color:#dc2626; margin-bottom:0.5rem; display:block; }
+.intel-error p { margin:0.5rem 0 1rem; color:#556575; font-size:0.875rem; }
 .intel-gov-header { margin-bottom:1rem; }
 .intel-gov-namerow { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
 .intel-gov-name { margin:0; font-size:1.1rem; font-weight:700; color:#f1f5f9; }
 .intel-gov-code { font-size:0.8125rem; color:#64748b; }
-.intel-gov-name-sub { font-size:0.875rem; color:#94a3b8; margin-top:0.125rem; }
+.intel-gov-name-sub { font-size:0.875rem; color:#556575; margin-top:0.125rem; }
 .intel-risk-row { display:flex; align-items:center; gap:0.75rem; margin-top:0.5rem; }
 .intel-risk-score { font-size:2rem; font-weight:700; }
 .intel-risk-badge { display:inline-flex; align-items:center; padding:0.25rem 0.625rem; border-radius:9999px; font-size:0.8125rem; font-weight:600; }
@@ -114,26 +114,26 @@
 .intel-section-title { font-size:0.875rem; font-weight:600; color:#cbd5e1; margin-bottom:0.5rem; display:flex; gap:0.35rem; align-items:center; }
 .intel-count { font-weight:400; color:#64748b; }
 .intel-ind-row { margin-bottom:0.5rem; display:flex; align-items:center; justify-content:space-between; }
-.intel-ind-label { font-size:0.775rem; color:#94a3b8; flex:1; }
+.intel-ind-label { font-size:0.775rem; color:#556575; flex:1; }
 .intel-ind-bar { display:flex; align-items:center; gap:0.375rem; flex:1; }
 .intel-ind-track { flex:1; height:5px; background:rgba(255,255,255,0.08); border-radius:9999px; overflow:hidden; }
-.intel-ind-fill { height:100%; border-radius:9999px; transition:width 0.4s ease; }
+.intel-ind-fill { height:100%; border-radius:9999px;  }
 .intel-ind-score { font-size:0.75rem; font-weight:700; min-width:26px; text-align:end; }
 .intel-alert-row { display:flex; align-items:flex-start; gap:0.5rem; font-size:0.875rem; padding:0.25rem 0; color:#cbd5e1; }
 .intel-alert-dot { width:8px; height:8px; border-radius:50%; background:#ef4444; flex-shrink:0; margin-top:0.3rem; }
 .intel-no-alerts { color:#64748b; font-size:0.875rem; }
-.intel-footer { margin-top:1rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.07); font-size:0.8125rem; color:#94a3b8; line-height:1.8; }
+.intel-footer { margin-top:1rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.07); font-size:0.8125rem; color:#556575; line-height:1.8; }
 
 /* Risk badges (shared) */
 .rank-badge { display:inline-flex; padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.75rem; font-weight:600; }
 .rank-badge.risk-low,.intel-risk-badge.risk-low       { background:rgba(34,197,94,0.15); color:#22c55e; }
 .rank-badge.risk-medium,.intel-risk-badge.risk-medium { background:rgba(245,158,11,0.15); color:#f59e0b; }
 .rank-badge.risk-high,.intel-risk-badge.risk-high     { background:rgba(249,115,22,0.15); color:#f97316; }
-.rank-badge.risk-critical,.intel-risk-badge.risk-critical { background:rgba(239,68,68,0.15); color:#ef4444; }
+.rank-badge.risk-critical,.intel-risk-badge.risk-critical { background:rgba(239,68,68,0.15); color:#dc2626; }
 
 /* ── RISK LEGEND ─────────────────────────────────────────────────── */
 .risk-legend { display:flex; gap:0.5rem; padding:0.5rem 0.875rem; flex-wrap:wrap; align-items:center; font-size:0.8125rem; border-top:1px solid rgba(255,255,255,0.06); background:rgba(0,0,0,0.3); }
-.legend-label { color:#94a3b8; }
+.legend-label { color:#556575; }
 .legend-item  { display:flex; align-items:center; gap:0.3rem; color:#cbd5e1; }
 .legend-dot   { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
 
@@ -150,7 +150,7 @@
 .sort-btn.active { color:#f1f5f9; border-color:rgba(255,255,255,0.3); background:rgba(255,255,255,0.06); }
 .rankings-table-wrap { max-height:360px; overflow-y:auto; border:1px solid rgba(255,255,255,0.06); border-radius:0.5rem; }
 #rankingsTable { width:100%; border-collapse:collapse; font-size:0.875rem; }
-#rankingsTable th { background:rgba(255,255,255,0.04); padding:0.5rem 0.75rem; text-align:start; color:#94a3b8; font-weight:600; white-space:nowrap; }
+#rankingsTable th { background:rgba(255,255,255,0.04); padding:0.5rem 0.75rem; text-align:start; color:#556575; font-weight:600; white-space:nowrap; }
 #rankingsTable td { padding:0.45rem 0.75rem; border-top:1px solid rgba(255,255,255,0.04); }
 #rankingsTable tbody tr { cursor:pointer; }
 #rankingsTable tbody tr:hover { background:rgba(255,255,255,0.03); }
@@ -161,14 +161,16 @@
 .top-2 { background:#94a3b8; color:#fff; }
 .top-3 { background:#d97706; color:#fff; }
 .rank-name { font-weight:600; color:#f1f5f9; }
-.rank-code { font-size:0.75rem; color:#64748b; }
+/* On the dark ranking panel muted text must go lighter, not darker:
+   the light-ground muted tone measured under the floor here. */
+.rank-code { font-size:0.75rem; color: var(--kinjo-color-text-muted-on-dark); }
 .rank-drill { background:transparent; border:none; color:#64748b; cursor:pointer; padding:0.25rem; border-radius:0.25rem; transition:color 0.1s, background 0.1s; }
 .rank-drill:hover { background:rgba(255,255,255,0.08); color:#f1f5f9; }
 .rank-drill:focus-visible { outline:0.25rem solid #24a1ff; }
 .mini-bar-track { flex:1; background:rgba(255,255,255,0.08); border-radius:9999px; height:6px; overflow:hidden; }
 .mini-bar-fill  { height:100%; border-radius:9999px; }
 .skeleton { background:rgba(255,255,255,0.06); border-radius:0.25rem; }
-.compare-up { color:#ef4444; font-size:0.78rem; font-weight:600; }
+.compare-up { color:#dc2626; font-size:0.78rem; font-weight:600; }
 .compare-dn { color:#22c55e; font-size:0.78rem; font-weight:600; }
 .compare-eq { color:#475569; font-size:0.78rem; }
 .rank-actions { display:flex; gap:2px; }
@@ -179,7 +181,7 @@
 .tt-badge   { margin-bottom:0.375rem; font-size:0.8125rem; }
 .tt-divider { height:1px; background:rgba(255,255,255,0.08); margin:0.375rem 0; }
 .tt-row     { display:flex; justify-content:space-between; gap:0.75rem; font-size:0.8125rem; margin-bottom:0.125rem; }
-.tt-row span { color:#94a3b8; }
+.tt-row span { color:#556575; }
 .tt-hint    { margin-top:0.375rem; font-size:0.75rem; color:#475569; }
 
 /* ── DISTRICT ROWS ───────────────────────────────────────────────────── */
@@ -200,11 +202,11 @@
 /* ── PAGE ERROR ──────────────────────────────────────────────────── */
 .page-error-state { display:flex; flex-direction:column; align-items:center; padding:4rem 2rem; text-align:center; gap:0.5rem; }
 .page-error-state h2 { margin:0; color:#f1f5f9; font-size:1.1rem; }
-.page-error-state p  { color:#94a3b8; margin:0; font-size:0.875rem; }
+.page-error-state p  { color:#556575; margin:0; font-size:0.875rem; }
 
 /* ── RISK FILTER PILLS ───────────────────────────────────────────── */
 .cs-risk-filter { display:flex; gap:0.3rem; padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); flex-wrap:wrap; background:rgba(255,255,255,0.02); }
-.risk-filter-btn { padding:0.2rem 0.6rem; border-radius:9999px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.06); color:#94a3b8; font-size:0.75rem; cursor:pointer; transition:background 0.12s,color 0.12s,border-color 0.12s; white-space:nowrap; }
+.risk-filter-btn { padding:0.2rem 0.6rem; border-radius:9999px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.06); color:#556575; font-size:0.75rem; cursor:pointer; transition:background 0.12s,color 0.12s,border-color 0.12s; white-space:nowrap; }
 .risk-filter-btn.active          { background:rgba(255,255,255,0.14); color:#f1f5f9; border-color:rgba(255,255,255,0.28); font-weight:600; }
 .risk-filter-btn.risk-btn-low    { border-color:rgba(34,197,94,0.3); }
 .risk-filter-btn.risk-btn-low.active    { background:rgba(34,197,94,0.18); color:#22c55e; border-color:#22c55e; }
@@ -213,7 +215,7 @@
 .risk-filter-btn.risk-btn-high   { border-color:rgba(249,115,22,0.3); }
 .risk-filter-btn.risk-btn-high.active   { background:rgba(249,115,22,0.18); color:#f97316; border-color:#f97316; }
 .risk-filter-btn.risk-btn-critical { border-color:rgba(239,68,68,0.3); }
-.risk-filter-btn.risk-btn-critical.active { background:rgba(239,68,68,0.18); color:#ef4444; border-color:#ef4444; }
+.risk-filter-btn.risk-btn-critical.active { background:rgba(239,68,68,0.18); color:#dc2626; border-color:#dc2626; }
 
 /* ── RESPONSIVE ──────────────────────────────────────────────────── */
 /* Professional operations-dashboard polish */
@@ -242,7 +244,7 @@
 .kpi-strip { display:grid; grid-template-columns:repeat(6,minmax(128px,1fr)); gap:0.75rem; padding:1rem 1.25rem; background:#0a1423; border-bottom:1px solid rgba(148,163,184,0.12); }
 .kpi-card { min-width:0; border-color:rgba(148,163,184,0.15); background:linear-gradient(180deg,rgba(15,23,42,0.92),rgba(15,23,42,0.66)); box-shadow:none; }
 .kpi-card:hover { transform:translateY(-1px); border-color:rgba(45,212,191,0.28); box-shadow:0 10px 26px rgba(2,8,23,0.2); }
-.kpi-label { color:#94a3b8; }
+.kpi-label { color:#556575; }
 .kpi-value { color:#f8fafc; font-size:1.35rem; }
 .kpi-sub { color:#7f8da3; }
 .cs-scene { margin:0; min-height:560px; border-bottom:1px solid rgba(148,163,184,0.12); background:#07101d; }
@@ -259,7 +261,7 @@
 .map-loading-card { display:flex; align-items:center; gap:0.8rem; max-width:360px; padding:1rem 1.125rem; border:1px solid rgba(148,163,184,0.18); border-radius:0.75rem; background:rgba(15,23,42,0.86); box-shadow:0 18px 38px rgba(2,8,23,0.24); }
 .map-loading-spinner { width:2rem; height:2rem; border:3px solid rgba(148,163,184,0.22); border-top-color:#2dd4bf; border-radius:999px; animation:spin 0.8s linear infinite; flex:0 0 auto; }
 .map-loading-title { font-weight:700; color:#f8fafc; }
-.map-loading-sub { margin-top:0.1rem; font-size:0.82rem; color:#94a3b8; }
+.map-loading-sub { margin-top:0.1rem; font-size:0.82rem; color:#556575; }
 #googleMapContainer.map-ready .map-loading-state { display:none; }
 .intel-placeholder { border:1px dashed rgba(148,163,184,0.2); border-radius:0.75rem; background:rgba(15,23,42,0.42); }
 .intel-action-box { background:rgba(20,184,166,0.1); border-color:rgba(45,212,191,0.22); }
@@ -315,6 +317,17 @@
   .geo-cc { background:#fff !important; color:#000 !important; }
   .kpi-strip, .rankings-section, .risk-legend { display:block; }
   body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
+
+/* Dark-panel muted tone. On this panel's dark ground the light-ground muted
+   colours fall under the contrast floor; muted text on a dark surface has to go
+   lighter, not darker. The value lives in design-tokens.css. */
+.cs-left, .intel-panel, .rankings-table-wrap {
+  --panel-muted: var(--kinjo-color-text-muted-on-dark);
+}
+.cs-left .text-muted, .intel-panel .text-muted,
+.rankings-table-wrap .text-muted, .rankings-table-wrap td, .rank-code {
+  color: var(--panel-muted);
 }
 </style>
 {% endblock %}

@@ -358,7 +358,7 @@
   height: 100%;
   border-radius: 100px;
   background: var(--ko-green);
-  transition: width 800ms cubic-bezier(.4,0,.2,1);
+  
 }
 .ko-kg-bar-fill.warn  { background: var(--ko-amber); }
 .ko-kg-bar-fill.alert { background: var(--ko-red); }

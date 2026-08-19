@@ -436,3 +436,15 @@
     display: none !important;
   }
 }
+
+/* Opaque menu surface. Items inside a dropdown that opens over the green
+   masthead were measured at 1.14:1 -- action-blue text on brand green -- because
+   the menu itself had no background of its own and the header showed through.
+   An explicit surface gives every item a predictable, light backing. */
+.dropdown-menu {
+  background-color: var(--kinjo-color-bg-surface);
+  border: 1px solid var(--kinjo-color-border-subtle);
+}
+.dropdown-menu .dropdown-item {
+  color: var(--kinjo-color-text-primary);
+}

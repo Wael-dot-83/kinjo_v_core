@@ -2998,7 +2998,7 @@ html[dir="ltr"] .dropdown-menu {
 .kd-kpi-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgb(0 0 0 / 0.1);
-  border-color: #94a3b8;
+  border-color: #556575;
   text-decoration: none;
   color: inherit;
 }
@@ -3492,7 +3492,7 @@ html[dir="ltr"] .dropdown-menu {
   color: #f59e0b;
 }
 .kd-health-err i {
-  color: #ef4444;
+  color: #dc2626;
 }
 
 .kd-health-label {

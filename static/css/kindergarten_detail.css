@@ -453,12 +453,12 @@
 .kg-metric-value .kg-metric-unit {
   font-size: 1rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: #556575;
 }
 
 .kg-metric-subtitle {
   font-size: 0.78rem;
-  color: #94a3b8;
+  color: #556575;
   line-height: 1.4;
 }
 
@@ -602,7 +602,7 @@
   font-size: 0.73rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: #556575;
   letter-spacing: 0.07em;
 }
 
@@ -714,7 +714,7 @@
   align-items: center;
   justify-content: center;
   padding: 3rem 2rem;
-  color: #94a3b8;
+  color: #556575;
   text-align: center;
 }
 
