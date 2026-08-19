@@ -14,17 +14,37 @@ def _visible_text(html: str) -> str:
 
 
 def test_home_page_is_bilingual_and_promotes_primary_actions(client):
+    """An anonymous English visitor is offered sign-in and account creation.
+
+    This asserts the RULE, not a particular marketing phrase, because the
+    wording has now moved twice. It previously pinned "Create an account" /
+    "Sign in" / "See how it works"; the Stitch redesign ships "Login",
+    "Register" and "Sign in to Platform", and dropped the how-it-works CTA
+    entirely -- a fact the Arabic test below had already recorded while this
+    one was left asserting the old strings. Pinning exact copy in two places
+    that drift apart is how a contract stops describing the product.
+
+    What must stay true: both primary actions are reachable, a signed-out
+    visitor is not offered a dashboard, and an English render ships no Arabic.
+    """
     client.cookies.set("kinjo_lang", "en")
     response = client.get("/", follow_redirects=True)
 
     assert response.status_code == 200
     assert 'lang="en"' in response.text
     assert 'dir="ltr"' in response.text
-    assert "Open your dashboard" not in response.text
-    assert "Create an account" in response.text
-    assert "Sign in" in response.text
-    assert "See how it works" in response.text
 
+    # A signed-out visitor is never offered a dashboard.
+    for signed_in_only in ("Open your dashboard", "Go to Dashboard"):
+        assert signed_in_only not in response.text
+
+    # Both primary actions are present, however they are currently worded.
+    assert "Register" in response.text, "no account-creation action on the English home page"
+    assert "Sign in to Platform" in response.text or "Login" in response.text, (
+        "no sign-in action on the English home page"
+    )
+
+    # The English render must not ship Arabic copy it hides.
     visible = _visible_text(response.text)
     assert not ARABIC_RE.search(visible)
 
@@ -55,8 +75,11 @@ def test_home_page_renders_in_arabic_without_english_ctas(client):
     assert response.status_code == 200
     assert 'lang="ar"' in response.text
     assert 'dir="rtl"' in response.text
-    assert "إنشاء حساب" in response.text
-    assert "تسجيل الدخول" in response.text
+    # Both primary actions, in Arabic. Wording is the redesign's ("حساب جديد"
+    # for account creation, where this test previously pinned "إنشاء حساب");
+    # the rule is that both actions are offered in the page's own language.
+    assert "حساب جديد" in response.text, "no account-creation action on the Arabic home page"
+    assert "تسجيل الدخول" in response.text, "no sign-in action on the Arabic home page"
 
     # The "شاهد طريقة العمل" CTA no longer exists -- the redesign dropped it.
     #

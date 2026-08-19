@@ -47,6 +47,12 @@
   --kinjo-color-success-text-on-tint: #036347;  /* 5.81:1 on the success tint */
   --kinjo-color-warning-text-on-tint: #7d5408;  /* 5.53:1 on the amber tint */
   --kinjo-color-neutral-text: #4b5563;      /* 7.56:1 on white */
+  /* Status TINTS -- the surfaces the *-text-on-tint foregrounds are measured
+     against. These already existed as literals inside .k-badge-* rules; naming
+     them means a status chip anywhere can use the same pair instead of
+     inventing a new one. */
+  --kinjo-color-success-tint: #d1fae5;
+  --kinjo-color-danger-tint: #fee2e2;
   --kinjo-color-link-accessible: #0a58ca;   /* 6.12:1 on the warm canvas;
                                                Bootstrap's #0d6efd is 4.27:1 */
   --kinjo-color-info: #3b82f6;

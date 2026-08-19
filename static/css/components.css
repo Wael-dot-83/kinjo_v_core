@@ -407,3 +407,44 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* ---------------------------------------------------------------------------
+   Activity status badges (admin dashboard).
+
+   admin_dashboard.js builds `activity-status-badge badge-${status}` and
+   admin_endpoints.py::_activity_item_from_log emits exactly two statuses --
+   "failed" for LOGIN_FAILED / ACCESS_DENIED and friends, "success" otherwise.
+   No rule for either class existed anywhere in the stylesheets: the .k-badge-*
+   rules above are prefixed and never matched what the JS emits. So a failed
+   login and a successful action rendered identically, with a transparent
+   background and inherited text.
+
+   That is a status signal carrying no signal. On an audit feed the failure
+   rows are the entire reason to look at it.
+
+   Colours come from the tokens rather than literals -- components.css sits at
+   its colour-literal budget, and these pairs are already measured: the tint is
+   the surface each *-text-on-tint foreground was derived against.
+   --------------------------------------------------------------------------- */
+.activity-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--kinjo-spacing-1) var(--kinjo-spacing-3);
+  border-radius: var(--kinjo-radius-full);
+  font-size: var(--kinjo-font-size-xs);
+  font-weight: var(--kinjo-font-weight-semibold);
+  white-space: nowrap;
+  /* No letter-spacing and no text-transform: these render Arabic, where
+     tracking is guarded away and uppercasing does nothing. */
+}
+
+.activity-status-badge.badge-success {
+  background-color: var(--kinjo-color-success-tint);
+  color: var(--kinjo-color-success-text-on-tint);
+}
+
+.activity-status-badge.badge-failed,
+.activity-status-badge.badge-danger {
+  background-color: var(--kinjo-color-danger-tint);
+  color: var(--kinjo-color-danger-text-strong);
+}

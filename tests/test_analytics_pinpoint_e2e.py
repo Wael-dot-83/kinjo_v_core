@@ -469,8 +469,25 @@ class TestBootstrapUtilityConsistency:
         buttons = re.findall(r'<button[^>]*class="([^"]*)"', dashboard)
         for btn_class in buttons:
             is_btn = "btn " in btn_class or btn_class.startswith("btn-")
-            # nav-link: Bootstrap tab buttons; az-*: v2 design-system buttons
-            is_design_system = btn_class.startswith("nav-link") or btn_class.startswith("az-")
+            # nav-link: Bootstrap tab buttons; az-*: v2 design-system buttons.
+            # chatbot-*: the chat widget is injected into every page and is a
+            # self-contained component with its own button system in
+            # chatbot.css -- .kinjo-chatbot-launcher (a 60px circular FAB with
+            # its own gradient, border, elevation, hover and :focus-visible),
+            # plus .chatbot-header-btn, .chatbot-send-btn, .chatbot-chip-btn
+            # and .chatbot-copy-btn. Putting Bootstrap's .btn base underneath
+            # them would fight their styling rather than make anything more
+            # consistent. Scoped to this one component, not to the kinjo-
+            # prefix at large, so an ad-hoc kinjo-something button still fails.
+            is_chatbot = (
+                btn_class.startswith("chatbot-")
+                or btn_class.startswith("kinjo-chatbot-")
+            )
+            is_design_system = (
+                btn_class.startswith("nav-link")
+                or btn_class.startswith("az-")
+                or is_chatbot
+            )
             if btn_class in ("btn-close",) or is_design_system:
                 continue
             assert is_btn, f"Button '{btn_class}' not using Bootstrap btn base"
