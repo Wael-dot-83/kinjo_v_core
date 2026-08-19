@@ -227,3 +227,7 @@ data/*.backup-*-wal
 
 # Droplet-specific environment file (contains SMTP and other secrets)
 .env.droplet
+
+# Written by scripts/deploy_locked.sh on the deployed host; never committed.
+# The tree digest deliberately excludes it, so it can never be self-referential.
+RELEASE.json

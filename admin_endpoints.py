@@ -15,7 +15,9 @@ This module provides secure admin endpoints with:
 """
 import csv
 import io
+import json
 import os
+from pathlib import Path
 import enum
 import logging
 import math
@@ -4097,6 +4099,71 @@ def admin_health_check(
         "status": overall,
         "checks": checks,
         "admin_id": current_user.id,
+        "timestamp": datetime.now(_JORDAN_TZ).isoformat(),
+    }
+
+
+# =============================================================================
+# Admin Release Identity Endpoint
+# =============================================================================
+
+@router.get("/release")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def admin_release_identity(
+    request: Request,
+    current_user: models.User = Depends(require_admin),
+):
+    """What SHA is actually running, answerable without hashing the filesystem.
+
+    Before this existed the only way to answer "what is deployed?" was to hash
+    all ~3,950 files and diff them against a candidate commit. That parity check
+    is strong independent proof and it stays -- but it is a *verification*
+    control: it can confirm a guess, and cannot answer the question cold.
+
+    Read-only and admin-scoped on purpose. A release identity is not secret, but
+    it is operational detail about the host and there is no reason to hand it to
+    anonymous callers.
+
+    `sha` is what the deploy was told it was shipping; `tarball_sha256` and
+    `tree_digest` are derived by deploy_locked.sh from the artifact it actually
+    extracted. Cross-checking them is what makes the claim trustworthy, and
+    tests/test_release_provenance.py does exactly that against `git archive`.
+    A missing file means the running release predates this mechanism -- reported
+    plainly rather than guessed at.
+    """
+    release_path = Path(os.environ.get("KINJO_DIR", "/opt/kinjo")) / "RELEASE.json"
+    if not release_path.is_file():
+        # Fall back to the repo root, which is how this reads in a dev checkout.
+        release_path = Path(__file__).resolve().parent / "RELEASE.json"
+
+    if not release_path.is_file():
+        return {
+            "recorded": False,
+            "detail": (
+                "no RELEASE.json on this host: the running release was deployed "
+                "before deploy_locked.sh recorded release identity, or this is a "
+                "development server. Verify by file parity against a candidate commit."
+            ),
+            "timestamp": datetime.now(_JORDAN_TZ).isoformat(),
+        }
+
+    try:
+        payload = json.loads(release_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        logger.error("release identity unreadable: %s", exc)
+        return {
+            "recorded": False,
+            "detail": "RELEASE.json is present but could not be parsed",
+            "timestamp": datetime.now(_JORDAN_TZ).isoformat(),
+        }
+
+    return {
+        "recorded": True,
+        "sha": payload.get("sha"),
+        "tarball_sha256": payload.get("tarball_sha256"),
+        "tree_digest": payload.get("tree_digest"),
+        "deployed_at": payload.get("deployed_at"),
+        "artifact": payload.get("artifact"),
         "timestamp": datetime.now(_JORDAN_TZ).isoformat(),
     }
 

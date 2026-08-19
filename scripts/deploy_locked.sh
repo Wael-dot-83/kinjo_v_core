@@ -242,6 +242,68 @@ ENV_AFTER="$(md5sum .env | awk '{print $1}')"
 log "release extracted; .env intact"
 
 # ---------------------------------------------------------------------------
+# 3a. Record release identity INSIDE the deployed artifact.
+#
+# Until this existed, the only answer to "what SHA is running?" was to hash all
+# 3,951 files and diff them against a candidate commit. That is excellent
+# independent proof and it stays (see the parity check in the test suite), but
+# it is a verification control, not an identity mechanism: it can confirm a
+# guess and cannot answer the question cold.
+#
+# The subtlety is that RELEASE_SHA arrives as argv[2] -- a claim by whoever ran
+# the deploy, which can simply be wrong. So the claim is recorded ALONGSIDE two
+# values derived from the artifact itself:
+#
+#   tarball_sha256  the archive this script actually extracted
+#   tree_digest     sha256 over "<sha256>  <path>" for every extracted file,
+#                   sorted, so it is reproducible from any checkout
+#
+# A caller who passes the wrong SHA now produces a file that contradicts
+# itself, and tests/test_release_provenance.py fails on exactly that: it
+# rebuilds `git archive <sha>` and requires the digest to match. The claim is
+# checkable rather than trusted.
+#
+# Written before the containers are recreated so a failed build still leaves
+# the identity of what is on disk.
+# ---------------------------------------------------------------------------
+RELEASE_FILE="$APP_DIR/RELEASE.json"
+TARBALL_SHA="$(sha256sum "$TARBALL" | awk '{print $1}')"
+# Canonicalise every line to "<sha256>  <path>" before sorting, then sort
+# byte-wise with LC_ALL=C. Two reasons this is not gold-plating:
+#
+#   * GNU coreutils on Linux prints "<hash>  <path>" while Git Bash on Windows
+#     prints "<hash> *<path>" (binary marker). Without normalisation the same
+#     tree digests differently depending on where you verify it, which defeats
+#     the point of an independent cross-check run from a workstation.
+#   * substr() past the hash keeps paths containing spaces intact, which naive
+#     field-splitting would mangle.
+#
+# tests/test_release_provenance.py mirrors this exactly; a difference between
+# the two would surface as a digest mismatch that looks like tampering.
+TREE_DIGEST="$(cd "$APP_DIR" \
+  && find . -type f -not -path './.git/*' -not -name '.env' -not -name 'RELEASE.json' \
+          -not -path './data/*' -print0 \
+  | xargs -0 sha256sum \
+  | awk '{h=$1; p=substr($0, length(h)+3); print h "  " p}' \
+  | LC_ALL=C sort | sha256sum | awk '{print $1}')"
+# Jordan time (UTC+3): this host runs UTC, and every operational timestamp in
+# this project is Jordan-local by convention. Offset is explicit so the value
+# is unambiguous rather than merely local.
+DEPLOYED_AT="$(TZ=Asia/Amman date -Is)"
+cat > "$RELEASE_FILE" <<JSON
+{
+  "sha": "$RELEASE_SHA",
+  "tarball_sha256": "$TARBALL_SHA",
+  "tree_digest": "$TREE_DIGEST",
+  "deployed_at": "$DEPLOYED_AT",
+  "deployed_from": "$(hostname)",
+  "artifact": "$(basename "$TARBALL")"
+}
+JSON
+chmod 0644 "$RELEASE_FILE"
+log "release identity recorded: sha=$RELEASE_SHA tarball=${TARBALL_SHA:0:12} tree=${TREE_DIGEST:0:12}"
+
+# ---------------------------------------------------------------------------
 # 3b. Bind-mount ownership for the non-root container.
 #
 # The image used to run as root, so ./data (bind-mounted to /app/data) is owned
