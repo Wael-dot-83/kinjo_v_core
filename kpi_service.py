@@ -5336,9 +5336,9 @@ def get_kpi_country_level(
     current_user: models.User = Depends(require_admin),
 ):
     """Country-wide KPI aggregation (Admin only)."""
-    if period_end is None:
+    if not isinstance(period_end, date):
         period_end = _today_jordan()
-    if period_start is None:
+    if not isinstance(period_start, date):
         period_start = period_end - timedelta(days=29)
 
     kindergartens = db.query(models.Kindergarten).filter(
@@ -5402,9 +5402,9 @@ def get_kpi_governorate_level(
     current_user: models.User = Depends(require_admin),
 ):
     """KPI aggregation per governorate (Admin only)."""
-    if period_end is None:
+    if not isinstance(period_end, date):
         period_end = _today_jordan()
-    if period_start is None:
+    if not isinstance(period_start, date):
         period_start = period_end - timedelta(days=29)
 
     kindergartens = db.query(models.Kindergarten).filter(
