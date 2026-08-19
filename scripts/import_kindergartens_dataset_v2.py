@@ -163,18 +163,35 @@ def parse_int(value: Any) -> Optional[int]:
         return None
 
 
-def wipe_all_kindergartens(db: Session) -> dict[str, int]:
+def wipe_all_kindergartens(db: Session) -> dict[str, Any]:
     """Cleanly wipe all existing kindergartens and their foreign key dependencies."""
     logger.info("Wiping all existing kindergarten records and unlinking dependencies...")
-    stats = {}
-    is_sqlite = db.bind.dialect.name == "sqlite" if db.bind else False
+    stats: dict[str, Any] = {}
+    dialect_name = db.bind.dialect.name if db.bind else ""
+    is_postgres = dialect_name == "postgresql"
+    is_sqlite = dialect_name == "sqlite"
     
+    if is_postgres:
+        logger.info("Performing PostgreSQL fast CASCADE wipe...")
+        db.execute(text("DELETE FROM user_dashboard_preferences WHERE user_id IN (SELECT id FROM users WHERE role IN ('MANAGER', 'SUPERVISOR') OR kindergarten_id IS NOT NULL);"))
+        db.execute(text("DELETE FROM user_filter_preferences WHERE user_id IN (SELECT id FROM users WHERE role IN ('MANAGER', 'SUPERVISOR') OR kindergarten_id IS NOT NULL);"))
+        db.execute(text("DELETE FROM users WHERE role IN ('MANAGER', 'SUPERVISOR') OR kindergarten_id IS NOT NULL;"))
+        db.execute(text("UPDATE users SET kindergarten_id = NULL WHERE kindergarten_id IS NOT NULL;"))
+        db.execute(text("TRUNCATE TABLE kindergartens CASCADE;"))
+        db.flush()
+        stats["wiped_postgresql_cascade"] = True
+        logger.info("PostgreSQL CASCADE wipe completed.")
+        return stats
+
     if is_sqlite:
         db.execute(text("PRAGMA foreign_keys = OFF;"))
     
     try:
         # Delete dependent operational and transactional data first
         tables_to_clear = [
+            models.DailyReportView,
+            models.AIParentRecommendation,
+            models.Notification,
             models.AttendanceLog,
             models.DailyReport,
             models.AbsenceRequest,
