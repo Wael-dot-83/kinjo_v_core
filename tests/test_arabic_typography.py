@@ -4,17 +4,20 @@ Arabic is a cursive script and CSS Text directs a UA not to insert spacing
 where that would sever a cursive connection. Arabic is this product's default
 language, so how tracking behaves on it is a primary-surface question.
 
-What this gate is NOT: a claim that Arabic glyphs were rendering disconnected.
-That was the original hypothesis and measurement contradicted it. In Chromium
-at 32px, `letter-spacing: 4px` adds +0.00px to a joined word, to a word with
-non-joiners, and to Arabic-Indic digits; it lands only on word gaps (+8px
-across two spaces) and on Latin embedded in Arabic (+16px on "KPI").
+Whether tracking breaks those joins depends on the engine, which is exactly why
+this is an invariant and not a judgement call. Measured at 32px with 4px
+tracking on the string "الحضانة":
 
-What it is: an invariant that Arabic text carries no tracking declaration at
-all -- because the declaration is inert exactly where it looks meaningful,
-because where it does land it produces uneven word gaps and tracked Latin
-fragments inside Arabic sentences, and because suppression inside cursive runs
-is engine behaviour verified here only in Chromium.
+    chromium   +0.00px      suppressed inside the cursive run
+    firefox    +0.00px      suppressed
+    webkit    +28.00px      applied -- the joins come apart
+
+So on Safari and every browser on iOS this was a real rendering defect. On
+Blink and Gecko the same declaration is inert inside words while still landing
+on word gaps and on Latin embedded in Arabic, which is unwanted on its own.
+Measuring only Chromium produced a confident wrong answer here once already;
+the rule is engine-independent so the outcome does not depend on which one
+someone happens to test in.
 
 It also exists because the conformance detector reports this repository clean.
 `wide-tracking` and `extreme-negative-tracking` are calibrated for Latin, and

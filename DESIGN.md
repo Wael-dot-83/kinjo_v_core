@@ -115,21 +115,25 @@ Three rules that do not apply to Latin type:
    loses anything. Use `rem`, never `em`, for anything near the floor —
    Bootstrap's `.badge { font-size: .75em }` compounded to **10.5px** inside a
    14px block.
-2. **Don't declare `letter-spacing` on Arabic.** The common claim is that it
-   breaks cursive joins. Measured in Chromium at 32px, it does not: `4px`
-   tracking adds **+0.00px** to `الحضانة`, to `دار` (which contains
-   non-joiners), and to `٢٠٢٦`. Chromium suppresses letter-spacing inside
-   cursive runs, as CSS Text directs. Where it *does* land is word gaps
-   (`+8px` across two spaces) and Latin embedded in Arabic (`+16px` on the
-   `KPI` in `KPI لوحة`).
+2. **Never declare `letter-spacing` on Arabic.** Whether it breaks cursive
+   joins depends entirely on the engine, which is why this has to be an
+   invariant rather than a judgement call. Measured at 32px with `4px`
+   tracking:
 
-   So the rule is enforced not because joins were visibly breaking in Chromium
-   — they were not — but because the declaration is inert where it looks
-   meaningful, produces uneven word gaps and tracked Latin fragments where it
-   is not, and depends on engine behaviour this project has verified only in
-   Chromium. `[dir="rtl"]` text is pinned to `letter-spacing: normal`, with
-   `lang="en"` and `.allow-tracking` as the documented escapes.
-   Enforced by `tests/test_arabic_typography.py`.
+   | | `الحضانة` | `دار` | `٢٠٢٦` | multiword | `KPI لوحة` | Latin |
+   |---|---|---|---|---|---|---|
+   | Chromium | 0 | 0 | 0 | +8px | +16px | +48px |
+   | Firefox | 0 | 0 | 0 | +8px | +16px | +48px |
+   | **WebKit** | **+28px** | **+12px** | **+16px** | +72px | +32px | +48px |
+
+   Chromium and Firefox suppress tracking inside cursive runs, as CSS Text
+   directs. **WebKit applies it**, so on Safari and every browser on iOS the
+   joins genuinely come apart. Blink and Gecko still apply it at word gaps and
+   to Latin embedded in Arabic, which is unwanted on its own.
+
+   `[dir="rtl"]` text is pinned to `letter-spacing: normal`, with `lang="en"`
+   and `.allow-tracking` as the documented escapes. Enforced by
+   `tests/test_arabic_typography.py`.
 3. **`text-transform: uppercase` is inert.** Arabic has no letter case, so it
    silently does nothing while changing the Latin around it.
 
@@ -221,17 +225,21 @@ shadows in the auth templates are focus rings, not decorative glows.
   properties at computed-value time, so an undefined token drops the whole
   declaration *silently* — this is why several "applied" fixes did nothing.
 
-### Known open work
+### Two blind spots worth remembering
 
-**Engine coverage.** The Arabic tracking behaviour above is measured in
-Chromium only — WebKit and Firefox are not installed in this environment. If
-either applies letter-spacing inside cursive runs, the guard is doing more work
-there than it is here. Worth measuring before assuming either way.
-
-**Detector blind spot, restated accurately.** `wide-tracking` and
+**A clean scan is scoped to the rules someone wrote.** `wide-tracking` and
 `extreme-negative-tracking` read clean on this repository because they are
 calibrated for Latin, and the values here (0.01–0.09em) sit below their
-thresholds. That was how 142 Arabic nodes carrying tracking went unreported.
-The lesson is not that the scan was hiding broken glyphs — it was not — but
-that a clean scan is scoped to the rules someone wrote, and Arabic-specific
-questions need Arabic-specific gates.
+thresholds. That is how 142 Arabic nodes carrying tracking went unreported —
+tracking that WebKit renders as broken joins. Arabic-specific questions need
+Arabic-specific gates.
+
+**One engine is not "the browser".** The tracking behaviour above splits 2–1
+across engines, and measuring only Chromium produced a confident, wrong
+conclusion. Separately, the contrast harness used to skip any element over a
+`background-image` as indeterminate — 29 nodes on `/admin/heatmap`, 69 on
+`/services` — and since nearly every dark panel here is a gradient, a large
+share of the UI had never been measured at all. It now composites gradient
+layers bottom-up and takes the worst stop. What that surfaced was not
+theoretical: a 1.42:1 sign-in button, a 1.02:1 user name, a 1.19:1 CTA in the
+shared navbar.
