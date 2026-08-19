@@ -61,7 +61,11 @@
 
     .step-label {
         font-size: 0.875rem;
-        color: var(--kinjo-text-muted, #94a3b8);
+        /* The #94a3b8 fallback is 2.6:1 on white -- it only ever reads as
+           "muted" because it is barely there. This is the label under an
+           unvisited step, which the user needs in order to see where the flow
+           is going, so it gets the accessible neutral instead. */
+        color: var(--kinjo-color-neutral-text);
         text-align: center;
         max-width: 100px;
         transition: color 0.2s ease;

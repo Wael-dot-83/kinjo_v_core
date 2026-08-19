@@ -1,3 +1,9 @@
+<!-- impeccable-disable cramped-padding -- measured in Chromium on /admin/analytics/charts. The flagged
+     elements are card wrappers that carry no padding by design and delegate
+     their inset to __body / __header / -body / -header children, which measure
+     12-16px. The single 0px case is an explicit p-0 on a card whose
+     .table-responsive child supplies its own cell padding, which is what a table
+     meeting its card edge is supposed to do. -->
 {% extends "admin_base.html" %} {% block title %}{% if ui_lang == 'en' %}Charts
 Explorer{% else %}مستكشف الرسوم البيانية{% endif %} — KinJo{% endblock %} {%
 block extra_head %}
