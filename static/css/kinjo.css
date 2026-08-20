@@ -2980,7 +2980,14 @@ body.sidebar-open .sidebar-backdrop {
 
 /* ── Page Header ────────────────────────────────────────────────────────── */
 .page-header-wrap {
-  background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+  position: relative;
+  background-color: #ffffff;
+  background-image: 
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 251, 255, 0.90) 100%),
+    url('/static/images/kinjo-header-background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   border-radius: 0.875rem;
   border: 1px solid #edf2f7;
   padding: 1.25rem 1.5rem;
@@ -2990,7 +2997,7 @@ body.sidebar-open .sidebar-backdrop {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.75rem;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 .page-header-title {
   font-size: 1.3125rem !important;
@@ -2999,6 +3006,7 @@ body.sidebar-open .sidebar-backdrop {
   margin-bottom: 0.25rem !important;
   letter-spacing: -0.02em;
 }
+
 
 /* ── Table Refinements ──────────────────────────────────────────────────── */
 .table th {

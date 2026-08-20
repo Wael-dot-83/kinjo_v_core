@@ -373,8 +373,8 @@
     <!-- Section 1: Search-First Hero -->
     <section id="kg-search-section" class="relative bg-surface-container-low overflow-hidden py-10 md:py-16 border-b border-outline-variant/20" aria-label="Search Kindergartens">
       <div class="absolute inset-0 z-0">
-        <div class="bg-cover bg-center w-full h-full opacity-30" style="background-image: url('/static/img/landing/hero_bg.jpg');"></div>
-        <div class="absolute inset-0 bg-gradient-to-b from-surface-container-low via-surface-container-low/95 to-white"></div>
+        <div class="bg-cover bg-center w-full h-full opacity-40" style="background-image: url('/static/images/kinjo-hero-background.png');"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-surface-container-low/95 via-surface-container-low/90 to-white"></div>
       </div>
 
       <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -727,6 +727,87 @@
           </span>
         </div>
 
+      </div>
+    </section>
+
+    <!-- Visual Showcase / Early Childhood Quality Card (Image "2") -->
+    <section class="py-12 md:py-16 bg-white border-b border-outline-variant/20" aria-label="National Childcare Standards Showcase">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-gradient-to-br from-surface-container-low via-white to-surface-container-low/60 rounded-3xl p-6 sm:p-10 border border-outline-variant/30 shadow-md">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            
+            <!-- Content Column -->
+            <div class="lg:col-span-7 space-y-4">
+              <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold">
+                <span class="material-symbols-outlined text-sm text-tertiary" aria-hidden="true">verified</span>
+                <span>{% if ui_lang == 'en' %}Unified National Childcare Standards{% else %}المنظومة الوطنية المعتمدة لرعاية الطفولة المبكرة{% endif %}</span>
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-extrabold text-primary leading-tight">
+                {% if ui_lang == 'en' %}
+                Empowering Safe &amp; Nurturing Early Childhood Environments Across Jordan
+                {% else %}
+                بيئة تعليمية وتربوية آمنة ومحفزة للأطفال في كافة محافظات المملكة
+                {% endif %}
+              </h2>
+              <p class="text-sm sm:text-base text-on-surface-variant leading-relaxed">
+                {% if ui_lang == 'en' %}
+                KinJo connects parents, certified caregivers, and ministry supervisors within a unified digital ecosystem, ensuring full accreditation compliance, statutory educator ratios, and transparent daily care reports for every child.
+                {% else %}
+                تربط منصة KinJo أولياء الأمور والكوادر التربوية والمشرفين المعتمدين في إطار رقمي متكامل، يضمن الامتثال التام لمعايير الاعتماد القانونية والنسب المعتمدة وسجلات المتابعة اليومية الموثقة.
+                {% endif %}
+              </p>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+                <div class="flex items-center gap-3 p-3.5 bg-white rounded-xl border border-outline-variant/25 shadow-sm">
+                  <div class="w-10 h-10 rounded-lg bg-tertiary/20 text-primary flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined text-xl" aria-hidden="true">child_care</span>
+                  </div>
+                  <div>
+                    <div class="text-xs font-bold text-primary">{% if ui_lang == 'en' %}Individual Care{% else %}رعاية فردية متخصصة{% endif %}</div>
+                    <div class="text-[11px] text-on-surface-variant">{% if ui_lang == 'en' %}Statutory age ratios{% else %}وفق النسب القانونية المعتمدة{% endif %}</div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-3 p-3.5 bg-white rounded-xl border border-outline-variant/25 shadow-sm">
+                  <div class="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined text-xl text-primary" aria-hidden="true">health_and_safety</span>
+                  </div>
+                  <div>
+                    <div class="text-xs font-bold text-primary">{% if ui_lang == 'en' %}Health &amp; Safety{% else %}السلامة والبيئة الصحية{% endif %}</div>
+                    <div class="text-[11px] text-on-surface-variant">{% if ui_lang == 'en' %}Certified facilities{% else %}منشآت مرخصة ومطابقة{% endif %}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-2">
+                <a href="/services#standards" class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-xs sm:text-sm font-bold rounded-xl hover:bg-primary-container transition-all shadow-sm">
+                  <span>{% if ui_lang == 'en' %}Learn More About Quality Standards{% else %}الاطلاع على معايير الجودة والاعتماد{% endif %}</span>
+                  <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true">arrow_forward</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- Image Card "2" Column -->
+            <div class="lg:col-span-5 flex justify-center">
+              <div class="relative w-full max-w-md rounded-2xl overflow-hidden shadow-xl border-2 border-white bg-white group hover:shadow-2xl transition-all">
+                <img
+                  src="/static/images/kinjo-home-card-2.png"
+                  alt="{% if ui_lang == 'en' %}Illustration of early childhood learning, care and play in Jordan{% else %}رسم توضيحي لأنشطة ورعاية الطفولة المبكرة والتعلم في الأردن{% endif %}"
+                  class="w-full h-auto object-cover max-h-[380px] rounded-xl transform group-hover:scale-[1.02] transition-transform duration-300"
+                  loading="lazy"
+                >
+                <div class="absolute bottom-3 start-3 end-3 bg-white/95 backdrop-blur-sm px-3.5 py-2 rounded-xl border border-outline-variant/30 shadow-sm flex items-center justify-between text-xs font-bold text-primary">
+                  <span class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>{% if ui_lang == 'en' %}Accredited Childcare Standards{% else %}معايير الرعاية والتعليم المعتمدة{% endif %}</span>
+                  </span>
+                  <span class="text-[11px] text-tertiary font-bold">KinJo Jordan</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
     </section>
 
