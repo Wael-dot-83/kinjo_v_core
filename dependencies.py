@@ -162,10 +162,15 @@ async def get_current_user(
             raise credentials_exception
         db.info["impersonated_by"] = impersonated_by
         db.info["impersonation_reason"] = payload.get("impersonation_reason")
+        # ADMIN-003 requirement 6: carry the session id so the before_flush
+        # audit listener can stamp every row written during this request.
+        db.info["impersonation_session_id"] = payload.get("impersonation_session_id")
         request.state.impersonated_by = impersonated_by
+        request.state.impersonation_session_id = payload.get("impersonation_session_id")
     else:
         db.info.pop("impersonated_by", None)
         db.info.pop("impersonation_reason", None)
+        db.info.pop("impersonation_session_id", None)
 
     # Cache resolved id on request.state so middleware (e.g. structured access log)
     # can read it without re-decoding the JWT.
@@ -269,10 +274,13 @@ async def get_current_user_optional(
                 return None
             db.info["impersonated_by"] = impersonated_by
             db.info["impersonation_reason"] = payload.get("impersonation_reason")
+            db.info["impersonation_session_id"] = payload.get("impersonation_session_id")
             request.state.impersonated_by = impersonated_by
+            request.state.impersonation_session_id = payload.get("impersonation_session_id")
         else:
             db.info.pop("impersonated_by", None)
             db.info.pop("impersonation_reason", None)
+            db.info.pop("impersonation_session_id", None)
         return user
     return None
 

@@ -1414,6 +1414,10 @@ class AuditLog(Base):
     sensitivity_level = Column(Integer, nullable=True)
     impersonated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     impersonation_reason = Column(Text, nullable=True)
+    # ADMIN-003: correlates every action taken inside one impersonation
+    # session, so a reviewer can replay exactly what an admin did while
+    # wearing another user's identity.
+    impersonation_session_id = Column(String(36), nullable=True)
     created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
@@ -1421,6 +1425,7 @@ class AuditLog(Base):
         Index("idx_audit_logs_entity_type", "entity_type"),
         Index("idx_audit_logs_created_at", "created_at"),
         Index("idx_audit_logs_user_id", "user_id"),
+        Index("idx_audit_logs_impersonation_session", "impersonation_session_id"),
     )
 
 

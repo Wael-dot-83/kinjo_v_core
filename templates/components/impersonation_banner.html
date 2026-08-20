@@ -19,6 +19,13 @@
                     <span class="imp-role-badge">{{ impersonation.role }}</span>
                     {% endif %}
                 </span>
+                {% if impersonation.expires_at %}
+                <span class="imp-separator">·</span>
+                <span class="imp-expiry">
+                    {% if ui_lang == 'en' %}Session ends at{% else %}تنتهي الجلسة في{% endif %}
+                    <time datetime="{{ impersonation.expires_at }}">{{ impersonation.expires_at[11:16] }}</time>
+                </span>
+                {% endif %}
             </div>
         </div>
         <button type="button" class="btn btn-light btn-sm imp-exit-btn" id="exitImpersonateBtn"

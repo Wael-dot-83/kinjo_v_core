@@ -142,6 +142,11 @@ def get_impersonation_context(request: Request) -> Optional[dict]:
             "username": payload.get("target_display_name") or payload.get("target_username"),
             "role": payload.get("target_role"),
             "started_at": payload.get("started_at"),
+            # ADMIN-003 requirement 7: the banner must name when the session
+            # ends, so the admin can see the clock rather than be logged out
+            # mid-task without warning.
+            "expires_at": payload.get("expires_at"),
+            "session_id": payload.get("impersonation_session_id"),
         }
     except JWTError:
         return None

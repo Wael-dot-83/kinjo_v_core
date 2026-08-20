@@ -21,6 +21,9 @@ from jose import JWTError, jwt
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+import logging
+import uuid
+
 from audit_actions import AuditAction
 from database import get_db
 from models import AuditLog, Kindergarten, User, UserRole, UserStatus
@@ -29,12 +32,19 @@ from config import settings
 from auth import create_access_token
 from cache_service import cache_service
 from session_service import revoke_access_session
-from dependencies import get_current_user
-from rbac import IMPERSONATION_COOKIE_NAME, require_role
+from dependencies import Permission, get_current_user, has_role, require_permission
+from rbac import IMPERSONATION_COOKIE_NAME
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-_require_admin = require_role(UserRole.ADMIN)
+_require_admin = require_permission(Permission.IMPERSONATE)
+
+# ADMIN-003 section 2.2 -- hard limits, none of them configurable at runtime.
+IMPERSONATION_MAX_DURATION_MINUTES = 30
+IMPERSONATION_CHAIN_MAX_DEPTH = 1   # A->B only, never A->B->C
+IMPERSONATION_MAX_SESSIONS_PER_DAY = 5
 
 
 # ---------------------------------------------------------------------------
@@ -102,20 +112,104 @@ def _write_audit(
     action: str,
     reason: Optional[str],
     ip: Optional[str],
+    session_id: Optional[str] = None,
+    extra: Optional[dict] = None,
 ) -> None:
+    details = {"reason": reason}
+    if extra:
+        details.update(extra)
     entry = AuditLog(
         user_id=admin_id,          # actor who performed the action
         action=action,
         entity_type="User",
         entity_id=target_id,       # subject being impersonated
-        details=json.dumps({"reason": reason}),
+        details=json.dumps(details, ensure_ascii=False),
         ip_address=ip,
         sensitivity_level=4,
         impersonated_by=admin_id,
         impersonation_reason=reason,
+        impersonation_session_id=session_id,
     )
     db.add(entry)
     db.commit()
+
+
+def _jordan_day_start() -> datetime:
+    """Midnight today in Jordan (UTC+3), as an aware datetime."""
+    now = datetime.now(_JORDAN_TZ)
+    return now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def _sessions_started_today(db: Session, admin_id: int) -> int:
+    """Count this admin's impersonation starts since Jordan midnight.
+
+    Counted from the audit table rather than a cache counter: the cache falls
+    back to an in-process dict when Redis is unavailable, which would give each
+    worker its own quota. The audit log is the record of truth and survives a
+    restart.
+    """
+    return (
+        db.query(AuditLog)
+        .filter(
+            AuditLog.action == AuditAction.IMPERSONATION_START,
+            AuditLog.user_id == admin_id,
+            AuditLog.created_at >= _jordan_day_start(),
+        )
+        .count()
+    )
+
+
+def _is_currently_impersonating(request: Request) -> bool:
+    """True when this request is already running inside an impersonation.
+
+    Two independent signals, because either alone can be spoofed away by
+    dropping a cookie: the restore cookie that exit-impersonation consumes,
+    and the ``impersonated_by`` claim the access token carries.
+    """
+    if request.cookies.get(IMPERSONATION_COOKIE_NAME):
+        return True
+    return getattr(request.state, "impersonated_by", None) is not None
+
+
+def _notify_target(target: User, admin: User, started_at: datetime, ip: Optional[str]) -> bool:
+    """Tell the target their account was accessed. Returns whether mail went out.
+
+    Requirement 4 of section 2.2. A failure here is recorded in the audit entry
+    rather than swallowed: an SMTP outage must be visible to whoever reviews the
+    log, not silently turn the notification into a no-op.
+    """
+    if not target.email:
+        return False
+
+    admin_name = admin.full_name or admin.username
+    when = started_at.strftime("%Y-%m-%d %H:%M")
+    where = ip or "unknown"
+
+    subject = "تنبيه أمني: تم الوصول إلى حسابك | Security alert: your account was accessed"
+    body = "\n".join([
+        f"قام المسؤول {admin_name} بالوصول إلى حسابك بتاريخ {when} "
+        f"(بتوقيت الأردن) من عنوان IP {where}.",
+        "إذا لم يكن هذا الوصول مصرحاً به، يرجى التواصل مع الدعم فوراً.",
+        "",
+        "-----",
+        "",
+        f"Admin {admin_name} accessed your account at {when} (Jordan time) "
+        f"from IP {where}.",
+        "If this was not authorized, contact support.",
+        "",
+    ])
+
+    try:
+        from email_service import send_email
+
+        send_email(target.email, subject, body)
+        return True
+    except Exception:
+        logger.warning(
+            "Impersonation notification could not be delivered to user %s", target.id,
+            exc_info=True,
+        )
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -130,37 +224,89 @@ def start_impersonation(
     current_admin: User = Depends(_require_admin),
     db: Session = Depends(get_db),
 ):
+    ip = _get_ip(request)
+
+    def _deny(reason: str, status_code: int, detail: str, target_id: int):
+        """Record the refused attempt, then raise. Every refusal is auditable."""
+        _write_audit(
+            db,
+            admin_id=current_admin.id,
+            target_id=target_id,
+            action=AuditAction.IMPERSONATION_ATTEMPT_FAILED,
+            reason=reason,
+            ip=ip,
+        )
+        raise HTTPException(status_code=status_code, detail=detail)
+
+    # Requirement 3: chain prevention. Checked before anything else so an
+    # already-impersonating session cannot even probe for valid targets.
+    if _is_currently_impersonating(request):
+        _deny(
+            "Chained impersonation refused: session is already impersonating",
+            status.HTTP_409_CONFLICT,
+            "Already impersonating. Exit the current session first.",
+            payload.target_user_id,
+        )
+
+    # Requirement 8: daily quota, counted from the audit log.
+    used_today = _sessions_started_today(db, current_admin.id)
+    if used_today >= IMPERSONATION_MAX_SESSIONS_PER_DAY:
+        _deny(
+            f"Daily impersonation quota exhausted ({used_today}/"
+            f"{IMPERSONATION_MAX_SESSIONS_PER_DAY})",
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "Daily impersonation limit reached.",
+            payload.target_user_id,
+        )
+
+    # Requirement 1: never yourself. Checked against the id rather than the
+    # role so it holds even if the role table changes later.
+    if payload.target_user_id == current_admin.id:
+        _deny(
+            "Self-impersonation refused",
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "You cannot impersonate yourself.",
+            payload.target_user_id,
+        )
+
     target = db.query(User).filter(
         User.id == payload.target_user_id,
         User.deleted_at.is_(None),
         User.status == UserStatus.ACTIVE,
     ).first()
     if not target:
-        _write_audit(
-            db,
-            admin_id=current_admin.id,
-            target_id=payload.target_user_id,
-            action=AuditAction.IMPERSONATION_ATTEMPT_FAILED,
-            reason=f"User not found: {payload.target_user_id}",
-            ip=_get_ip(request),
-        )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-    if target.role != UserRole.MANAGER:
-        _write_audit(
-            db,
-            admin_id=current_admin.id,
-            target_id=target.id,
-            action=AuditAction.IMPERSONATION_ATTEMPT_FAILED,
-            reason=f"Target role is {target.role.value}, not MANAGER",
-            ip=_get_ip(request),
-        )
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="Only managers can be impersonated.",
+        _deny(
+            f"User not found: {payload.target_user_id}",
+            status.HTTP_404_NOT_FOUND,
+            "User not found.",
+            payload.target_user_id,
         )
 
-    started_at = datetime.now(_JORDAN_TZ).isoformat()
-    lifetime = min(settings.ACCESS_TOKEN_EXPIRE_MINUTES, 30)
+    # Requirement 2: never another admin.
+    if has_role(target, UserRole.ADMIN):
+        _deny(
+            "Admin-to-admin impersonation refused",
+            status.HTTP_403_FORBIDDEN,
+            "Administrators cannot be impersonated.",
+            target.id,
+        )
+
+    if not has_role(target, UserRole.MANAGER):
+        _deny(
+            f"Target role is {target.role.value}, not MANAGER",
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Only managers can be impersonated.",
+            target.id,
+        )
+
+    session_id = str(uuid.uuid4())
+    started_at_dt = datetime.now(_JORDAN_TZ)
+    started_at = started_at_dt.isoformat()
+    # Requirement 5: 30 minutes, hard. Never longer than the platform's own
+    # access-token lifetime, and never extendable -- there is no refresh path
+    # for an impersonated token, so expiry ends the session outright.
+    lifetime = min(settings.ACCESS_TOKEN_EXPIRE_MINUTES, IMPERSONATION_MAX_DURATION_MINUTES)
+    expires_at = (started_at_dt + timedelta(minutes=lifetime)).isoformat()
     max_age = lifetime * 60
     target_token = create_access_token(
         {
@@ -168,6 +314,9 @@ def start_impersonation(
             "role": target.role.value,
             "impersonated_by": current_admin.id,
             "impersonation_reason": payload.reason,
+            # Requirement 6: rides on every request made as the target, so the
+            # before_flush audit listener can stamp each row it writes.
+            "impersonation_session_id": session_id,
         },
         expires_delta=timedelta(minutes=lifetime),
     )
@@ -181,10 +330,16 @@ def start_impersonation(
             "target_display_name": target.full_name or target.username,
             "target_role": target.role.value,
             "started_at": started_at,
+            "expires_at": expires_at,
+            "impersonation_session_id": session_id,
             "jti": secrets.token_urlsafe(24),
         },
         expires_delta=timedelta(minutes=lifetime),
     )
+
+    # Requirement 4: notify the target. The outcome is audited either way, so a
+    # dead SMTP shows up in the log instead of silently skipping the notice.
+    notified = _notify_target(target, current_admin, started_at_dt, ip)
 
     _write_audit(
         db,
@@ -192,7 +347,14 @@ def start_impersonation(
         target_id=target.id,
         action=AuditAction.IMPERSONATION_START,
         reason=payload.reason,
-        ip=_get_ip(request),
+        ip=ip,
+        session_id=session_id,
+        extra={
+            "impersonation_session_id": session_id,
+            "expires_at": expires_at,
+            "target_notified": notified,
+            "sessions_used_today": used_today + 1,
+        },
     )
 
     kg_name = ""
@@ -200,14 +362,24 @@ def start_impersonation(
         kg = db.query(Kindergarten).filter(Kindergarten.id == target.kindergarten_id).first()
         kg_name = kg.name_ar if kg else ""
 
+    target_display = target.full_name or target.username
     response = JSONResponse({
         "message": "Impersonation started.",
+        "session_id": session_id,
+        "expires_at": expires_at,
+        "target_notified": notified,
         "impersonating": {
             "user_id": target.id,
             "username": target.username,
-            "name": target.full_name or target.username,
+            "name": target_display,
             "role": target.role.value,
             "kindergarten_name": kg_name,
+        },
+        # Requirement 7: the banner text the UI must display, supplied by the
+        # server so both languages stay in one place.
+        "banner": {
+            "ar": f"أنت تعمل باسم {target_display} — تنتهي الجلسة في {expires_at}",
+            "en": f"You are acting as {target_display} — session ends at {expires_at}",
         },
     })
     _set_auth_cookie(response, target_token, max_age=max_age)

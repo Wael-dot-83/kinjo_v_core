@@ -106,12 +106,17 @@ def _attribute_impersonated_audit_events(session, flush_context, instances):
     import models
 
     reason = session.info.get("impersonation_reason")
+    session_id = session.info.get("impersonation_session_id")
     for obj in session.new:
         if isinstance(obj, models.AuditLog):
             if obj.impersonated_by is None:
                 obj.impersonated_by = impersonated_by
             if obj.impersonation_reason is None:
                 obj.impersonation_reason = reason
+            # ADMIN-003 requirement 6: every action during impersonation
+            # carries the session id it happened under.
+            if obj.impersonation_session_id is None:
+                obj.impersonation_session_id = session_id
 
 
 @event.listens_for(Session, "do_orm_execute")

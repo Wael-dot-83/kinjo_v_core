@@ -257,7 +257,7 @@ from api.manager import router as manager_router
 from api.portfolio import router as portfolio_router
 from routers.supervisor import router as supervisor_scoped_router
 from routers.manager import router as manager_scoped_router
-from routers.admin_impersonation import router as admin_impersonation_router
+from routers.admin import impersonation_router as admin_impersonation_router
 from routers.messaging import router as messaging_router
 from me_endpoints import router as me_router
 from government_api import router as government_api_router
