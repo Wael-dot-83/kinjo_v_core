@@ -118,6 +118,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      # tests/test_contrast_compositor.py and tests/test_arabic_typography.py
+      # drive a real headless Chromium. pytest.importorskip("playwright.sync_api")
+      # guards the Python package -- which requirements-dev.txt installs -- but
+      # not the browser binary, and those files deliberately refuse to skip, so
+      # without this step they fail with "Executable doesn't exist at
+      # .../chrome-headless-shell". Eight failures on run 32334319036, the first
+      # run in which this job executed at all (lint had been red, and test is
+      # needs: smoke -> needs: lint, so the whole chain was skipped for months).
+      - name: Install Playwright browsers
+        run: python -m playwright install --with-deps chromium
+
       - name: Run P0 tests
         run: pytest -m "p0" --timeout=30 --maxfail=3 -q
 
