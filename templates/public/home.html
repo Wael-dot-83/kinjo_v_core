@@ -90,8 +90,8 @@
 </head>
 <body class="kinjo-public-home bg-surface text-on-surface {% if ui_lang == 'en' %}lang-en{% else %}lang-ar{% endif %} min-h-screen flex flex-col antialiased selection:bg-tertiary/30 selection:text-primary">
 
-  <!-- TopNavBar (with visible header background image) -->
-  <header class="kinjo-public-header sticky top-0 z-50 text-white border-b border-white/15 shadow-md relative overflow-hidden" style="background: linear-gradient(135deg, rgba(0, 47, 108, 0.86) 0%, rgba(0, 47, 108, 0.92) 100%), url('/static/images/kinjo-header-background.jpg') center/cover no-repeat;" role="banner">
+  <!-- TopNavBar (with #1A5B51 Dark Teal Background and 0px 4px 12px rgba(0,0,0,0.08) shadow) -->
+  <header class="kinjo-public-header sticky top-0 z-50 text-white border-b border-white/15 relative overflow-hidden" style="background-color: #1A5B51; box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08);" role="banner">
     <div class="flex justify-between items-center w-full px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto h-20 relative z-10">
       
       <!-- Brand Logo -->
@@ -373,8 +373,8 @@
     <!-- Section 1: Search-First Hero -->
     <section id="kg-search-section" class="relative bg-surface-container-low overflow-hidden py-10 md:py-16 border-b border-outline-variant/20" aria-label="Search Kindergartens">
       <div class="absolute inset-0 z-0">
-        <div class="bg-cover bg-center w-full h-full opacity-100" style="background-image: url('/static/images/kinjo-hero-background.png');"></div>
-        <div class="absolute inset-0 bg-gradient-to-b from-white/75 via-white/40 to-white/90"></div>
+        <div class="bg-cover bg-center w-full h-full" style="background-image: url('/static/images/kinjo-hero-background.png'); opacity: 0.88;"></div>
+        <div class="absolute inset-0" style="background: {% if ui_lang == 'en' %}linear-gradient(to right, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.4)){% else %}linear-gradient(to left, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.4)){% endif %};"></div>
       </div>
 
       <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1278,6 +1278,52 @@
 
     </div>
   </div>
+
+  <!-- Material UI-Compliant Login Prompt Dialog for Unauthenticated Search Visitors -->
+  <div id="login-prompt-modal" class="fixed inset-0 z-50 overflow-y-auto modal-backdrop-blur hidden flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="login-dialog-title">
+    <div class="relative login-dialog-container max-w-lg w-full transform transition-all">
+      
+      <!-- Close Button (X icon with #9E9E9E) -->
+      <button type="button" id="login-modal-close-btn" class="absolute top-4 end-4 w-9 h-9 rounded-full flex items-center justify-center text-[#9E9E9E] hover:text-[#4F4F4F] hover:bg-black/5 transition-colors focus:outline-none" aria-label="Close login prompt">
+        <span class="material-symbols-outlined text-2xl">close</span>
+      </button>
+
+      <!-- Title (variant="h5", Color: #1A5B51, fontWeight: 600) -->
+      <h3 id="login-dialog-title" class="login-dialog-title flex items-center gap-2 mb-2 pe-8">
+        <span class="material-symbols-outlined text-2xl text-[#1A5B51]" aria-hidden="true">lock</span>
+        <span>{% if ui_lang == 'en' %}Please Log In{% else %}يرجى تسجيل الدخول{% endif %}</span>
+      </h3>
+
+      <!-- Body Text (variant="body1", Color: #4F4F4F) -->
+      <p class="login-dialog-body mt-3 mb-6">
+        {% if ui_lang == 'en' %}
+        To view full kindergarten details and contact info, please log in or create a new parent account.
+        {% else %}
+        لعرض التفاصيل الكاملة للحضانة ومعلومات التواصل، يرجى تسجيل الدخول إلى حسابك أو إنشاء حساب جديد كولي أمر.
+        {% endif %}
+      </p>
+
+      <!-- Call to Action (CTA) Buttons -->
+      <div class="flex flex-col sm:flex-row gap-3 items-stretch">
+        <!-- Primary Button (تسجيل الدخول - Login) -->
+        <a id="login-modal-primary-btn" href="/login" class="login-dialog-btn-primary flex-1 py-3 px-6 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm text-center">
+          <span>{% if ui_lang == 'en' %}Log In{% else %}تسجيل الدخول{% endif %}</span>
+          <span class="material-symbols-outlined text-base rtl:rotate-180" aria-hidden="true">login</span>
+        </a>
+
+        <!-- Secondary Button (إنشاء حساب - Sign Up) -->
+        <a id="login-modal-signup-btn" href="/register" class="login-dialog-btn-secondary flex-1 py-3 px-6 rounded-lg text-sm flex items-center justify-center gap-2 text-center">
+          <span>{% if ui_lang == 'en' %}Sign Up{% else %}إنشاء حساب جديد{% endif %}</span>
+          <span class="material-symbols-outlined text-base" aria-hidden="true">person_add</span>
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    window.__CURRENT_USER__ = {{ 'true' if current_user else 'false' }};
+  </script>
 
 </body>
 </html>

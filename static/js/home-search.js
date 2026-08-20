@@ -278,8 +278,45 @@
     );
   }
 
-  // Public Kindergarten Details Modal Logic
+  // Login Prompt Modal Elements (MUI compliant)
+  const loginPromptModal = document.getElementById('login-prompt-modal');
+  const loginModalCloseBtn = document.getElementById('login-modal-close-btn');
+  const loginModalPrimaryBtn = document.getElementById('login-modal-primary-btn');
+  const loginModalSignupBtn = document.getElementById('login-modal-signup-btn');
+
+  function showLoginPromptModal(kgId) {
+    if (!loginPromptModal) return;
+    const targetUrl = kgId ? ('/kindergartens/' + kgId) : '/kindergartens';
+    if (loginModalPrimaryBtn) {
+      loginModalPrimaryBtn.href = '/login?returnUrl=' + encodeURIComponent(targetUrl) + '&next=' + encodeURIComponent(targetUrl);
+    }
+    if (loginModalSignupBtn) {
+      loginModalSignupBtn.href = '/register?returnUrl=' + encodeURIComponent(targetUrl);
+    }
+    loginPromptModal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  }
+
+  function closeLoginPromptModal() {
+    if (!loginPromptModal) return;
+    loginPromptModal.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  }
+
+  window.showLoginPromptModal = showLoginPromptModal;
+  window.closeLoginPromptModal = closeLoginPromptModal;
+
+  // Intercept View Details: Check Authentication Flow
   async function openKgDetailsModal(kgId) {
+    const isAuthenticated = (typeof window.__CURRENT_USER__ === 'boolean') ? window.__CURRENT_USER__ : false;
+    
+    // Unauthenticated State: Show Login Prompt Dialog
+    if (!isAuthenticated) {
+      showLoginPromptModal(kgId);
+      return;
+    }
+
+    // Authenticated State: Open Full Kindergarten Details Dialog
     if (!modalEl) return;
     const uiLang = document.documentElement.lang === 'en' ? 'en' : 'ar';
 
@@ -440,6 +477,18 @@
       document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && !modalEl.classList.contains('hidden')) {
           closeKgDetailsModal();
+        }
+      });
+    }
+
+    if (loginModalCloseBtn) loginModalCloseBtn.addEventListener('click', closeLoginPromptModal);
+    if (loginPromptModal) {
+      loginPromptModal.addEventListener('click', function (e) {
+        if (e.target === loginPromptModal) closeLoginPromptModal();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !loginPromptModal.classList.contains('hidden')) {
+          closeLoginPromptModal();
         }
       });
     }
