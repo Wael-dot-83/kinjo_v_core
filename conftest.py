@@ -8,8 +8,8 @@ import pytest
 import secrets
 from pathlib import Path
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, event, text as sa_text
+from sqlalchemy.orm import Session as _SASession, sessionmaker
 from sqlalchemy.pool import StaticPool
 from datetime import date, datetime, timedelta
 
@@ -19,6 +19,16 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "kinjo-ci-testing-secret-key-not-for-production-use-9x7z")
 os.environ["MIN_CHILD_AGE_DAYS"] = "1"
 os.environ["MAX_CHILD_AGE_MONTHS"] = "56"
+
+# Opt-in Postgres. This has to happen BEFORE `config` is imported: settings is a
+# pydantic Settings singleton read once at import, and alembic/env.py builds its
+# URL from settings.DATABASE_URL. Setting the variable after the import left
+# settings pointing at SQLite while the engine pointed at Postgres, so anything
+# reading settings.DATABASE_URL -- including a programmatic alembic upgrade --
+# silently addressed the wrong database.
+_TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "").strip()
+if _TEST_DATABASE_URL.startswith("postgres"):
+    os.environ["DATABASE_URL"] = _TEST_DATABASE_URL
 
 from config import settings as _settings
 
@@ -39,12 +49,8 @@ import models
 # a real Postgres (used by the CI Postgres E2E job). This is fully backward
 # compatible — with TEST_DATABASE_URL unset the engine below is byte-for-byte the
 # previous SQLite configuration.
-_TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "").strip()
-
 if _TEST_DATABASE_URL.startswith("postgres"):
     SQLALCHEMY_DATABASE_URL = _TEST_DATABASE_URL
-    # Route the app's own DATABASE_URL to the same Postgres so app-side sessions match.
-    os.environ["DATABASE_URL"] = _TEST_DATABASE_URL
     engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
 else:
     SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -72,21 +78,133 @@ def tmp_path():
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
+# ---------------------------------------------------------------------------
+# Postgres schema source and per-test isolation (#97)
+# ---------------------------------------------------------------------------
+# The SQLite path below is unchanged: create_all/drop_all per test, which is
+# nearly free against an in-memory database.
+#
+# The Postgres path is different, because create_all does not build the schema
+# that ships. Measured on PostgreSQL 15 at 34533e8, an Alembic-built database
+# had 95 tables and 436 indexes where create_all produced 87 and 378 -- 79 real
+# indexes that exist in production and in no test database. A performance test
+# against create_all measures a database that exists nowhere.
+#
+# So on Postgres the schema is built once per session by `alembic upgrade head`,
+# and per-test isolation is done by truncation rather than by dropping the
+# schema. Dropping and rebuilding per test would cost ~3.4s x N.
+
+_IS_POSTGRES = SQLALCHEMY_DATABASE_URL.startswith("postgres")
+
+
+def _alembic_upgrade_head() -> None:
+    """Build the real schema, once, from the migration chain."""
+    from alembic import command
+    from alembic.config import Config
+
+    cfg = Config(str(Path(__file__).resolve().parent / "alembic.ini"))
+    cfg.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
+    command.upgrade(cfg, "head")
+
+
+def _truncatable_tables(conn) -> list[str]:
+    """Every public table except alembic_version, which must survive."""
+    rows = conn.execute(
+        sa_text(
+            "SELECT tablename FROM pg_tables "
+            "WHERE schemaname = 'public' AND tablename <> 'alembic_version'"
+        )
+    )
+    return [r[0] for r in rows]
+
+
+def _truncate(tables) -> None:
+    """TRUNCATE the named tables. CASCADE reaches anything referencing them."""
+    if not tables:
+        return
+    quoted = ", ".join(f'public."{t}"' for t in sorted(tables))
+    with engine.begin() as conn:
+        conn.execute(sa_text(f"TRUNCATE TABLE {quoted} RESTART IDENTITY CASCADE"))
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _schema_source():
+    """Build the Postgres schema once per session; no-op on SQLite."""
+    if _IS_POSTGRES:
+        _alembic_upgrade_head()
+    yield
+
+
 @pytest.fixture(scope="function")
-def test_db():
+def test_db(_schema_source):
+    """A database session isolated from every other test.
+
+    SQLite (the default): unchanged -- create_all before, drop_all after.
+
+    Postgres (TEST_DATABASE_URL set): the schema was built once per session by
+    Alembic, so tearing it down per test is not an option. Instead an
+    ``after_flush`` listener records which tables the test actually wrote, and
+    teardown truncates exactly those. Measured on PostgreSQL 15: truncating all
+    94 tables costs ~1.4s per test (over two hours across the suite) because of
+    the ACCESS EXCLUSIVE locks; truncating only what was touched costs ~3ms.
+
+    The recorded set is deterministic. It is deliberately not derived from
+    ``pg_stat_user_tables.n_live_tup``, which is documented as an estimate --
+    a table missed by an estimator leaks state into the next test and surfaces
+    days later as a flake in an unrelated file.
+
+    Known limitation: the listener sees ORM flushes, not raw SQL. A test that
+    writes via ``db.execute(text(...))`` or a stored procedure is invisible to
+    it. That case is covered by the commit fallback below -- if anything
+    committed but no flush was recorded, every table is truncated -- but the
+    fallback is coarse, so prefer the ORM in fixtures. ``TRUNCATE ... CASCADE``
+    also reaches tables referencing a recorded one, which narrows the gap
+    further.
     """
-    Create a fresh test database for each test function
-    """
-    # Create all tables
-    Base.metadata.create_all(bind=engine)
+    if not _IS_POSTGRES:
+        Base.metadata.create_all(bind=engine)
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+            Base.metadata.drop_all(bind=engine)
+        return
+
+    written: set[str] = set()
+    state = {"committed": False}
+
+    def _track_flush(session, flush_context, instances=None):
+        for obj in (*session.new, *session.dirty, *session.deleted):
+            table = getattr(obj, "__table__", None)
+            if table is not None:
+                written.add(table.name)
+
+    def _track_commit(session):
+        state["committed"] = True
+
+    event.listen(_SASession, "after_flush", _track_flush)
+    event.listen(_SASession, "after_commit", _track_commit)
 
     db = TestingSessionLocal()
     try:
         yield db
     finally:
+        # Remove the listeners before truncating, so teardown's own statements
+        # cannot feed the set they are draining, and so a listener cannot
+        # outlive the fixture that registered it.
+        event.remove(_SASession, "after_flush", _track_flush)
+        event.remove(_SASession, "after_commit", _track_commit)
         db.close()
-        # Drop all tables after test
-        Base.metadata.drop_all(bind=engine)
+
+        if written:
+            _truncate(written)
+        elif state["committed"]:
+            # Something committed without an ORM flush -- raw SQL. Fall back to
+            # the whole schema rather than leave unknown rows behind.
+            with engine.connect() as conn:
+                _truncate(_truncatable_tables(conn))
+        # Neither fired: the test never touched the database. Nothing to do.
 
 
 @pytest.fixture(scope="function")

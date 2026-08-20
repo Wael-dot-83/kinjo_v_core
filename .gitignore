@@ -231,3 +231,6 @@ data/*.backup-*-wal
 # Written by scripts/deploy_locked.sh on the deployed host; never committed.
 # The tree digest deliberately excludes it, so it can never be self-referential.
 RELEASE.json
+
+# ADMIN-PERF-001 baseline output; emitted as a CI artifact, never committed.
+admin_perf_baseline.json
