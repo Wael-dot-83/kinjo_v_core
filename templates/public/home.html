@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="/static/css/home_premium.css?v=2">
   <link rel="stylesheet" href="/static/css/design-tokens.css?v=1">
   <link rel="stylesheet" href="/static/css/home_modern.css?v=1">
+  <link rel="stylesheet" href="/static/css/home_public_overrides.css?v=1">
 
   <style>
     .material-symbols-outlined {
@@ -90,8 +91,8 @@
 </head>
 <body class="kinjo-public-home bg-surface text-on-surface {% if ui_lang == 'en' %}lang-en{% else %}lang-ar{% endif %} min-h-screen flex flex-col antialiased selection:bg-tertiary/30 selection:text-primary">
 
-  <!-- TopNavBar (with visible header background image blended with #1A5B51 Dark Teal) -->
-  <header class="kinjo-public-header sticky top-0 z-50 text-white border-b border-white/15 relative overflow-hidden" style="background: linear-gradient(135deg, rgba(26, 91, 81, 0.85) 0%, rgba(26, 91, 81, 0.92) 100%), url('/static/images/kinjo-header-background.jpg') center/cover no-repeat; box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08);" role="banner">
+  <!-- Global public header: the approved image stays visible beneath a navy veil. -->
+  <header class="kinjo-public-header sticky top-0 z-50 text-white border-b border-white/15 relative overflow-hidden" role="banner">
     <div class="flex justify-between items-center w-full px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto h-20 relative z-10">
       
       <!-- Brand Logo -->
@@ -373,8 +374,8 @@
     <!-- Section 1: Search-First Hero -->
     <section id="kg-search-section" class="relative bg-surface-container-low overflow-hidden py-10 md:py-16 border-b border-outline-variant/20" aria-label="Search Kindergartens">
       <div class="absolute inset-0 z-0">
-        <div class="bg-cover bg-center w-full h-full opacity-100" style="background-image: url('/static/images/kinjo-hero-background.png');"></div>
-        <div class="absolute inset-0 bg-white/20"></div>
+        <div class="kinjo-hero-image" aria-hidden="true"></div>
+        <div class="kinjo-hero-overlay" aria-hidden="true"></div>
       </div>
 
       <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -430,6 +431,7 @@
                 <input
                   type="text"
                   id="kg-search-input"
+                  aria-label="{% if ui_lang == 'en' %}Search nurseries by name, neighborhood, area, district, governorate, or address{% else %}البحث عن الحضانات بالاسم أو الحي أو المنطقة أو اللواء أو المحافظة أو العنوان{% endif %}"
                   class="w-full ps-11 pe-10 py-3.5 rounded-xl border border-outline-variant/60 bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-sm sm:text-base font-medium shadow-sm"
                   placeholder="{% if ui_lang == 'en' %}Search by kindergarten name, neighborhood, or keywords...{% else %}ابحث باسم الحضانة، الحي، أو الكلمات المفتاحية...{% endif %}"
                   autocomplete="off"
@@ -475,7 +477,7 @@
                     {% if ui_lang == 'en' %}District / Region{% else %}اللواء / المنطقة{% endif %}
                   </label>
                   <div class="relative">
-                    <select id="kg-filter-district" class="w-full py-2.5 ps-3 pe-8 rounded-xl border border-outline-variant/60 bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-xs sm:text-sm font-medium shadow-sm appearance-none">
+                    <select id="kg-filter-district" disabled aria-disabled="true" class="w-full py-2.5 ps-3 pe-8 rounded-xl border border-outline-variant/60 bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-xs sm:text-sm font-medium shadow-sm appearance-none">
                       <option value="">{% if ui_lang == 'en' %}Select Governorate First{% else %}اختر المحافظة أولاً لعرض الألوية{% endif %}</option>
                     </select>
                     <div class="absolute inset-y-0 end-0 pe-2.5 flex items-center pointer-events-none text-on-surface-variant">
@@ -499,6 +501,7 @@
                     <span id="kg-geo-btn-text">{% if ui_lang == 'en' %}Nearest to Me (GPS){% else %}أقرب حضانة لموقعي (GPS){% endif %}</span>
                     <span id="kg-geo-spinner" class="hidden material-symbols-outlined text-sm animate-spin" aria-hidden="true">sync</span>
                   </button>
+                  <p id="kg-geo-status" class="kg-search-status hidden" role="status" aria-live="polite"></p>
                 </div>
 
               </div>
@@ -791,7 +794,7 @@
               <div class="relative w-full max-w-md rounded-2xl overflow-hidden shadow-xl border-2 border-white bg-white group hover:shadow-2xl transition-all">
                 <img
                   src="/static/images/kinjo-home-card-2.png"
-                  alt="{% if ui_lang == 'en' %}Illustration of early childhood learning, care and play in Jordan{% else %}رسم توضيحي لأنشطة ورعاية الطفولة المبكرة والتعلم في الأردن{% endif %}"
+                  alt="{% if ui_lang == 'en' %}Illustration of quality and care standards in licensed nurseries and kindergartens in Jordan{% else %}صورة توضيحية لمعايير الجودة والرعاية في الحضانات ورياض الأطفال المعتمدة في الأردن{% endif %}"
                   class="w-full h-auto object-cover max-h-[380px] rounded-xl transform group-hover:scale-[1.02] transition-transform duration-300"
                   loading="lazy"
                 >
@@ -1182,8 +1185,8 @@
   </script>
 
   <!-- Public Kindergarten Details Modal (Free Access - No Registration Required) -->
-  <div id="kg-details-modal" class="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="modal-kg-name">
-    <div class="relative bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-outline-variant/30 transform transition-all overflow-hidden max-h-[90vh] flex flex-col">
+  <div id="kg-details-modal" class="kinjo-details-modal fixed inset-0 z-50 overflow-y-auto hidden flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="modal-kg-name" aria-describedby="modal-kg-description">
+    <div data-modal-panel tabindex="-1" class="kinjo-details-panel relative bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
       
       <!-- Modal Header -->
       <div class="flex items-start justify-between gap-4 border-b border-outline-variant/20 pb-4 mb-4">
@@ -1193,7 +1196,9 @@
             <span>{% if ui_lang == 'en' %}Officially Accredited Nursery{% else %}حضانة معتمدة ومرخصة رسمياً{% endif %}</span>
           </div>
           <h3 id="modal-kg-name" class="text-xl sm:text-2xl font-extrabold text-primary truncate leading-tight"></h3>
+          <p id="modal-kg-name-en" class="text-sm text-on-surface-variant mt-1" lang="en"></p>
           <p id="modal-kg-location" class="text-xs sm:text-sm text-on-surface-variant flex items-center gap-1 mt-1"></p>
+          <p id="modal-kg-description" class="sr-only">{% if ui_lang == 'en' %}Public details for an active, licensed nursery{% else %}تفاصيل حضانة نشطة ومرخصة متاحة للعامة{% endif %}</p>
         </div>
         <button type="button" id="modal-close-btn" class="w-10 h-10 rounded-full bg-surface hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors focus:outline-none" aria-label="Close modal">
           <span class="material-symbols-outlined text-xl" aria-hidden="true">close</span>
@@ -1209,6 +1214,11 @@
           <div class="p-3.5 bg-surface-container-low rounded-2xl border border-outline-variant/20">
             <span class="text-xs font-bold text-on-surface-variant block mb-1">{% if ui_lang == 'en' %}Governorate &amp; District{% else %}المحافظة واللواء{% endif %}</span>
             <span id="modal-kg-gov-dist" class="font-bold text-primary text-sm"></span>
+          </div>
+
+          <div class="p-3.5 bg-surface-container-low rounded-2xl border border-outline-variant/20">
+            <span class="text-xs font-bold text-on-surface-variant block mb-1">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</span>
+            <span id="modal-kg-area" class="font-bold text-primary text-sm"></span>
           </div>
 
           <div class="p-3.5 bg-surface-container-low rounded-2xl border border-outline-variant/20">
@@ -1229,7 +1239,22 @@
 
           <div class="p-3.5 bg-surface-container-low rounded-2xl border border-outline-variant/20">
             <span class="text-xs font-bold text-on-surface-variant block mb-1">{% if ui_lang == 'en' %}Contact Email{% else %}البريد الإلكتروني{% endif %}</span>
-            <span id="modal-kg-email" class="font-medium text-primary text-sm truncate block"></span>
+            <a id="modal-kg-email-link" href="#" class="font-medium text-primary text-sm truncate block"><span id="modal-kg-email"></span></a>
+          </div>
+
+          <div class="p-3.5 bg-surface-container-low rounded-2xl border border-outline-variant/20">
+            <span class="text-xs font-bold text-on-surface-variant block mb-1">{% if ui_lang == 'en' %}Working hours{% else %}ساعات العمل{% endif %}</span>
+            <span id="modal-kg-hours" class="font-bold text-primary text-sm"></span>
+          </div>
+
+          <div class="p-3.5 bg-surface-container-low rounded-2xl border border-outline-variant/20">
+            <span class="text-xs font-bold text-on-surface-variant block mb-1">{% if ui_lang == 'en' %}Working days{% else %}أيام العمل{% endif %}</span>
+            <span id="modal-kg-days" class="font-bold text-primary text-sm"></span>
+          </div>
+
+          <div data-distance-row class="p-3.5 bg-surface-container-low rounded-2xl border border-outline-variant/20 hidden">
+            <span class="text-xs font-bold text-on-surface-variant block mb-1">{% if ui_lang == 'en' %}Distance from you{% else %}المسافة من موقعك{% endif %}</span>
+            <span id="modal-kg-distance" class="font-bold text-primary text-sm"></span>
           </div>
 
         </div>
@@ -1279,7 +1304,8 @@
     </div>
   </div>
 
-  <!-- Material UI-Compliant Login Prompt Dialog for Unauthenticated Search Visitors -->
+  {% if public_registration_enabled and not current_user %}
+  <!-- Legacy login prompt retained for compatibility; public search opens details directly. -->
   <div id="login-prompt-modal" class="fixed inset-0 z-50 overflow-y-auto modal-backdrop-blur hidden flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="login-dialog-title">
     <div class="relative login-dialog-container max-w-lg w-full transform transition-all">
       
@@ -1288,9 +1314,9 @@
         <span class="material-symbols-outlined text-2xl">close</span>
       </button>
 
-      <!-- Title (variant="h5", Color: #1A5B51, fontWeight: 600) -->
+      <!-- Legacy prompt styling follows the navy brand; public details no longer require login. -->
       <h3 id="login-dialog-title" class="login-dialog-title flex items-center gap-2 mb-2 pe-8">
-        <span class="material-symbols-outlined text-2xl text-[#1A5B51]" aria-hidden="true">lock</span>
+        <span class="material-symbols-outlined text-2xl text-primary" aria-hidden="true">lock</span>
         <span>{% if ui_lang == 'en' %}Please Log In{% else %}يرجى تسجيل الدخول{% endif %}</span>
       </h3>
 
@@ -1320,6 +1346,7 @@
 
     </div>
   </div>
+  {% endif %}
 
   <script>
     window.__CURRENT_USER__ = {{ 'true' if current_user else 'false' }};

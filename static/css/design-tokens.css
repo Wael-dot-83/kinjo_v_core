@@ -12,7 +12,7 @@
      used to compete (#2563eb here, #1E40AF in admin_design_system.css, #1F5E47
      in kinjo.css, #005ea8 inline on the dashboard); everything below now points
      at --kinjo-action so there is one place to change it. Do not add a fifth. */
-  --kinjo-brand: #1F5E47;   /* identity only — logo lockup, login, public chrome */
+  --kinjo-brand: #002F6C;   /* identity only — logo lockup, login, public chrome */
   --kinjo-action: #1E40AF;  /* interaction — 8.7:1 on white, the most accessible of the four */
   --kinjo-action-hover: #1E3A8A;
 
@@ -39,7 +39,7 @@
      that passes on white generally fails on near-black and vice versa. Measured
      against the analytics panels' darkest and lightest dark grounds. */
   --kinjo-color-danger-on-dark: #f87171;    /* 6.26:1 min across dark grounds */
-  --kinjo-color-success-text: #047857;      /* 5.48:1 on white; the fill green
+  --kinjo-color-success-text: #002F6C;      /* accessible success text on white
                                                measures 2.54:1 as text */
   --kinjo-color-warning-text: #92620a;      /* 5.28:1 on white; fill amber 2.15:1 */
   --kinjo-color-danger-action: #c81e1e;      /* 5.74:1 with white, for destructive buttons */
@@ -57,7 +57,7 @@
      against. These already existed as literals inside .k-badge-* rules; naming
      them means a status chip anywhere can use the same pair instead of
      inventing a new one. */
-  --kinjo-color-success-tint: #d1fae5;
+  --kinjo-color-success-tint: #EAF2FF;
   --kinjo-color-danger-tint: #fee2e2;
   /* The auth pages sit on a warm cream ground, where the blue link token
      fights the orange identity. This is the same burnt orange, dark enough to
@@ -103,7 +103,7 @@
      asks 3:1 of a component boundary, and the neutral #e2e8f0 this replaces
      managed 1.23:1 on white. #064E32 measures 9.80:1 on a white card and 9.31:1
      on the page canvas behind it. */
-  --kinjo-color-border: #064E32;
+  --kinjo-color-border: #002F6C;
   --kinjo-color-border-hover: #043A25;
   --kinjo-color-border-subtle: #DCEAE3;
   --kinjo-color-ring: rgba(37, 99, 235, 0.3);
@@ -128,7 +128,7 @@
      Single source of truth for both tiers. layout.css owns the header's
      structure and top-menu.css the nav's; neither hardcodes a colour, and
      nothing overrides these with !important. */
-  --admin-header-bg: #064E32;
+  --admin-header-bg: #002F6C;
   --admin-header-border: #043A25;
   --admin-header-ink: #ffffff;          /* 9.80:1 */
   --admin-header-ink-muted: #A7CBB8;    /* 5.54:1 — the user's role line */
@@ -136,7 +136,7 @@
   --admin-header-hover: rgba(255, 255, 255, 0.12);
   --admin-header-divider: rgba(255, 255, 255, 0.22);
   --admin-header-avatar-bg: #D4AF37;    /* the logo badge's gold, reused */
-  --admin-header-avatar-ink: #064E32;   /* 4.66:1 on the gold */
+  --admin-header-avatar-ink: #002F6C;   /* accessible on the gold */
 
   --admin-nav-bg: #ffffff;
   --admin-nav-border: var(--kinjo-color-border);
@@ -283,7 +283,7 @@
 @media (prefers-contrast: more) {
   :root {
     --kinjo-color-border: #043a25;
-    --kinjo-color-border-subtle: #064E32;
+  --kinjo-color-border-subtle: #D8E4F2;
     --kinjo-color-text-muted: #40505A;
     --kinjo-focus-ring-width: 3px;
   }

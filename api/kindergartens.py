@@ -449,6 +449,37 @@ def _public_kindergarten_projection(item: dict) -> dict:
     return {key: value for key, value in item.items() if key in allowed}
 
 
+def _public_kindergarten_details_projection(item: dict) -> dict:
+    """Return the safe public registry fields used by the details dialog."""
+    allowed = {
+        "id", "name_ar", "name_en", "governorate", "district", "area",
+        "address_line", "contact_phone", "contact_email", "status",
+        "total_capacity", "current_child_count", "occupancy_pct",
+        "working_hours_start", "working_hours_end", "working_days",
+        "latitude", "longitude", "license_status", "license_valid_until",
+    }
+    projected = {key: value for key, value in item.items() if key in allowed}
+    # Imported legacy records use operational ACTIVE as their license source.
+    projected["license_status"] = projected.get("license_status") or "active"
+    return projected
+
+
+def _public_registry_filter(query):
+    """Keep public results limited to currently operating licensed records."""
+    valid_license_statuses = ("active", "licensed", "valid", "approved")
+    return query.filter(
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+        or_(
+            models.Kindergarten.license_status.is_(None),
+            func.lower(models.Kindergarten.license_status).in_(valid_license_statuses),
+        ),
+        or_(
+            models.Kindergarten.license_valid_until.is_(None),
+            models.Kindergarten.license_valid_until >= datetime.now(_JORDAN_TZ).date(),
+        ),
+    )
+
+
 # --------------------------------------------------------------------------
 # Endpoints
 # --------------------------------------------------------------------------
@@ -582,31 +613,41 @@ def public_kindergarten_search(
     q: Optional[str] = Query(None, description="search by name or keyword"),
     governorate: Optional[str] = None,
     district: Optional[str] = None,
-    status: Optional[str] = None,
+    status: Optional[str] = Query(None, include_in_schema=False),
     lat: Optional[float] = Query(None, description="user latitude for nearest search"),
     lng: Optional[float] = Query(None, description="user longitude for nearest search"),
     limit: int = Query(20, ge=1, le=100),
     skip: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ):
-    query = db.query(models.Kindergarten)
-    query = query.filter(models.Kindergarten.status != models.KindergartenStatus.DELETED)
+    # Keep this legacy parameter for URL compatibility, but never allow it to
+    # widen the public registry beyond active, licensed facilities.
+    query = _public_registry_filter(db.query(models.Kindergarten))
 
     if q:
+        normalized_q = " ".join(q.strip().split())[:120]
         query = query.filter(
             or_(
-                models.Kindergarten.name_ar.ilike(f"%{q}%"),
-                models.Kindergarten.name_en.ilike(f"%{q}%"),
-                models.Kindergarten.legal_name.ilike(f"%{q}%"),
-                models.Kindergarten.area.ilike(f"%{q}%"),
-                models.Kindergarten.district.ilike(f"%{q}%"),
-                models.Kindergarten.address_line.ilike(f"%{q}%"),
+                models.Kindergarten.name_ar.ilike(f"%{normalized_q}%"),
+                models.Kindergarten.name_en.ilike(f"%{normalized_q}%"),
+                models.Kindergarten.legal_name.ilike(f"%{normalized_q}%"),
+                models.Kindergarten.governorate.ilike(f"%{normalized_q}%"),
+                models.Kindergarten.area.ilike(f"%{normalized_q}%"),
+                models.Kindergarten.district.ilike(f"%{normalized_q}%"),
+                models.Kindergarten.address_line.ilike(f"%{normalized_q}%"),
             )
         )
     if governorate:
         query = query.filter(governorate_filter(models.Kindergarten.governorate, governorate))
     if district:
         query = query.filter(models.Kindergarten.district == district)
+    if lat is not None and lng is not None:
+        query = query.filter(
+            models.Kindergarten.latitude.isnot(None),
+            models.Kindergarten.longitude.isnot(None),
+        )
+    # The public registry must not accept a client-supplied status override.
+    status = None
     if status:
         try:
             query = query.filter(models.Kindergarten.status == _normalize_status(status))
@@ -623,13 +664,14 @@ def public_kindergarten_search(
     for kg in kgs:
         item = _serialize(kg)
         proj = _public_kindergarten_projection(item)
-        if lat is not None and lng is not None and kg.latitude and kg.longitude:
+        if lat is not None and lng is not None and kg.latitude is not None and kg.longitude is not None:
             try:
                 import math
                 R = 6371.0
                 dlat = math.radians(kg.latitude - lat)
                 dlon = math.radians(kg.longitude - lng)
                 a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat)) * math.cos(math.radians(kg.latitude)) * math.sin(dlon / 2) ** 2
+                a = min(1.0, max(0.0, a))
                 c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
                 proj["distance_km"] = round(R * c, 1)
             except Exception:
@@ -655,17 +697,16 @@ def public_get_kindergarten(
 ):
     kg = (
         db.query(models.Kindergarten)
-        .filter(
-            models.Kindergarten.id == kindergarten_id,
-            models.Kindergarten.status != models.KindergartenStatus.DELETED,
-        )
+        .filter(models.Kindergarten.id == kindergarten_id)
         .first()
     )
-    if not kg:
+    if not kg or not _public_registry_filter(db.query(models.Kindergarten)).filter(
+        models.Kindergarten.id == kindergarten_id
+    ).first():
         return _envelope(False, None, "الحضانة غير موجودة / Kindergarten not found", 404)
 
     item = _serialize(kg)
-    projected = _public_kindergarten_projection(item)
+    projected = _public_kindergarten_details_projection(item)
     return _envelope(True, projected, "تم جلب تفاصيل الحضانة بنجاح")
 
 

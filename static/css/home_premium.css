@@ -421,8 +421,8 @@
 }
 
 .kinjo-home-search-card .card-badge-active {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
+  background: rgba(197, 160, 89, 0.14);
+  color: #002f6c;
 }
 
 .kinjo-home-search-card .card-badge-frozen {
@@ -533,7 +533,7 @@
 }
 
 .kinjo-home-card-list i {
-  color: #10B981;
+  color: #c5a059;
   flex: 0 0 auto;
   margin-top: 0.1rem;
   font-size: 1rem;
@@ -666,7 +666,7 @@
 .kinjo-navbar {
   background: rgba(255, 255, 255, 0.85) !important;
   border-bottom: 2px solid transparent !important;
-  border-image: linear-gradient(90deg, #3B82F6, #10B981, #F59E0B, #EF4444) 1 !important;
+  border-image: linear-gradient(90deg, #002F6C, #93C5FD, #C5A059) 1 !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
   transition: all 0.3s ease;
 }
@@ -726,9 +726,9 @@
 
 /* ── Super Professional Footer Override ───────────────────────────────────── */
 .kj-footer {
-  background: linear-gradient(155deg, #F8FAFC 0%, #EFF6FF 50%, #ECFDF5 100%) !important;
+  background: linear-gradient(155deg, #F8FAFC 0%, #EFF6FF 50%, #F6F8FC 100%) !important;
   border-top: 4px solid transparent !important;
-  border-image: linear-gradient(90deg, #3B82F6, #10B981, #F59E0B, #EF4444) 1 !important;
+  border-image: linear-gradient(90deg, #002F6C, #93C5FD, #C5A059) 1 !important;
   color: #475569 !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }

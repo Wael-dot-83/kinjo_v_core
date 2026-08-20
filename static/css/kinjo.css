@@ -30,15 +30,15 @@
 :root {
   /* Primary Brand Colors */
   --kinjo-primary: var(--kinjo-brand);
-  --kinjo-primary-dark: #163d2e;
-  --kinjo-primary-light: #e0f0eb;
-  --kinjo-primary-50: #f0f7f4;
+  --kinjo-primary-dark: #001f4d;
+  --kinjo-primary-light: #eaf2ff;
+  --kinjo-primary-50: #f3f7fd;
   --kinjo-secondary: #64748b;
   --kinjo-secondary-dark: #475569;
-  --kinjo-success: #059669;
-  --kinjo-success-light: #d1fae5;
-  --kinjo-info: #2F7D62;
-  --kinjo-info-light: #e0f0eb;
+  --kinjo-success: #002f6c;
+  --kinjo-success-light: #eaf2ff;
+  --kinjo-info: #1e4c9a;
+  --kinjo-info-light: #eaf2ff;
   --kinjo-warning: #f59e0b;
   --kinjo-warning-light: #fef3c7;
   --kinjo-danger: #ef4444;
@@ -1138,7 +1138,7 @@ body.sidebar-open .sidebar-backdrop {
 
 .alert-success {
   background-color: var(--kinjo-success-light);
-  color: #065f46;
+  color: #002f6c;
 }
 
 .alert-danger {
@@ -1153,7 +1153,7 @@ body.sidebar-open .sidebar-backdrop {
 
 .alert-info {
   background-color: var(--kinjo-info-light);
-  color: #163d2e;
+  color: #001f4d;
 }
 
 .alert-container {
@@ -1326,8 +1326,8 @@ body.sidebar-open .sidebar-backdrop {
 
 /* Governance Score Band Colors */
 .band-green {
-  color: #198754;
-  background-color: rgba(25, 135, 84, 0.1);
+  color: #002f6c;
+  background-color: rgba(147, 197, 253, 0.22);
 }
 .band-amber {
   color: #fd7e14;
@@ -2096,7 +2096,7 @@ body.sidebar-open .sidebar-backdrop {
    Page Guide Panel
    ============================================================================ */
 #pageGuidePanel {
-  background: linear-gradient(135deg, #f0f7f4 0%, #e8f4ef 100%);
+  background: linear-gradient(135deg, #f3f7fd 0%, #eaf2ff 100%);
   border: 1px solid rgba(31, 94, 71, 0.12);
 }
 
@@ -2195,7 +2195,7 @@ body.sidebar-open .sidebar-backdrop {
    Shared Page Header Utilities
    ============================================================================ */
 :root {
-  --kinjo-primary-xlight: #f0f7f4;
+  --kinjo-primary-xlight: #f3f7fd;
 }
 
 .page-header-wrap {
@@ -2366,10 +2366,10 @@ body.sidebar-open .sidebar-backdrop {
 }
 
 .badge-soft-primary   { background: var(--kinjo-primary-light);  color: var(--kinjo-primary-dark); }
-.badge-soft-success   { background: var(--kinjo-success-light);   color: #065f46; }
+.badge-soft-success   { background: var(--kinjo-success-light);   color: #002f6c; }
 .badge-soft-warning   { background: var(--kinjo-warning-light);   color: #92400e; }
 .badge-soft-danger    { background: var(--kinjo-danger-light);    color: #991b1b; }
-.badge-soft-info      { background: var(--kinjo-info-light);      color: #163d2e; }
+.badge-soft-info      { background: var(--kinjo-info-light);      color: #002f6c; }
 .badge-soft-secondary { background: #f1f5f9;                      color: var(--kinjo-text-secondary); }
 .badge-soft-purple    { background: rgba(124,58,237,0.12);        color: #6d28d9; }
 
@@ -2623,9 +2623,9 @@ body.sidebar-open .sidebar-backdrop {
   --kinjo-sidebar-muted:    #cbd5e1;
   --kinjo-sidebar-border:   rgba(255,255,255,0.06);
   --kinjo-sidebar-hover:    rgba(255,255,255,0.07);
-  --kinjo-sidebar-active-bg:#163d2e;
+  --kinjo-sidebar-active-bg:#001f4d;
   --kinjo-sidebar-active-text:#a8d4c4;
-  --kinjo-sidebar-accent:   #2F7D62;
+  --kinjo-sidebar-accent:   #1e4c9a;
 }
 
 /* This layer restyles the sidebar's text to light-on-dark (--kinjo-sidebar-text is
@@ -2657,8 +2657,8 @@ body.sidebar-open .sidebar-backdrop {
   color: var(--kinjo-sidebar-muted) !important;
 }
 .sidebar-user-card .avatar-md {
-  background: rgba(31,94,71,0.2) !important;
-  border: 1px solid rgba(31,94,71,0.3);
+  background: rgba(0,47,108,0.2) !important;
+  border: 1px solid rgba(0,47,108,0.3);
 }
 .sidebar-user-card .avatar-md i {
   color: #a8d4c4 !important;
@@ -2802,11 +2802,11 @@ body.sidebar-open .sidebar-backdrop {
 .stat-card-body-text { flex: 1; min-width: 0; }
 
 /* Icon color variants */
-.stat-card-icon.primary { background: #e0f0eb; color: var(--kinjo-brand); }
-.stat-card-icon.success { background: #d1fae5; color: #059669; }
+.stat-card-icon.primary { background: #eaf2ff; color: var(--kinjo-brand); }
+.stat-card-icon.success { background: #eaf2ff; color: #002f6c; }
 .stat-card-icon.warning { background: #fef3c7; color: #d97706; }
 .stat-card-icon.danger  { background: #fee2e2; color: #dc2626; }
-.stat-card-icon.info    { background: #e0f0eb; color: #2F7D62; }
+.stat-card-icon.info    { background: #eaf2ff; color: #1e4c9a; }
 .stat-card-icon.purple  { background: #ede9fe; color: #7c3aed; }
 
 /* ── Card Refinements ──────────────────────────────────────────────────── */
@@ -2854,7 +2854,7 @@ body.sidebar-open .sidebar-backdrop {
 }
 .attendance-cell:hover {
   border-color: var(--kinjo-primary) !important;
-  box-shadow: 0 0 0 3px rgba(31,94,71,0.12);
+  box-shadow: 0 0 0 3px rgba(0,47,108,0.12);
   transform: translateY(-1px);
 }
 .attendance-cell .att-avatar {
@@ -2896,9 +2896,9 @@ body.sidebar-open .sidebar-backdrop {
   border-color: var(--kinjo-success) !important;
 }
 .attendance-cell.present .att-avatar {
-  background: #d1fae5;
-  color: #059669;
-  border-color: rgba(5,150,105,0.2);
+  background: #eaf2ff;
+  color: #002f6c;
+  border-color: rgba(0,47,108,0.2);
 }
 .attendance-cell.present .att-status-dot { background: var(--kinjo-success); }
 .attendance-cell.absent {
@@ -2962,17 +2962,17 @@ body.sidebar-open .sidebar-backdrop {
   font-size: 1.2rem;
   flex-shrink: 0;
 }
-.quick-action-btn.qa-success { border-color: #d1fae5; background: #f0fdf4; color: #065f46; }
-.quick-action-btn.qa-success:hover { border-color: var(--kinjo-success); box-shadow: 0 2px 12px rgba(5,150,105,0.18); }
-.quick-action-btn.qa-success .qa-icon { background: #d1fae5; color: #059669; }
+.quick-action-btn.qa-success { border-color: #d8e4f2; background: #f3f7fd; color: #002f6c; }
+.quick-action-btn.qa-success:hover { border-color: var(--kinjo-success); box-shadow: 0 2px 12px rgba(0,47,108,0.18); }
+.quick-action-btn.qa-success .qa-icon { background: #eaf2ff; color: #002f6c; }
 
-.quick-action-btn.qa-primary { border-color: #e0f0eb; background: #f0f7f4; color: #163d2e; }
-.quick-action-btn.qa-primary:hover { border-color: var(--kinjo-primary); box-shadow: 0 2px 12px rgba(31,94,71,0.18); }
-.quick-action-btn.qa-primary .qa-icon { background: #e0f0eb; color: var(--kinjo-brand); }
+.quick-action-btn.qa-primary { border-color: #d8e4f2; background: #f3f7fd; color: #001f4d; }
+.quick-action-btn.qa-primary:hover { border-color: var(--kinjo-primary); box-shadow: 0 2px 12px rgba(0,47,108,0.18); }
+.quick-action-btn.qa-primary .qa-icon { background: #eaf2ff; color: var(--kinjo-brand); }
 
-.quick-action-btn.qa-info { border-color: #e0f0eb; background: #f0f7f4; color: #163d2e; }
-.quick-action-btn.qa-info:hover { border-color: var(--kinjo-info); box-shadow: 0 2px 12px rgba(47,125,98,0.18); }
-.quick-action-btn.qa-info .qa-icon { background: #e0f0eb; color: #2F7D62; }
+.quick-action-btn.qa-info { border-color: #d8e4f2; background: #f3f7fd; color: #001f4d; }
+.quick-action-btn.qa-info:hover { border-color: var(--kinjo-info); box-shadow: 0 2px 12px rgba(30,76,154,0.18); }
+.quick-action-btn.qa-info .qa-icon { background: #eaf2ff; color: #1e4c9a; }
 
 .quick-action-btn.qa-warning { border-color: #fef3c7; background: #fffbeb; color: #78350f; }
 .quick-action-btn.qa-warning:hover { border-color: var(--kinjo-warning); box-shadow: 0 2px 12px rgba(217,119,6,0.18); }
@@ -2987,7 +2987,7 @@ body.sidebar-open .sidebar-backdrop {
   position: relative;
   background-color: #002f6c;
   background-image: 
-    linear-gradient(135deg, rgba(0, 47, 108, 0.80) 0%, rgba(0, 47, 108, 0.86) 100%),
+    linear-gradient(135deg, rgba(0, 47, 108, 0.68) 0%, rgba(0, 31, 77, 0.58) 100%),
     url('/static/images/kinjo-header-background.jpg');
   background-size: cover;
   background-position: center;
@@ -3015,6 +3015,11 @@ body.sidebar-open .sidebar-backdrop {
 .page-header-wrap .breadcrumb-item,
 .page-header-wrap .breadcrumb-item a {
   color: rgba(255, 255, 255, 0.85) !important;
+}
+.page-header-wrap .breadcrumb-item a:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 3px;
+  border-radius: 0.25rem;
 }
 .page-header-wrap .breadcrumb-item.active {
   color: #c5a059 !important;
@@ -3046,15 +3051,15 @@ body.sidebar-open .sidebar-backdrop {
 
 /* ── Alert / Banner ─────────────────────────────────────────────────────── */
 .alert-primary {
-  background: linear-gradient(135deg, #f0f7f4 0%, #daeee6 100%) !important;
-  border: 1px solid #a8d4c4 !important;
-  color: #163d2e !important;
+  background: linear-gradient(135deg, #f3f7fd 0%, #eaf2ff 100%) !important;
+  border: 1px solid #b8cde5 !important;
+  color: #001f4d !important;
   border-radius: 0.875rem !important;
 }
 .alert-success {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
-  border: 1px solid #bbf7d0 !important;
-  color: #14532d !important;
+  background: linear-gradient(135deg, #f3f7fd 0%, #eaf2ff 100%) !important;
+  border: 1px solid #b8cde5 !important;
+  color: #002f6c !important;
   border-radius: 0.875rem !important;
 }
 .alert-warning {
@@ -3082,7 +3087,7 @@ body.sidebar-open .sidebar-backdrop {
 }
 .form-control:focus, .form-select:focus {
   border-color: var(--kinjo-primary) !important;
-  box-shadow: 0 0 0 3px rgba(31,94,71,0.12) !important;
+  box-shadow: 0 0 0 3px rgba(0,47,108,0.12) !important;
 }
 .form-label {
   font-weight: 600 !important;
@@ -3099,31 +3104,31 @@ body.sidebar-open .sidebar-backdrop {
   transition: all 0.18s ease !important;
 }
 .btn-primary {
-  background: linear-gradient(135deg, var(--kinjo-brand), #163d2e) !important;
+  background: linear-gradient(135deg, var(--kinjo-brand), #001f4d) !important;
   border: none !important;
-  box-shadow: 0 1px 3px rgba(31,94,71,0.35) !important;
+  box-shadow: 0 1px 3px rgba(0,47,108,0.35) !important;
 }
 .btn-primary:hover {
-  background: linear-gradient(135deg, #2F7D62, var(--kinjo-brand)) !important;
-  box-shadow: 0 4px 12px rgba(31,94,71,0.4) !important;
+  background: linear-gradient(135deg, #1e4c9a, var(--kinjo-brand)) !important;
+  box-shadow: 0 4px 12px rgba(0,47,108,0.4) !important;
   transform: translateY(-1px);
 }
 .btn-success {
-  background: linear-gradient(135deg, #059669, #047857) !important;
+  background: linear-gradient(135deg, #002f6c, #001f4d) !important;
   border: none !important;
-  box-shadow: 0 1px 3px rgba(5,150,105,0.35) !important;
+  box-shadow: 0 1px 3px rgba(0,47,108,0.35) !important;
 }
 .btn-success:hover {
-  background: linear-gradient(135deg, #047857, #065f46) !important;
+  background: linear-gradient(135deg, #001f4d, #002f6c) !important;
   transform: translateY(-1px);
 }
 .btn-outline-primary {
-  border-color: #e0f0eb !important;
+  border-color: #d8e4f2 !important;
   color: var(--kinjo-brand) !important;
-  background: #f0f7f4 !important;
+  background: #f3f7fd !important;
 }
 .btn-outline-primary:hover {
-  background: #e0f0eb !important;
+  background: #eaf2ff !important;
   border-color: var(--kinjo-primary) !important;
   transform: translateY(-1px);
 }
@@ -3135,7 +3140,7 @@ body.sidebar-open .sidebar-backdrop {
   border-color: var(--kinjo-color-border-subtle) !important;
   transition: background 0.15s ease !important;
 }
-.list-group-item:hover { background: #f0f7f4 !important; }
+.list-group-item:hover { background: #f3f7fd !important; }
 .list-group-flush .list-group-item:first-child { border-top: 0 !important; }
 
 /* ── KPI Cards ──────────────────────────────────────────────────────────── */
@@ -3174,8 +3179,8 @@ body.sidebar-open .sidebar-backdrop {
   padding: 0.5rem 0.75rem !important;
   transition: background 0.12s ease !important;
 }
-.dropdown-item:hover { background: #f0f7f4 !important; }
-.dropdown-item:active { background: #e0f0eb !important; color: #163d2e !important; }
+.dropdown-item:hover { background: #f3f7fd !important; }
+.dropdown-item:active { background: #eaf2ff !important; color: #001f4d !important; }
 .dropdown-divider { margin: 0.35rem 0 !important; border-color: var(--kinjo-color-border-subtle) !important; }
 
 /* ── Modal Refinements ──────────────────────────────────────────────────── */
@@ -3209,14 +3214,14 @@ body.sidebar-open .sidebar-backdrop {
 
 /* ── Welcome Banner ─────────────────────────────────────────────────────── */
 .welcome-banner {
-  background: linear-gradient(135deg, #163d2e 0%, var(--kinjo-brand) 50%, #2F7D62 100%);
+  background: linear-gradient(135deg, #001f4d 0%, var(--kinjo-brand) 50%, #1e4c9a 100%);
   border-radius: 1rem;
   padding: 1.5rem 2rem;
   color: #fff;
   position: relative;
   overflow: hidden;
   border: 0 !important;
-  box-shadow: 0 4px 24px rgba(31,94,71,0.3) !important;
+  box-shadow: 0 4px 24px rgba(0,47,108,0.3) !important;
 }
 .welcome-banner::before {
   content: '';
@@ -3249,7 +3254,7 @@ body.sidebar-open .sidebar-backdrop {
 }
 .progress-bar {
   border-radius: 999px !important;
-  background: linear-gradient(90deg, var(--kinjo-primary), #2F7D62) !important;
+  background: linear-gradient(90deg, var(--kinjo-primary), #1e4c9a) !important;
 }
 
 /* ── Toast ───────────────────────────────────────────────────────────────── */
@@ -3874,11 +3879,15 @@ code {
   color: var(--kinjo-color-warning-on-dark) !important;
 }
 
-/* ── KinJo Brand Header & Navigation (#1A5B51 Dark Teal) ─────────────────── */
+/* ── KinJo Brand Header & Navigation ─────────────────────────────────────── */
 .kinjo-public-header {
-  background-color: #1A5B51 !important;
+  background-color: #002F6C !important;
+  background-image: linear-gradient(rgba(0, 47, 108, 0.56), rgba(0, 31, 77, 0.42)), url('/static/images/kinjo-header-background.jpg') !important;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
   color: #FFFFFF !important;
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0px 8px 24px rgba(0, 31, 77, 0.22) !important;
 }
 .kinjo-public-header nav a,
 .kinjo-public-header nav button {
@@ -3909,7 +3918,7 @@ code {
   box-shadow: 0px 20px 25px -5px rgba(0, 0, 0, 0.1), 0px 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
 }
 .login-dialog-title {
-  color: #1A5B51 !important;
+  color: #002F6C !important;
   font-weight: 600 !important;
   font-size: 1.35rem !important;
 }
@@ -3919,22 +3928,22 @@ code {
   line-height: 1.6 !important;
 }
 .login-dialog-btn-primary {
-  background-color: #1A5B51 !important;
+  background-color: #002F6C !important;
   color: #FFFFFF !important;
   font-weight: 600 !important;
   transition: background-color 0.2s ease;
 }
 .login-dialog-btn-primary:hover {
-  background-color: #237367 !important;
+  background-color: #1E4C9A !important;
 }
 .login-dialog-btn-secondary {
   background-color: transparent !important;
-  border: 2px solid #1A5B51 !important;
-  color: #1A5B51 !important;
+  border: 2px solid #002F6C !important;
+  color: #002F6C !important;
   font-weight: 600 !important;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 .login-dialog-btn-secondary:hover {
-  background-color: rgba(26, 91, 81, 0.08) !important;
+  background-color: rgba(0, 47, 108, 0.08) !important;
 }
 
