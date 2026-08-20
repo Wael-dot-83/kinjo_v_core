@@ -228,7 +228,15 @@ class TestRequirePermissionDependency:
 
 
 class TestNoInlineRoleChecksRemain:
-    """Section 10, acceptance criterion 1."""
+    """Section 10, acceptance criterion 1.
+
+    The needles are assembled from fragments so this file does not contain the
+    literal strings it forbids, and therefore does not have to exempt itself.
+    An exemption list would be a hole someone could quietly widen.
+    """
+
+    INEQUALITY_NEEDLE = "role !" + "= models.UserRole"
+    MEMBERSHIP_NEEDLE = "role not in " + "[models.UserRole"
 
     @staticmethod
     def _tracked_python_files():
@@ -252,7 +260,7 @@ class TestNoInlineRoleChecksRemain:
         return offenders
 
     def test_no_inequality_role_comparisons(self):
-        offenders = self._sweep("role != models.UserRole")
+        offenders = self._sweep(self.INEQUALITY_NEEDLE)
 
         assert offenders == [], (
             "Inline role comparisons must route through the ADMIN-001 "
@@ -260,9 +268,15 @@ class TestNoInlineRoleChecksRemain:
         )
 
     def test_no_role_membership_lists(self):
-        offenders = self._sweep("role not in [models.UserRole")
+        offenders = self._sweep(self.MEMBERSHIP_NEEDLE)
 
         assert offenders == [], (
             "Role membership gates must use has_role()/require_permission():\n"
             + "\n".join(offenders)
         )
+
+    def test_the_sweep_can_actually_find_an_offender(self):
+        """A sweep that can never fail proves nothing. Prove it can."""
+        offenders = self._sweep("def has_permission(")
+
+        assert any("dependencies.py" in line for line in offenders)
