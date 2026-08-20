@@ -20,6 +20,10 @@
   const resultsPanel = document.getElementById('kg-search-results');
   const resultsGrid = document.getElementById('kg-results-grid');
   const resultsCountEl = document.getElementById('kg-results-count');
+  const resultsContextEl = document.getElementById('kg-results-context');
+  const resultsResetBtn = document.getElementById('kg-results-reset');
+  const resultsEmptyResetBtn = document.getElementById('kg-results-empty-reset');
+  const resultsRetryBtn = document.getElementById('kg-results-retry');
   const emptyState = document.getElementById('kg-results-empty');
   const errorState = document.getElementById('kg-results-error');
   const loadingState = document.getElementById('kg-results-loading');
@@ -47,6 +51,7 @@
   const modalKgMapsWrap = document.getElementById('modal-kg-maps-wrap');
   const modalKgMapsBtn = document.getElementById('modal-kg-maps-btn');
   const modalKgCallBtn = document.getElementById('modal-kg-call-btn');
+  const modalStatus = document.getElementById('modal-kg-status');
 
   let debounceTimer = null;
   let requestController = null;
@@ -72,6 +77,7 @@
     return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
   }
   function showPanel() { setHidden(resultsPanel, false); }
+  function setResultsBusy(busy) { if (resultsPanel) resultsPanel.setAttribute('aria-busy', busy ? 'true' : 'false'); }
   function hideStates() {
     if (resultsGrid) resultsGrid.innerHTML = '';
     setHidden(emptyState, true); setHidden(errorState, true); setHidden(loadingState, true);
@@ -79,11 +85,13 @@
   function showLoading() {
     if (resultsGrid) resultsGrid.innerHTML = '';
     setHidden(emptyState, true); setHidden(errorState, true); setHidden(loadingState, false);
+    setResultsBusy(true);
     setHidden(searchBtn && searchBtn.querySelector('.kg-btn-spinner'), false);
     if (searchBtn) searchBtn.setAttribute('aria-busy', 'true');
   }
   function hideLoading() {
     setHidden(loadingState, true); setHidden(searchBtn && searchBtn.querySelector('.kg-btn-spinner'), true);
+    setResultsBusy(false);
     if (searchBtn) searchBtn.removeAttribute('aria-busy');
   }
   function buildQuery() {
@@ -104,10 +112,32 @@
     window.history.replaceState(null, '', window.location.pathname + (query ? '?' + query : '') + window.location.hash);
   }
   function updateClearButton() { if (clearBtn && inputEl) setHidden(clearBtn, !inputEl.value.trim()); }
+  function resetSearch() {
+    if (inputEl) inputEl.value = '';
+    if (govEl) govEl.value = '';
+    if (distEl) distEl.value = '';
+    userPosition = null;
+    if (geoBtn) geoBtn.classList.remove('kg-geo-active');
+    if (geoBtnText) geoBtnText.textContent = t('Find nurseries near me (GPS)', 'أقرب حضانة لموقعي (GPS)');
+    setGeoStatus('');
+    setDistrictOptions('');
+    updateClearButton();
+    search(true);
+    if (inputEl) inputEl.focus();
+  }
+  function setModalStatus(message, isError) {
+    if (!modalStatus) return;
+    modalStatus.textContent = message || '';
+    modalStatus.classList.toggle('is-error', Boolean(isError));
+    setHidden(modalStatus, !message);
+  }
 
   function renderCards(items, total) {
     hideStates(); hideLoading();
-    if (resultsCountEl) resultsCountEl.textContent = typeof total === 'number' ? '(' + total + ' ' + t('available', 'متاحة') + ')' : '';
+    if (resultsCountEl) resultsCountEl.textContent = typeof total === 'number' ? total + ' ' + t('available', 'متاحة') : '';
+    if (resultsContextEl) resultsContextEl.textContent = items && items.length
+      ? t('Select a kindergarten to view its public details without signing in.', 'اختر حضانة لعرض تفاصيلها العامة دون تسجيل الدخول.')
+      : t('Try a wider search or clear the filters to see more kindergartens.', 'جرّب بحثاً أوسع أو امسح التصفية لرؤية حضانات أكثر.');
     if (!items || !items.length) { setHidden(emptyState, false); return; }
     if (!resultsGrid) return;
     resultsGrid.innerHTML = items.slice(0, RESULTS_LIMIT).map(function (kg) {
@@ -117,7 +147,7 @@
       const distance = typeof kg.distance_km === 'number' ? '<span class="kg-distance-badge"><span class="material-symbols-outlined" aria-hidden="true">near_me</span>' + escapeHtml(formatDistance(kg.distance_km)) + '</span>' : '';
       return '<article class="kinjo-home-search-card" tabindex="0" role="button" data-kg-id="' + escapeHtml(kg.id) + '" aria-label="' + escapeHtml(t('View details for ' + name, 'عرض تفاصيل ' + name)) + '">' +
         '<div class="kg-card-heading"><div class="kg-card-title-wrap"><h3 class="card-title">' + escapeHtml(name) + '</h3><p class="card-meta"><span class="material-symbols-outlined" aria-hidden="true">location_on</span><span>' + escapeHtml(location || address) + '</span></p></div><div class="kg-card-badges"><span class="kg-license-badge"><span class="material-symbols-outlined" aria-hidden="true">verified</span>' + escapeHtml(t('Active & licensed', 'نشطة ومرخصة')) + '</span>' + distance + '</div></div>' +
-        '<p class="kg-card-address">' + escapeHtml(address) + '</p><div class="kg-card-footer"><span class="kg-card-source"><span class="material-symbols-outlined" aria-hidden="true">account_balance</span>' + escapeHtml(t('Official registry', 'السجل الرسمي')) + '</span><button type="button" class="kg-card-details" data-kg-id="' + escapeHtml(kg.id) + '">' + escapeHtml(t('View details', 'عرض التفاصيل')) + '<span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></button></div></article>';
+        '<p class="kg-card-address">' + escapeHtml(address) + '</p><div class="kg-card-footer"><span class="kg-card-source"><span class="material-symbols-outlined" aria-hidden="true">account_balance</span>' + escapeHtml(t('Official registry', 'السجل الرسمي')) + '</span><span class="kg-card-details"><span>' + escapeHtml(t('View public details', 'عرض التفاصيل العامة')) + '</span><span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></span></div></article>';
     }).join('');
   }
 
@@ -134,7 +164,9 @@
       renderCards(data.items || [], typeof data.total === 'number' ? data.total : 0);
     } catch (error) {
       if (error.name === 'AbortError') return;
-      hideLoading(); hideStates(); setHidden(errorState, false); console.error('Home search failed:', error);
+      hideLoading(); hideStates(); setHidden(errorState, false);
+      if (resultsContextEl) resultsContextEl.textContent = t('Your filters are saved. Try the search again when the connection is back.', 'تم حفظ خيارات البحث. حاول مرة أخرى عند عودة الاتصال.');
+      console.error('Home search failed:', error);
     }
   }
   function debouncedSearch() {
@@ -201,11 +233,28 @@
   }
   function getFocusableModalElements() { return modalPanel ? Array.from(modalPanel.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter(function (element) { return !element.classList.contains('is-disabled'); }) : []; }
   async function openKgDetailsModal(id, trigger) {
-    if (!modalEl) return; lastFocusedTrigger = trigger || document.querySelector('[data-kg-id="' + String(id).replace(/"/g, '') + '"]');
-    try { const response = await fetch(SINGLE_KG_API + '/' + encodeURIComponent(id), { headers: { Accept: 'application/json' } }); if (!response.ok) throw new Error('HTTP ' + response.status); const payload = await response.json(); const kg = payload && payload.data; if (!kg) return; fillModal(kg); modalEl.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); if (modalPanel) modalPanel.focus(); }
-    catch (error) { console.error('Failed fetching public nursery details:', error); }
+    if (!modalEl) return;
+    lastFocusedTrigger = trigger || document.querySelector('[data-kg-id="' + String(id).replace(/"/g, '') + '"]');
+    modalEl.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    if (modalPanel) { modalPanel.setAttribute('aria-busy', 'true'); modalPanel.focus(); }
+    if (modalKgName) modalKgName.textContent = t('Loading kindergarten details…', 'جارٍ تحميل تفاصيل الحضانة…');
+    if (modalKgNameEn) modalKgNameEn.textContent = '';
+    setModalStatus(t('Loading public details…', 'جارٍ تحميل التفاصيل العامة…'));
+    try {
+      const response = await fetch(SINGLE_KG_API + '/' + encodeURIComponent(id), { headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const payload = await response.json(); const kg = payload && payload.data;
+      if (!kg) throw new Error('Empty kindergarten details');
+      fillModal(kg); setModalStatus('');
+    } catch (error) {
+      console.error('Failed fetching public nursery details:', error);
+      setModalStatus(t('We could not load this kindergarten. Close the dialog and try again.', 'تعذر تحميل بيانات هذه الحضانة. أغلق النافذة وحاول مرة أخرى.'), true);
+    } finally {
+      if (modalPanel) modalPanel.setAttribute('aria-busy', 'false');
+    }
   }
-  function closeKgDetailsModal() { if (!modalEl) return; modalEl.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); if (lastFocusedTrigger && document.contains(lastFocusedTrigger)) lastFocusedTrigger.focus(); }
+  function closeKgDetailsModal() { if (!modalEl) return; modalEl.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); setModalStatus(''); if (modalPanel) modalPanel.setAttribute('aria-busy', 'false'); if (lastFocusedTrigger && document.contains(lastFocusedTrigger)) lastFocusedTrigger.focus(); }
   window.openKgDetailsModal = openKgDetailsModal; window.closeKgDetailsModal = closeKgDetailsModal;
 
   async function loadGovernorates() {
@@ -221,9 +270,12 @@
     const params = new URLSearchParams(window.location.search); if (inputEl && params.get('q')) inputEl.value = params.get('q'); updateClearButton();
     if (searchBtn) searchBtn.addEventListener('click', function () { search(true); }); if (geoBtn) geoBtn.addEventListener('click', handleGeolocation);
     if (inputEl) { inputEl.addEventListener('input', debouncedSearch); inputEl.addEventListener('keydown', function (event) { if (event.key === 'Enter') { event.preventDefault(); if (debounceTimer) window.clearTimeout(debounceTimer); search(true); } }); }
-    if (clearBtn && inputEl) clearBtn.addEventListener('click', function () { inputEl.value = ''; updateClearButton(); search(true); inputEl.focus(); });
+    if (clearBtn && inputEl) clearBtn.addEventListener('click', resetSearch);
     if (govEl) govEl.addEventListener('change', function () { setDistrictOptions(govEl.value); if (distEl) distEl.value = ''; search(true); }); if (distEl) distEl.addEventListener('change', function () { search(true); });
     quickPills.forEach(function (pill) { pill.addEventListener('click', function () { selectGovernorate(pill.getAttribute('data-gov') || ''); }); });
+    if (resultsResetBtn) resultsResetBtn.addEventListener('click', resetSearch);
+    if (resultsEmptyResetBtn) resultsEmptyResetBtn.addEventListener('click', resetSearch);
+    if (resultsRetryBtn) resultsRetryBtn.addEventListener('click', function () { search(true); });
     if (resultsGrid) { resultsGrid.addEventListener('click', function (event) { const trigger = event.target.closest('[data-kg-id]'); if (trigger) openKgDetailsModal(trigger.getAttribute('data-kg-id'), trigger); }); resultsGrid.addEventListener('keydown', function (event) { const card = event.target.closest('article[data-kg-id]'); if (card && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); openKgDetailsModal(card.getAttribute('data-kg-id'), card); } }); }
     if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeKgDetailsModal); if (modalCloseFooterBtn) modalCloseFooterBtn.addEventListener('click', closeKgDetailsModal); if (modalEl) modalEl.addEventListener('click', function (event) { if (event.target === modalEl) closeKgDetailsModal(); });
     document.addEventListener('keydown', function (event) { if (!modalEl || modalEl.classList.contains('hidden')) return; if (event.key === 'Escape') { event.preventDefault(); closeKgDetailsModal(); return; } if (event.key !== 'Tab') return; const focusable = getFocusableModalElements(); if (!focusable.length) return; const first = focusable[0]; const last = focusable[focusable.length - 1]; if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); } });

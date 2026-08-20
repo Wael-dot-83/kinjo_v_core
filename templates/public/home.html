@@ -566,47 +566,59 @@
 
             </div>
 
+          </div>
 
-            <!-- Results Preview Panel -->
-            <div id="kg-search-results" class="mt-6 pt-6 border-t border-outline-variant/25 hidden">
-              
-              <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-2">
-                  <h2 class="text-base sm:text-lg text-primary font-bold">
-                    {% if ui_lang == 'en' %}Available Kindergartens{% else %}نتائج البحث والتصفية{% endif %}
-                  </h2>
-                  <span id="kg-results-count" class="text-xs text-on-surface-variant font-medium"></span>
-                </div>
-                <a href="/kindergartens" class="text-xs sm:text-sm font-bold text-primary hover:text-tertiary flex items-center gap-1 transition-colors">
-                  <span>{% if ui_lang == 'en' %}View Full Directory{% else %}استعراض السجل الكامل{% endif %}</span>
-                  <span class="material-symbols-outlined text-xs rtl:rotate-180" aria-hidden="true">arrow_forward</span>
-                </a>
+          <!-- Results workspace: separate from the search controls so results can grow without crowding the form. -->
+          <div id="kg-search-results" class="kinjo-results-panel mt-6 hidden" role="region" aria-labelledby="kg-results-title" aria-busy="false">
+            <div class="kinjo-results-header">
+              <div class="min-w-0">
+                <h2 id="kg-results-title" class="text-base sm:text-lg text-primary font-bold">
+                  {% if ui_lang == 'en' %}Available Kindergartens{% else %}نتائج البحث والتصفية{% endif %}
+                </h2>
+                <p id="kg-results-context" class="kinjo-results-context">
+                  {% if ui_lang == 'en' %}Choose a result to view its public details without signing in.{% else %}اختر نتيجة لعرض تفاصيل الحضانة العامة دون تسجيل الدخول.{% endif %}
+                </p>
               </div>
-
-              <!-- Loading State Skeleton -->
-              <div id="kg-results-loading" class="hidden text-center py-10">
-                <div class="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-surface-container text-primary font-semibold text-sm shadow-sm">
-                  <span class="material-symbols-outlined animate-spin text-tertiary text-xl" aria-hidden="true">sync</span>
-                  <span>{% if ui_lang == 'en' %}Loading verified kindergartens...{% else %}جارٍ تحميل الحضانات المعتمدة...{% endif %}</span>
-                </div>
+              <div class="kinjo-results-actions">
+                <span id="kg-results-count" class="kg-results-count"></span>
+                <button type="button" id="kg-results-reset" class="kg-results-reset">
+                  <span class="material-symbols-outlined text-sm" aria-hidden="true">restart_alt</span>
+                  <span>{% if ui_lang == 'en' %}Clear filters{% else %}مسح التصفية{% endif %}</span>
+                </button>
               </div>
+            </div>
 
-              <!-- Results Grid -->
-              <div id="kg-results-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            <!-- Loading State -->
+            <div id="kg-results-loading" class="hidden kinjo-results-state" role="status" aria-live="polite">
+              <span class="material-symbols-outlined animate-spin text-tertiary text-xl" aria-hidden="true">sync</span>
+              <span>{% if ui_lang == 'en' %}Loading verified kindergartens...{% else %}جارٍ تحميل الحضانات المعتمدة...{% endif %}</span>
+            </div>
 
-              <!-- Empty State -->
-              <div id="kg-results-empty" class="hidden text-center py-10 bg-surface-container-low rounded-xl border border-outline-variant/30">
-                <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 block" aria-hidden="true">search_off</span>
+            <!-- Results Grid -->
+            <div id="kg-results-grid" class="kinjo-results-grid"></div>
+
+            <!-- Empty State -->
+            <div id="kg-results-empty" class="hidden kinjo-results-state kinjo-results-empty">
+              <span class="material-symbols-outlined text-4xl text-on-surface-variant" aria-hidden="true">search_off</span>
+              <div>
                 <p class="font-bold text-primary text-base">{% if ui_lang == 'en' %}No kindergartens match your criteria.{% else %}لم يتم العثور على حضانات مطابقة لمعايير البحث.{% endif %}</p>
-                <p class="text-xs text-on-surface-variant mt-1">{% if ui_lang == 'en' %}Try clearing filters or changing the governorate.{% else %}يرجى محاولة تغيير المحافظة أو تخفيف معايير التصفية.{% endif %}</p>
+                <p class="text-xs text-on-surface-variant mt-1">{% if ui_lang == 'en' %}Try clearing filters or choosing a wider area.{% else %}جرّب مسح التصفية أو اختيار نطاق أوسع للبحث.{% endif %}</p>
               </div>
+              <button type="button" id="kg-results-empty-reset" class="kg-results-primary-action">
+                {% if ui_lang == 'en' %}Show all available kindergartens{% else %}عرض جميع الحضانات المتاحة{% endif %}
+              </button>
+            </div>
 
-              <!-- Error State -->
-              <div id="kg-results-error" class="hidden text-center py-8 text-error bg-red-50 rounded-xl border border-red-200">
-                <span class="material-symbols-outlined text-3xl mb-1" aria-hidden="true">error</span>
-                <p class="font-semibold text-sm">{% if ui_lang == 'en' %}Unable to load results. Please check connection and try again.{% else %}تعذر تحميل نتائج البحث. يرجى التأكد من الاتصال والمحاولة ثانية.{% endif %}</p>
+            <!-- Error State -->
+            <div id="kg-results-error" class="hidden kinjo-results-state kinjo-results-error" role="alert">
+              <span class="material-symbols-outlined text-3xl" aria-hidden="true">error</span>
+              <div>
+                <p class="font-semibold text-sm">{% if ui_lang == 'en' %}We could not load the search results.{% else %}تعذر تحميل نتائج البحث.{% endif %}</p>
+                <p class="text-xs mt-1">{% if ui_lang == 'en' %}Check your connection and try again. Your filters are still saved.{% else %}تحقق من الاتصال وحاول مرة أخرى. ستبقى خيارات البحث محفوظة.{% endif %}</p>
               </div>
-
+              <button type="button" id="kg-results-retry" class="kg-results-secondary-action">
+                {% if ui_lang == 'en' %}Try again{% else %}حاول مرة أخرى{% endif %}
+              </button>
             </div>
 
           </div>
@@ -1105,9 +1117,6 @@
   {% include "components/chatbot.html" %}
   <script src="/static/js/chatbot.js?v=81c1ad2b58bc"></script>
 
-  <!-- Search Engine Script -->
-  <script src="/static/js/home-search.js?v=3"></script>
-
   <!-- Navigation and Mobile Drawer Script -->
   <script>
     function toggleLanguage() {
@@ -1207,6 +1216,7 @@
 
       <!-- Modal Body -->
       <div class="space-y-4 overflow-y-auto pe-1 flex-1 text-sm text-on-surface">
+        <div id="modal-kg-status" class="hidden kinjo-modal-status" role="status" aria-live="polite"></div>
         
         <!-- Details Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -1351,6 +1361,9 @@
   <script>
     window.__CURRENT_USER__ = {{ 'true' if current_user else 'false' }};
   </script>
+
+  <!-- Search Engine Script: loaded after the public details modal markup exists. -->
+  <script src="/static/js/home-search.js?v=4"></script>
 
 </body>
 </html>
