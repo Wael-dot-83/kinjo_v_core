@@ -90,9 +90,9 @@
 </head>
 <body class="kinjo-public-home bg-surface text-on-surface {% if ui_lang == 'en' %}lang-en{% else %}lang-ar{% endif %} min-h-screen flex flex-col antialiased selection:bg-tertiary/30 selection:text-primary">
 
-  <!-- TopNavBar -->
-  <header class="kinjo-public-header sticky top-0 z-50 bg-primary text-white border-b border-white/15 shadow-md backdrop-blur-md bg-opacity-95" role="banner">
-    <div class="flex justify-between items-center w-full px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto h-20">
+  <!-- TopNavBar (with visible header background image) -->
+  <header class="kinjo-public-header sticky top-0 z-50 text-white border-b border-white/15 shadow-md relative overflow-hidden" style="background: linear-gradient(135deg, rgba(0, 47, 108, 0.86) 0%, rgba(0, 47, 108, 0.92) 100%), url('/static/images/kinjo-header-background.jpg') center/cover no-repeat;" role="banner">
+    <div class="flex justify-between items-center w-full px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto h-20 relative z-10">
       
       <!-- Brand Logo -->
       <a href="/" class="flex items-center gap-3 group focus:outline-none" aria-label="KinJo Homepage">
@@ -373,8 +373,8 @@
     <!-- Section 1: Search-First Hero -->
     <section id="kg-search-section" class="relative bg-surface-container-low overflow-hidden py-10 md:py-16 border-b border-outline-variant/20" aria-label="Search Kindergartens">
       <div class="absolute inset-0 z-0">
-        <div class="bg-cover bg-center w-full h-full opacity-40" style="background-image: url('/static/images/kinjo-hero-background.png');"></div>
-        <div class="absolute inset-0 bg-gradient-to-b from-surface-container-low/95 via-surface-container-low/90 to-white"></div>
+        <div class="bg-cover bg-center w-full h-full opacity-100" style="background-image: url('/static/images/kinjo-hero-background.png');"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-white/75 via-white/40 to-white/90"></div>
       </div>
 
       <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -798,7 +798,7 @@
                 >
                 <div class="absolute bottom-3 start-3 end-3 bg-white/95 backdrop-blur-sm px-3.5 py-2 rounded-xl border border-outline-variant/30 shadow-sm flex items-center justify-between text-xs font-bold text-primary">
                   <span class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span class="w-2 h-2 rounded-full bg-tertiary"></span>
                     <span>{% if ui_lang == 'en' %}Accredited Childcare Standards{% else %}معايير الرعاية والتعليم المعتمدة{% endif %}</span>
                   </span>
                   <span class="text-[11px] text-tertiary font-bold">KinJo Jordan</span>

@@ -21,28 +21,28 @@ Guide{% else %}دليل الخدمة{% endif %}{% endblock %} {% block meta_desc
     background:
       radial-gradient(
         circle at top left,
-        rgba(255, 164, 120, 0.16),
+        rgba(197, 160, 89, 0.12),
         transparent 20%
       ),
       radial-gradient(
         circle at 92% 8%,
-        rgba(117, 201, 245, 0.16),
+        rgba(0, 47, 108, 0.08),
         transparent 20%
       ),
-      linear-gradient(180deg, #fffdf7 0%, #f8fbff 100%);
+      linear-gradient(180deg, #fffdfa 0%, #f8faff 100%);
   }
 
   .service-guide-hero {
-    border: 1px solid rgba(31, 94, 71, 0.08);
+    border: 1px solid rgba(0, 47, 108, 0.1);
     border-radius: 1.5rem;
     background:
       radial-gradient(
         circle at 88% 16%,
-        rgba(255, 214, 115, 0.28),
+        rgba(197, 160, 89, 0.18),
         transparent 18%
       ),
-      linear-gradient(135deg, #ffffff 0%, #fffaf2 100%);
-    box-shadow: 0 1.2rem 2.8rem rgba(15, 23, 42, 0.08);
+      linear-gradient(135deg, #ffffff 0%, #fdfbf7 100%);
+    box-shadow: 0 1.2rem 2.8rem rgba(0, 47, 108, 0.06);
   }
 
   .service-guide-badge {
@@ -51,22 +51,22 @@ Guide{% else %}دليل الخدمة{% endif %}{% endblock %} {% block meta_desc
     gap: 0.45rem;
     padding: 0.45rem 0.8rem;
     border-radius: 999px;
-    background: rgba(255, 214, 115, 0.28);
-    color: #7a5200;
+    background: rgba(197, 160, 89, 0.18);
+    color: #002f6c;
     font-size: 0.85rem;
     font-weight: 700;
   }
 
   .service-guide-copy {
-    color: #5c6e67;
+    color: #475569;
     line-height: 1.8;
   }
 
   .service-guide-card {
-    border: 1px solid rgba(31, 94, 71, 0.08);
+    border: 1px solid rgba(0, 47, 108, 0.08);
     border-radius: 1.35rem;
-    background: linear-gradient(180deg, #ffffff 0%, #fffdf7 100%);
-    box-shadow: 0 1rem 2rem rgba(15, 23, 42, 0.06);
+    background: linear-gradient(180deg, #ffffff 0%, #fcfdfe 100%);
+    box-shadow: 0 1rem 2rem rgba(0, 47, 108, 0.05);
   }
 
   .service-guide-stat {
@@ -84,20 +84,20 @@ Guide{% else %}دليل الخدمة{% endif %}{% endblock %} {% block meta_desc
     justify-content: center;
     background: linear-gradient(
       135deg,
-      rgba(255, 164, 120, 0.24),
-      rgba(117, 201, 245, 0.24)
+      rgba(0, 47, 108, 0.1),
+      rgba(197, 160, 89, 0.18)
     );
-    color: #165041;
+    color: #002f6c;
     flex: 0 0 auto;
   }
 
   .service-guide-stat strong {
     display: block;
-    color: #17312a;
+    color: #002f6c;
   }
 
   .service-guide-stat span {
-    color: #5b6472;
+    color: #64748b;
   }
 </style>
 {% endblock %} {% block page_header %} {{ page_header( title="Service Guide" if
@@ -392,7 +392,7 @@ endblock %} {% block content %}
             <div class="service-guide-stat-icon">
               <i class="bi bi-people" aria-hidden="true"></i>
             </div>
-            <h3 class="h5 mb-0" style="color: #17312a">
+            <h3 class="h5 mb-0" style="color: #002f6c">
               {% if ui_lang == 'en' %}Parent &amp; Family Services{% else %}خدمات أولياء الأمور والأسر{% endif %}
             </h3>
           </div>
@@ -406,13 +406,13 @@ endblock %} {% block content %}
           <div class="row g-3">
             <div class="col-md-6">
               <div class="p-3 bg-light rounded-3">
-                <h4 class="h6 mb-2 text-primary font-bold"><i class="bi bi-check-circle-fill text-success me-2"></i>{% if ui_lang == 'en' %}Daily Care Reports{% else %}تقارير الرعاية اليومية{% endif %}</h4>
+                <h4 class="h6 mb-2 text-primary font-bold"><i class="bi bi-check-circle-fill text-primary me-2"></i>{% if ui_lang == 'en' %}Daily Care Reports{% else %}تقارير الرعاية اليومية{% endif %}</h4>
                 <p class="small text-muted mb-0">{% if ui_lang == 'en' %}Track meal times, sleep intervals, and activities logged directly by caregivers.{% else %}متابعة مواعيد الوجبات وفترات النوم والأنشطة الموثقة من المربيات أولاً بأول.{% endif %}</p>
               </div>
             </div>
             <div class="col-md-6">
               <div class="p-3 bg-light rounded-3">
-                <h4 class="h6 mb-2 text-primary font-bold"><i class="bi bi-check-circle-fill text-success me-2"></i>{% if ui_lang == 'en' %}Absence Requests{% else %}طلبات الإجازة والغياب{% endif %}</h4>
+                <h4 class="h6 mb-2 text-primary font-bold"><i class="bi bi-check-circle-fill text-primary me-2"></i>{% if ui_lang == 'en' %}Absence Requests{% else %}طلبات الإجازة والغياب{% endif %}</h4>
                 <p class="small text-muted mb-0">{% if ui_lang == 'en' %}Submit planned absences or health notices online without paper forms.{% else %}تقديم إشعارات الغياب والإجازات المرضية إلكترونياً دون الحاجة لمعاملات ورقية.{% endif %}</p>
               </div>
             </div>
@@ -427,7 +427,7 @@ endblock %} {% block content %}
             <div class="service-guide-stat-icon">
               <i class="bi bi-shield-check" aria-hidden="true"></i>
             </div>
-            <h3 class="h5 mb-0" style="color: #17312a">
+            <h3 class="h5 mb-0" style="color: #002f6c">
               {% if ui_lang == 'en' %}Supervisory &amp; Inspection Tools{% else %}أدوات الإشراف والرقابة التربوية{% endif %}
             </h3>
           </div>
@@ -462,7 +462,7 @@ endblock %} {% block content %}
             <div class="service-guide-stat-icon">
               <i class="bi bi-building" aria-hidden="true"></i>
             </div>
-            <h3 class="h5 mb-0" style="color: #17312a">
+            <h3 class="h5 mb-0" style="color: #002f6c">
               {% if ui_lang == 'en' %}Kindergarten Administration Solutions{% else %}حلول إدارة وتشغيل الحضانات{% endif %}
             </h3>
           </div>
@@ -483,7 +483,7 @@ endblock %} {% block content %}
             <div class="service-guide-stat-icon">
               <i class="bi bi-award" aria-hidden="true"></i>
             </div>
-            <h3 class="h5 mb-0" style="color: #17312a">
+            <h3 class="h5 mb-0" style="color: #002f6c">
               {% if ui_lang == 'en' %}National Early Childhood Standards{% else %}المعايير الوطنية للطفولة المبكرة{% endif %}
             </h3>
           </div>

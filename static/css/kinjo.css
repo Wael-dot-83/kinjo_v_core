@@ -2726,12 +2726,16 @@ body.sidebar-open .sidebar-backdrop {
 }
 .sidebar-role-badge.role-admin    { background: rgba(239,68,68,0.15); color: #fca5a5; }
 .sidebar-role-badge.role-manager  { background: rgba(245,158,11,0.15); color: #fcd34d; }
-.sidebar-role-badge.role-supervisor { background: rgba(31,94,71,0.15); color: #a8d4c4; }
-.sidebar-role-badge.role-parent   { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+.sidebar-role-badge.role-supervisor { background: rgba(0,47,108,0.25); color: #93c5fd; }
+.sidebar-role-badge.role-parent   { background: rgba(197,160,89,0.18); color: #c5a059; }
 
 /* ── Navbar Refinements ──────────────────────────────────────────────────── */
 .kinjo-navbar {
-  background: linear-gradient(135deg, #0f2d6b 0%, #1549b8 60%, #1d60e0 100%) !important;
+  background-color: #0f2d6b !important;
+  background-image: linear-gradient(135deg, rgba(15,45,107,0.88) 0%, rgba(21,73,184,0.85) 60%, rgba(29,96,224,0.80) 100%), url('/static/images/kinjo-header-background.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
   box-shadow: 0 1px 0 rgba(255,255,255,0.08), 0 4px 24px rgba(15,45,107,0.35) !important;
 }
 .kinjo-brand-icon {
@@ -2981,31 +2985,42 @@ body.sidebar-open .sidebar-backdrop {
 /* ── Page Header ────────────────────────────────────────────────────────── */
 .page-header-wrap {
   position: relative;
-  background-color: #ffffff;
+  background-color: #002f6c;
   background-image: 
-    linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 251, 255, 0.90) 100%),
+    linear-gradient(135deg, rgba(0, 47, 108, 0.80) 0%, rgba(0, 47, 108, 0.86) 100%),
     url('/static/images/kinjo-header-background.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  border-radius: 0.875rem;
-  border: 1px solid #edf2f7;
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.75rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.75rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 15px rgba(0, 47, 108, 0.12);
+  color: #ffffff;
 }
 .page-header-title {
-  font-size: 1.3125rem !important;
+  font-size: 1.35rem !important;
   font-weight: 800 !important;
-  color: var(--kinjo-text-primary) !important;
+  color: #ffffff !important;
   margin-bottom: 0.25rem !important;
   letter-spacing: -0.02em;
 }
+.page-header-wrap .text-muted,
+.page-header-wrap .breadcrumb-item,
+.page-header-wrap .breadcrumb-item a {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+.page-header-wrap .breadcrumb-item.active {
+  color: #c5a059 !important;
+  font-weight: 700;
+}
+
 
 
 /* ── Table Refinements ──────────────────────────────────────────────────── */
