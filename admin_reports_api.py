@@ -362,8 +362,10 @@ class _LazyMetrics(Mapping):
         return value
 
     def __iter__(self):
-        # Iterating asks for everything, so materialise everything. Callers that
-        # only read individual keys never reach this.
+        # Yields key names only; nothing is computed here. A caller that walks
+        # the values (dict(metrics), .items()) goes through __getitem__ and does
+        # materialise every deferred section, which is exactly what the old
+        # eager version always cost.
         return iter({**self._thunks, **self._values})
 
     def __len__(self):
