@@ -359,20 +359,26 @@ class TestRequirement6SessionCorrelation:
 
         assert first != second
 
-    def test_audit_listener_stamps_rows_written_during_a_session(self, test_db):
+    def test_audit_listener_stamps_rows_written_during_a_session(
+        self, test_db, admin_user
+    ):
         """database.py stamps every audit row created inside an impersonation."""
-        test_db.info["impersonated_by"] = 1
+        # Real user ids, not literals: audit_logs.user_id and .impersonated_by
+        # are foreign keys, and Postgres enforces them where SQLite does not.
+        actor_id = admin_user.id
+        test_db.info["impersonated_by"] = actor_id
         test_db.info["impersonation_reason"] = "support"
         test_db.info["impersonation_session_id"] = "session-under-test"
         try:
             row = models.AuditLog(
-                user_id=1, action="SOMETHING_ELSE", entity_type="User", entity_id=2
+                user_id=actor_id, action="SOMETHING_ELSE",
+                entity_type="User", entity_id=actor_id,
             )
             test_db.add(row)
             test_db.commit()
 
             assert row.impersonation_session_id == "session-under-test"
-            assert row.impersonated_by == 1
+            assert row.impersonated_by == actor_id
         finally:
             test_db.info.pop("impersonated_by", None)
             test_db.info.pop("impersonation_reason", None)
@@ -419,7 +425,11 @@ class TestRequirement8DailyQuota:
                 entity_id=manager_user.id,
                 created_at=_jordan_day_start(),
             ))
-        test_db.commit()
+            # One commit per row on purpose: batching these into an executemany
+            # trips the audit_logs.request_id type drift on Postgres (models.py
+            # declares String(36), the migration chain creates uuid). That is a
+            # real defect, but it is not what this test is measuring.
+            test_db.commit()
 
         response = _start(client, admin_token, manager_user.id)
 
@@ -437,7 +447,11 @@ class TestRequirement8DailyQuota:
                 entity_id=manager_user.id,
                 created_at=_jordan_day_start(),
             ))
-        test_db.commit()
+            # One commit per row on purpose: batching these into an executemany
+            # trips the audit_logs.request_id type drift on Postgres (models.py
+            # declares String(36), the migration chain creates uuid). That is a
+            # real defect, but it is not what this test is measuring.
+            test_db.commit()
 
         _start(client, admin_token, manager_user.id)
 
@@ -473,7 +487,7 @@ class TestRequirement8DailyQuota:
                 entity_id=manager_user.id,
                 created_at=_jordan_day_start(),
             ))
-        test_db.commit()
+            test_db.commit()
 
         response = _start(client, admin_token, manager_user.id)
 
