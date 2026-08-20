@@ -87,14 +87,39 @@ body.kinjo-public-home #kg-search-section {
 }
 
 body.kinjo-public-home #kg-search-section::before {
+  display: none;
+}
+
+body.kinjo-public-home #kg-search-section::after {
   content: "";
   position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(90deg, rgba(250, 249, 246, .92), rgba(250, 249, 246, .78)),
-    url('/static/img/landing/hero_bg.jpg') center / cover no-repeat;
-  opacity: .42;
+  inset-inline-end: clamp(1rem, 5vw, 5rem);
+  inset-block-start: clamp(5rem, 9vw, 7rem);
+  z-index: 1;
+  width: clamp(14rem, 24vw, 22rem);
+  height: clamp(18rem, 31vw, 28rem);
+  border: .5rem solid rgba(255, 255, 255, .86);
+  border-radius: 1.25rem;
+  background: url('/static/img/landing/classroom.jpg') center / cover no-repeat;
+  box-shadow: 0 24px 48px rgba(15, 61, 42, .22);
+  transform: rotate(-2deg);
   pointer-events: none;
+}
+
+/* Keep the existing Jordan child image as a visible part of the first
+   viewport. The previous overlay was too opaque and made the asset read as a
+   blank background, especially on large screens. */
+body.kinjo-public-home #kg-search-section > div.absolute.inset-0.z-0 {
+  opacity: 1 !important;
+}
+
+body.kinjo-public-home #kg-search-section > div.absolute.inset-0.z-0 > div:first-child {
+  opacity: .18 !important;
+  filter: saturate(.9) contrast(.96);
+}
+
+body.kinjo-public-home #kg-search-section > div.absolute.inset-0.z-0 > div.absolute {
+  background: linear-gradient(90deg, rgba(250, 249, 246, .18) 0%, rgba(250, 249, 246, .52) 44%, rgba(250, 249, 246, .94) 82%, var(--home-paper) 100%) !important;
 }
 
 body.kinjo-public-home #kg-search-section > div.relative {
@@ -280,6 +305,10 @@ body.kinjo-public-home footer a:hover {
 }
 
 @media (max-width: 899.98px) {
+  body.kinjo-public-home #kg-search-section::after {
+    display: none;
+  }
+
   body.kinjo-public-home #kg-search-section {
     min-height: auto;
     padding-block: 3.5rem 3rem !important;
