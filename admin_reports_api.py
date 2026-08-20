@@ -21,6 +21,12 @@ from dependencies import require_admin
 from validators import calculate_required_supervisors
 from config import settings
 from services.jordan_locations import governorate_filter
+from services.admin.reports.scoring import (
+    calculate_compliance_score,
+    calculate_data_quality_score,
+    calculate_risk_score,
+    rank_kindergartens_by_risk,
+)
 
 from pydantic import BaseModel, Field
 from typing import List
@@ -634,22 +640,23 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         if kg.latitude is None or kg.longitude is None:
             kindergartens_missing_coordinates += 1
 
-    compliance_violations = (
-        age_invalid_reasons["too_young"]
-        + age_invalid_reasons["too_old"]
-        + age_invalid_reasons["future_dob"]
-        + classes_with_children_no_supervisor
-        + kindergartens_no_supervisor_with_children
-        + kindergartens_over_capacity
-        + children_in_multiple_classes
-    )
-    # CHART-020: Compliance score formula mixes different violation types (age, staffing, capacity)
-    # This may produce misleading results as violations have different severity levels
-    # Consider weighting violations by severity or using separate compliance metrics
+    # ADMIN-SCORING-001: violations keyed to VIOLATION_RULES so each type is
+    # deducted at its own severity weight. The previous formula summed the
+    # counts and divided by (children + kindergartens + classes), which let a
+    # large network dilute an unsupervised class to a rounding error.
+    compliance_violations = {
+        "invalid_age_too_young": age_invalid_reasons["too_young"],
+        "invalid_age_too_old": age_invalid_reasons["too_old"],
+        "future_dob": age_invalid_reasons["future_dob"],
+        "missing_dob": age_invalid_reasons["missing_dob"],
+        "class_with_children_no_supervisor": classes_with_children_no_supervisor,
+        "kindergarten_no_supervisor_with_children": kindergartens_no_supervisor_with_children,
+        "kindergarten_over_capacity": kindergartens_over_capacity,
+        "child_in_multiple_classes": children_in_multiple_classes,
+    }
+    compliance = calculate_compliance_score(compliance_violations)
+    compliance_score = compliance["score"]
 
-    # CHART-019: data_quality_score: % of active kindergartens in scope that filed a report in the last 7 days
-    # This matches the canonical definition in admin_endpoints.py and CLAUDE.md.
-    # Note: This measures report filing rate, not general data quality
     active_kg_count = len(kindergartens)
     if active_kg_count > 0 and kg_ids:
         kg_with_recent_report = (
@@ -661,12 +668,37 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
             .scalar()
             or 0
         )
-        data_quality_score = round((kg_with_recent_report / active_kg_count) * 100.0, 2)
     else:
-        data_quality_score = 0.0
+        kg_with_recent_report = 0
 
-    entity_base = max(1, total_children + active_kg_count + len(classes))
-    compliance_score = max(0.0, round(100.0 - ((compliance_violations / entity_base) * 100.0), 2))
+    # ADMIN-SCORING-002: report-filing rate is now only the timeliness
+    # dimension (20%), not the whole score. Completeness is measured over the
+    # four child fields already counted above -- date of birth, gender,
+    # kindergarten assignment and class assignment -- so the dimension costs
+    # no additional queries (mandate 4).
+    fields_per_child = 4
+    total_fields_required = total_children * fields_per_child
+    missing_fields = (
+        age_invalid_reasons["missing_dob"]
+        + gender_counts["unknown"]
+        + children_without_kindergarten
+        + children_without_class
+    )
+    total_fields_filled = max(0, total_fields_required - missing_fields)
+
+    data_quality = calculate_data_quality_score(
+        total_children=total_children,
+        missing_dob_count=age_invalid_reasons["missing_dob"],
+        missing_gender_count=gender_counts["unknown"],
+        invalid_age_count=age_invalid_reasons["too_young"] + age_invalid_reasons["too_old"],
+        duplicate_count=duplicate_children,
+        total_enrollments=sum(enrollment_status_counts.values()),
+        active_kg_count=active_kg_count,
+        kg_with_recent_report=kg_with_recent_report,
+        total_fields_required=total_fields_required,
+        total_fields_filled=total_fields_filled,
+    )
+    data_quality_score = data_quality["overall_score"]
 
     metrics = {
         "period": {"from": date_from.isoformat(), "to": date_to.isoformat()},
@@ -698,7 +730,11 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         "kindergartens_missing_coordinates": kindergartens_missing_coordinates,
         "kindergartens_missing_capacity": kindergartens_missing_capacity,
         "data_quality_score": data_quality_score,
+        "data_quality": data_quality,
         "compliance_score": compliance_score,
+        "compliance": compliance,
+        "compliance_violations": compliance_violations,
+        "kg_with_recent_report": kg_with_recent_report,
         "by_governorate": list(by_governorate.values()),
         "by_city": list(by_city.values()),
         "by_area": list(by_area.values()),
@@ -707,51 +743,65 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
 
 
 def _risk_rows(metrics: dict[str, Any]) -> list[dict[str, Any]]:
-    # CHART-018: Risk ranking currently uses city-level aggregation only
-    # Future enhancement: Add kindergarten/class-level risk ranking for more granular insights
+    """Rank the in-scope cities by risk (ADMIN-SCORING-003).
+
+    Two changes from the previous implementation:
+
+    * The raw score is the composite pressure score from the scoring module
+      (capacity 0.4, staffing 0.4, unsupervised classes 0.2) instead of a
+      ladder of hand-picked increments.
+    * The band is a percentile against the population in scope, not an
+      absolute cut-off. The old thresholds (>=60 critical, >=35 warning)
+      reported nothing at risk in a uniformly healthy network and everything
+      critical in a stressed one; percentile bands always surface the worst
+      10%, which is what an inspection schedule actually needs.
+
+    CHART-018: still aggregated at city level. Kindergarten-level ranking
+    needs per-facility coordinates and class rollups that this metrics bundle
+    does not carry.
+    """
     rows: list[dict[str, Any]] = []
     for row in metrics.get("by_city", []):
         children = row.get("children_count", 0)
         supervisors = row.get("supervisor_count", 0)
         capacity = row.get("capacity", 0)
+        class_count = row.get("class_count", 0)
+
         cps = _safe_div(children, supervisors)
         cap_util = _pct(children, capacity)
-        score = 0
-        if supervisors == 0 and children > 0:
-            score += 45
-        elif cps > 12:
-            score += 25
-        elif cps > 8:
-            score += 12
 
-        if cap_util > 100:
-            score += 35
-        elif cap_util > 85:
-            score += 15
+        # Same 1-supervisor-per-4-children ratio the class-level requirement
+        # uses in _collect_core_metrics, applied to the city total.
+        required_supervisors = -(-children // 4) if children > 0 else 0
+        supervisor_gap = max(0, required_supervisors - supervisors)
 
-        if row.get("class_count", 0) == 0 and children > 0:
-            score += 20
+        # A city with children but no classes on record has, in effect, all of
+        # its children in unsupervised arrangements.
+        classes_without_supervisor = 1 if (class_count == 0 and children > 0) else 0
 
-        if score >= 60:
-            status = "critical"
-        elif score >= 35:
-            status = "warning"
-        else:
-            status = "normal"
+        raw_score = calculate_risk_score(
+            capacity_utilization_pct=cap_util,
+            supervisor_gap=supervisor_gap,
+            children_count=children,
+            has_missing_capacity=(capacity <= 0 and children > 0),
+            has_missing_coordinates=False,
+            classes_without_supervisor=classes_without_supervisor,
+        )
 
         rows.append(
             {
                 "governorate": row.get("governorate"),
                 "city": row.get("city"),
-                "risk_score": min(score, 100),
-                "risk_status": status,
+                "id": f"{row.get('governorate')}/{row.get('city')}",
+                "raw_score": raw_score,
+                "risk_score": raw_score,
                 "children_per_supervisor": cps,
                 "capacity_utilization_pct": cap_util,
+                "supervisor_gap": supervisor_gap,
             }
         )
 
-    rows.sort(key=lambda x: x["risk_score"], reverse=True)
-    return rows
+    return rank_kindergartens_by_risk(rows)
 
 
 def _classify_kindergarten(
@@ -1674,14 +1724,9 @@ def data_quality_report(
     prev_start, prev_end = _prev_period(start, end)
     prev_metrics = _collect_core_metrics(db, filters, prev_start, prev_end)
     score = metrics["data_quality_score"]
-    if score >= 95:
-        status_band = "green"
-    elif score >= 85:
-        status_band = "yellow"
-    elif score >= 70:
-        status_band = "orange"
-    else:
-        status_band = "red"
+    # ADMIN-SCORING-002: the band comes from the scoring module so endpoints
+    # cannot drift from the authoritative thresholds.
+    status_band = metrics["data_quality"]["status"]
     quality_delta = _delta(score, prev_metrics["data_quality_score"])
     sign = lambda v: "+" if v > 0 else ""
     return {
@@ -1706,6 +1751,8 @@ def data_quality_report(
             "kindergartens_missing_capacity": metrics["kindergartens_missing_capacity"],
             "classes_with_children_no_supervisor": metrics["classes_with_children_no_supervisor"],
         },
+        # ADMIN-SCORING-002: the four weighted dimensions behind the score.
+        "dimensions": metrics["data_quality"]["dimensions"],
         "interpretation": {
             "summary": _localized(
                 "يعكس المؤشر مدى اكتمال وصحة السجلات التشغيلية.",
@@ -1750,14 +1797,8 @@ def compliance_report(
     prev_start, prev_end = _prev_period(start, end)
     prev_metrics = _collect_core_metrics(db, filters, prev_start, prev_end)
     score = metrics["compliance_score"]
-    if score >= 95:
-        status_band = "green"
-    elif score >= 85:
-        status_band = "yellow"
-    elif score >= 70:
-        status_band = "orange"
-    else:
-        status_band = "red"
+    # ADMIN-SCORING-001: band supplied by the scoring module.
+    status_band = metrics["compliance"]["status"]
     compliance_delta = _delta(score, prev_metrics["compliance_score"])
     sign = lambda v: "+" if v > 0 else ""
     return {
@@ -1778,6 +1819,11 @@ def compliance_report(
             "kindergartens_no_supervisor_with_children": metrics["kindergartens_no_supervisor_with_children"],
             "kindergartens_over_capacity": metrics["kindergartens_over_capacity"],
         },
+        # ADMIN-SCORING-001: what each violation type actually cost, so a
+        # reader can see why the score is where it is instead of guessing.
+        "severity_breakdown": metrics["compliance"]["breakdown"],
+        "weighted_violations": metrics["compliance"]["violations"],
+        "total_deduction": metrics["compliance"]["total_deduction"],
         "interpretation": {
             "summary": _localized(
                 "مؤشر الامتثال يقيس الالتزام بالقواعد التنظيمية والتشغيلية.",
