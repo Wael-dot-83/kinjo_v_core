@@ -306,17 +306,8 @@
   window.showLoginPromptModal = showLoginPromptModal;
   window.closeLoginPromptModal = closeLoginPromptModal;
 
-  // Intercept View Details: Check Authentication Flow
+  // View Details: Open Full Kindergarten Details Dialog Directly (No login required)
   async function openKgDetailsModal(kgId) {
-    const isAuthenticated = (typeof window.__CURRENT_USER__ === 'boolean') ? window.__CURRENT_USER__ : false;
-    
-    // Unauthenticated State: Show Login Prompt Dialog
-    if (!isAuthenticated) {
-      showLoginPromptModal(kgId);
-      return;
-    }
-
-    // Authenticated State: Open Full Kindergarten Details Dialog
     if (!modalEl) return;
     const uiLang = document.documentElement.lang === 'en' ? 'en' : 'ar';
 
