@@ -15,7 +15,7 @@ import models
 import validators
 from config import settings
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, Permission, has_global_scope, has_permission, has_role
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ def create_task(
 ):
     """Create a new task"""
     # Validate role - only admin, manager, supervisor can create tasks
-    if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR]:
+    if not has_role(current_user, models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
         raise HTTPException(status_code=403, detail="Not authorized to create tasks")
 
     # Resolve kindergarten: admins may optionally specify one; others use their assigned one
@@ -150,7 +150,7 @@ def get_tasks(
     query = db.query(models.Task)
 
     # Filter by kindergarten for non-admin users
-    if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id:
+    if not has_global_scope(current_user) and current_user.kindergarten_id:
         query = query.filter(models.Task.kindergarten_id == current_user.kindergarten_id)
 
     if status_filter:
@@ -202,7 +202,7 @@ def get_task(task_id: int, current_user: models.User = Depends(get_current_user)
         raise HTTPException(status_code=404, detail="Task not found")
 
     # Check access
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         if task.kindergarten_id != current_user.kindergarten_id:
             raise HTTPException(status_code=403, detail="Access denied")
 
@@ -235,7 +235,7 @@ def update_task(
         raise HTTPException(status_code=404, detail="Task not found")
 
     # Check access
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         if task.kindergarten_id != current_user.kindergarten_id:
             raise HTTPException(status_code=403, detail="Access denied")
 
@@ -291,7 +291,7 @@ def toggle_task_status(
         raise HTTPException(status_code=404, detail="Task not found")
 
     # Check access
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         if task.kindergarten_id != current_user.kindergarten_id:
             raise HTTPException(status_code=403, detail="Access denied")
 
@@ -330,7 +330,7 @@ def delete_task(task_id: int, current_user: models.User = Depends(get_current_us
         raise HTTPException(status_code=404, detail="Task not found")
 
     # Check access - only creator or admin can delete
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         if task.created_by != current_user.id:
             raise HTTPException(status_code=403, detail="Only task creator or admin can delete")
 

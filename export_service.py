@@ -17,6 +17,7 @@ from kpi_service import get_consolidated_kpi_dashboard_data
 from cache_service import cache_service
 from utils.time_utils import now_amman, to_jordan_date
 import models
+from dependencies import Permission, has_permission
 
 logger = logging.getLogger(__name__)
 
@@ -206,7 +207,7 @@ class ExportService:
             models.AttendanceLog.date <= date_to
         )
 
-        if user.role != models.UserRole.ADMIN:
+        if not has_permission(user, Permission.ADMIN_PANEL):
             query = query.join(models.Child).join(models.EnrollmentApplication).filter(
                 models.EnrollmentApplication.kindergarten_id == user.kindergarten_id
             )
@@ -232,7 +233,7 @@ class ExportService:
             *jordan_date_range_filter(models.Incident.occurred_at, date_from, date_to)
         )
 
-        if user.role != models.UserRole.ADMIN:
+        if not has_permission(user, Permission.ADMIN_PANEL):
             query = query.filter(models.Incident.kindergarten_id == user.kindergarten_id)
 
         incidents = query.limit(1000).all()
@@ -256,7 +257,7 @@ class ExportService:
             *jordan_date_range_filter(models.EnrollmentApplication.created_at, date_from, date_to)
         )
 
-        if user.role != models.UserRole.ADMIN:
+        if not has_permission(user, Permission.ADMIN_PANEL):
             query = query.filter(models.EnrollmentApplication.kindergarten_id == user.kindergarten_id)
 
         enrollments = query.limit(1000).all()

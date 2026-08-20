@@ -15,7 +15,7 @@ import validators
 from audit_actions import AuditAction
 from config import settings
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, has_role
 from i18n import gettext as _api
 
 
@@ -176,7 +176,7 @@ def create_enrollment_application(
     db: Session = Depends(get_db)
 ):
     """Create a new enrollment application (Parent only)"""
-    if current_user.role != models.UserRole.PARENT:
+    if not has_role(current_user, models.UserRole.PARENT):
         raise HTTPException(status_code=403, detail=_api("Only parents can apply for enrollment", _ulang(current_user)))
 
     # Get parent profile
@@ -384,7 +384,7 @@ def review_enrollment(
 
     # Authorize before validating workflow state so a foreign manager cannot
     # enumerate another tenant's application status through response differences.
-    if current_user.role not in [models.UserRole.MANAGER, models.UserRole.ADMIN]:
+    if not has_role(current_user, models.UserRole.MANAGER, models.UserRole.ADMIN):
         raise HTTPException(status_code=403, detail="Only managers can review applications")
     if (
         current_user.role == models.UserRole.MANAGER

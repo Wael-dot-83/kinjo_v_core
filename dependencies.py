@@ -210,7 +210,7 @@ async def get_current_user_with_password_check(
 async def get_current_admin_user(
     current_user: models.User = Depends(get_current_user)
 ) -> models.User:
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access only"
@@ -529,7 +529,7 @@ def get_current_parent(
 
     lang = getattr(current_user, "preferred_language", None) or "ar"
 
-    if current_user.role != models.UserRole.PARENT:
+    if not has_role(current_user, models.UserRole.PARENT):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_("Parent access only", lang))
 
     profile = (
@@ -565,7 +565,7 @@ class ManagerScope:
     @staticmethod
     def validate_manager(user: models.User) -> None:
         """Require MANAGER role with a kindergarten assigned."""
-        if user.role != models.UserRole.MANAGER:
+        if not has_role(user, models.UserRole.MANAGER):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="This operation requires manager role")
         if not user.kindergarten_id:
@@ -611,7 +611,7 @@ def require_manager(current_user: models.User = Depends(get_current_user)) -> mo
     whole app to 400 would require touching the app-wide validators.validate_
     manager_role callers, which is outside this change.
     """
-    if current_user.role != models.UserRole.MANAGER:
+    if not has_role(current_user, models.UserRole.MANAGER):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Manager access only.")
     if current_user.kindergarten_id is None:

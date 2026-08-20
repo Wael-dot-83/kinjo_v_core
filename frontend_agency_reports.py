@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 import models
-from dependencies import get_current_user_or_redirect
+from dependencies import get_current_user_or_redirect, Permission, has_permission
 from frontend import templates
 from utils.time_utils import today_amman as _today
 
@@ -13,7 +13,7 @@ router = APIRouter(include_in_schema=False)
 
 
 def _ensure_admin(current_user: models.User):
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         return RedirectResponse(url="/dashboard", status_code=302)
     return None
 

@@ -20,7 +20,7 @@ import models
 import validators
 from api.absence_requests import MAX_ABSENCE_SPAN_DAYS
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, has_role
 from utils.time_utils import today_amman
 
 router = APIRouter()
@@ -239,7 +239,7 @@ def global_search(
     if current_user.role == models.UserRole.ADMIN:
         # Users
         users = db.query(models.User).filter(
-            models.User.role != models.UserRole.ADMIN,
+            models.user_role_is_not(models.UserRole.ADMIN),
             models.User.username.ilike(term) | models.User.email.ilike(term),
         ).limit(20).all()
         for u in users:
@@ -645,7 +645,7 @@ def create_absence_request(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if current_user.role != models.UserRole.PARENT:
+    if not has_role(current_user, models.UserRole.PARENT):
         raise HTTPException(status_code=403, detail="Parents only")
 
     if body.to_date < body.from_date:
@@ -727,7 +727,7 @@ def supervisor_my_children(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if current_user.role != models.UserRole.SUPERVISOR:
+    if not has_role(current_user, models.UserRole.SUPERVISOR):
         raise HTTPException(status_code=403, detail="Supervisor role required")
 
     assignments = (

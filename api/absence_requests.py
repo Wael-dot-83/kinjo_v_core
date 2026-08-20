@@ -14,7 +14,7 @@ from pydantic import BaseModel, field_validator
 
 import models
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, has_role
 from audit_actions import AuditAction
 
 router = APIRouter(tags=["Absence Requests"])
@@ -36,7 +36,7 @@ def _require_scoped_manager(current_user: models.User) -> None:
     without a kindergarten has no scope and must not fall through to an
     unscoped query.
     """
-    if current_user.role != models.UserRole.MANAGER:
+    if not has_role(current_user, models.UserRole.MANAGER):
         raise HTTPException(status_code=403, detail="Only managers can decide absence requests")
     if current_user.kindergarten_id is None:
         raise HTTPException(status_code=403, detail="No kindergarten is associated with this manager account")
@@ -103,7 +103,7 @@ def create_absence_request(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if current_user.role != models.UserRole.PARENT:
+    if not has_role(current_user, models.UserRole.PARENT):
         raise HTTPException(status_code=403, detail="Only parents can create absence requests")
 
     parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
@@ -256,7 +256,7 @@ def cancel_absence_request(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if current_user.role != models.UserRole.PARENT:
+    if not has_role(current_user, models.UserRole.PARENT):
         raise HTTPException(status_code=403, detail="Only parents can cancel")
 
     parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()

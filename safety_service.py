@@ -14,7 +14,7 @@ from pydantic import BaseModel
 import models
 import validators
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, Permission, has_permission
 from rbac import assert_supervisor_owns_child, get_supervisor_child_ids, get_supervisor_class_ids
 
 router = APIRouter()
@@ -167,7 +167,7 @@ def list_incidents(
     )
     
     # Filter by kindergarten for non-admins
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         query = query.filter(models.Incident.kindergarten_id == current_user.kindergarten_id)
         if current_user.role == models.UserRole.SUPERVISOR:
             # Supervisor can only see incidents for children in their class
@@ -250,7 +250,7 @@ def get_incidents_summary(
         raise HTTPException(status_code=403, detail="Only staff can view incidents")
     query = db.query(models.Incident).filter(models.Incident.deleted_at.is_(None))
     
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         query = query.filter(models.Incident.kindergarten_id == current_user.kindergarten_id)
         if current_user.role == models.UserRole.SUPERVISOR:
             supervisor_classes = list(get_supervisor_class_ids(current_user.id, db))
@@ -421,7 +421,7 @@ def get_health_alerts_summary(
         )
     )
 
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         # Filter by kindergarten enrollment
         kindergarten_id = current_user.kindergarten_id
         
@@ -522,7 +522,7 @@ def create_safeguarding_case(
         raise HTTPException(status_code=400, detail="Kindergarten ID is required")
 
     # Scope check for managers
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         validators.validate_kindergarten_scope(current_user, kindergarten_id)
 
     # Verify child exists

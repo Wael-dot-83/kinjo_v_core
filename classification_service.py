@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 import models
 from cache_service import dashboard_cache
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, Permission, has_permission, has_role
 from kpi_service import KPIService
 from admin_security import log_audit_event
 from audit_actions import AuditAction
@@ -104,22 +104,22 @@ DEFAULT_COUNTRY_NAME = "الأردن"
 
 
 def _ensure_admin(user: models.User) -> None:
-    if user.role != models.UserRole.ADMIN:
+    if not has_permission(user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access only")
 
 
 def _ensure_manager_only(user: models.User) -> None:
-    if user.role != models.UserRole.MANAGER:
+    if not has_role(user, models.UserRole.MANAGER):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager access only")
 
 
 def _ensure_supervisor_only(user: models.User) -> None:
-    if user.role != models.UserRole.SUPERVISOR:
+    if not has_role(user, models.UserRole.SUPERVISOR):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Supervisor access only")
 
 
 def _ensure_parent_only(user: models.User) -> None:
-    if user.role != models.UserRole.PARENT:
+    if not has_role(user, models.UserRole.PARENT):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Parent access only")
 
 

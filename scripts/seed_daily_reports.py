@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from database import SessionLocal, engine, Base
 from config import settings
 import models
+from dependencies import has_role
 
 random.seed(42)
 
@@ -100,7 +101,7 @@ def seed(kg_id: int = 1, start: str = "2026-02-01", end: str = "2026-02-09"):
 
         if (
             manager.deleted_at is not None
-            or manager.role != models.UserRole.MANAGER
+            or not has_role(manager, models.UserRole.MANAGER)
             or manager.status != models.UserStatus.ACTIVE
             or manager.kindergarten_id != kg_id
         ):

@@ -27,7 +27,7 @@ except ImportError:
 
 import models
 from database import get_db, SessionLocal
-from dependencies import get_current_user, get_current_user_or_redirect
+from dependencies import get_current_user, get_current_user_or_redirect, Permission, has_global_scope, has_permission
 from services.jordan_locations import governorate_filter
 from kpi_service import KPIService
 from data_quality_enhanced import enhanced_data_quality_service
@@ -327,7 +327,7 @@ def validate_dashboard_data(data: dict) -> dict:
 
 
 def _ensure_admin_only(current_user: models.User):
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=403, detail="Admin only")
 
 
@@ -828,7 +828,7 @@ def get_narrative_summary(
     if period_start > period_end:
         raise HTTPException(status_code=422, detail="period_start must be before or equal to period_end")
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
 
     kg_filter = _kg_ids_for_governorate(db, governorate)
@@ -1246,7 +1246,7 @@ def get_target_progress(
 ):
     """Show progress toward targets with velocity and ETA"""
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
 
     kg_filter = _kg_ids_for_governorate(db, governorate)
@@ -1356,7 +1356,7 @@ def get_network_rankings(
 ):
     """Get network-wide rankings with percentile positions"""
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
 
     breakdown = AnalyticsService.get_governorate_breakdown(db, period_start, period_end, governorate, allowed_kgs, None)
@@ -1535,7 +1535,7 @@ def invalidate_advanced_analytics_cache(
     request: Request = None,
 ):
     _validate_csrf_token(request)
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=403, detail="Admin only")
     count = AnalyticsService.invalidate_advanced_analytics_cache(
         db,
@@ -1555,7 +1555,7 @@ def warm_advanced_analytics_cache(
     request: Request = None,
 ):
     _validate_csrf_token(request)
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=403, detail="Admin only")
     count = AnalyticsService.warm_advanced_analytics_cache(
         db,
@@ -1780,7 +1780,7 @@ def get_network_summary_endpoint(
     if period_start > period_end:
         raise HTTPException(status_code=422, detail="period_start must be before or equal to period_end")
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
 
     kg_filter = _kg_ids_for_governorate(db, governorate)
@@ -1803,12 +1803,12 @@ def get_governorate_breakdown_endpoint(
     if period_start > period_end:
         raise HTTPException(status_code=422, detail="period_start must be before or equal to period_end")
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
 
     allowed_govs = _allowed_governorates(current_user, db) or []
     gov_filter = governorate
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         if gov_filter and gov_filter not in allowed_govs:
             raise HTTPException(status_code=403, detail="Governorate not allowed")
         if not gov_filter and len(allowed_govs) == 1:
@@ -1831,7 +1831,7 @@ def get_action_queue(
     if period_start > period_end:
         raise HTTPException(status_code=422, detail="period_start must be before or equal to period_end")
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
 
     kg_filter = _kg_ids_for_governorate(db, governorate)
@@ -1912,7 +1912,7 @@ def get_root_cause(
 ):
     """Analyze root causes for metric underperformance"""
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
 
     kg_filter = _kg_ids_for_governorate(db, governorate)
@@ -2289,7 +2289,7 @@ def get_consolidated_dashboard_data(
     try:
         allowed_kgs = _allowed_kindergarten_ids(current_user, db)
         allowed_govs: Optional[List[str]] = None
-        if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+        if not has_global_scope(current_user) and not allowed_kgs:
             raise HTTPException(status_code=403, detail="Access denied")
         
         # Validate date range
@@ -2302,7 +2302,7 @@ def get_consolidated_dashboard_data(
 
         # Resolve filter set: intersection of allowed and requested governorate
         gov_filter = governorate
-        if current_user.role != models.UserRole.ADMIN:
+        if not has_permission(current_user, Permission.ADMIN_PANEL):
             allowed_govs = _allowed_governorates(current_user, db) or []
             if gov_filter and gov_filter not in allowed_govs:
                 raise HTTPException(status_code=403, detail="Governorate not allowed")
@@ -2454,7 +2454,7 @@ def get_insights(
 ):
     """Generate actionable insights for the dashboard"""
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
 
     gov_filter = _kg_ids_for_governorate(db, governorate)
@@ -2489,7 +2489,7 @@ def get_annotations(
         raise HTTPException(status_code=422, detail="period_start must be before or equal to period_end")
 
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
 
     annotations: List[Dict[str, Any]] = []
@@ -2633,7 +2633,7 @@ def get_network_trends_endpoint(
     if period_start > period_end:
         raise HTTPException(status_code=422, detail="period_start must be before or equal to period_end")
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
     kg_filter = _kg_ids_for_governorate(db, governorate)
     if allowed_kgs is not None and kg_filter is not None:
@@ -2649,7 +2649,7 @@ def get_risk_radar_endpoint(
 ):
     """Get list of high-risk entities (scoped)"""
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
     return AnalyticsService.get_high_risk_children(db, allowed_kgs)
 
@@ -3264,7 +3264,7 @@ def get_analytics_overview(
     """
     validators.validate_admin_role(current_user)
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
 
     allowed_govs = _allowed_governorates(current_user, db) or []
@@ -3357,7 +3357,7 @@ def get_drilldown(
     dim = dimension_type.upper()
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
     allowed_govs = _allowed_governorates(current_user, db) or []
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
 
     period_start, period_end = get_date_range(start_date, end_date)
@@ -3368,7 +3368,7 @@ def get_drilldown(
     if dim == "NETWORK":
         # Country level -> list governorates. dimension_id is ignored (use "all").
         base = []
-        if allowed_govs and current_user.role != models.UserRole.ADMIN:
+        if allowed_govs and not has_global_scope(current_user):
             base.append(models.Kindergarten.governorate.in_(allowed_govs))
         nurseries, children = _drilldown_geo_rollup(
             db, models.Kindergarten.governorate, base, allowed_kgs
@@ -3398,7 +3398,7 @@ def get_drilldown(
         )
 
     if dim == "GOVERNORATE":
-        if current_user.role != models.UserRole.ADMIN and allowed_govs and dimension_id not in allowed_govs:
+        if not has_global_scope(current_user) and allowed_govs and dimension_id not in allowed_govs:
             raise HTTPException(status_code=403, detail="Governorate not allowed")
 
         # Governorate level -> list Cities (distinct areas) within the governorate.
@@ -3688,7 +3688,7 @@ def get_time_series_data(
         dimension_id = str(enforced) if enforced else None
         kg_scope = [int(dimension_id)] if dimension_id else allowed_kgs
     elif dim_upper == "GOVERNORATE":
-        if current_user.role != models.UserRole.ADMIN:
+        if not has_permission(current_user, Permission.ADMIN_PANEL):
             if not allowed_kgs:
                 raise HTTPException(status_code=403, detail="Access denied")
             if dimension_id and dimension_id not in allowed_govs:
@@ -3697,7 +3697,7 @@ def get_time_series_data(
         if allowed_kgs is not None and kg_scope is not None:
             kg_scope = [kg for kg in kg_scope if kg in allowed_kgs]
     else:  # NETWORK or others
-        if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+        if not has_global_scope(current_user) and not allowed_kgs:
             raise HTTPException(status_code=403, detail="Access denied")
         kg_scope = allowed_kgs
 
@@ -3743,7 +3743,7 @@ def compare_endpoint(
             raise HTTPException(status_code=422, detail="compare_start must be before or equal to compare_end")
 
         allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-        if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+        if not has_global_scope(current_user) and not allowed_kgs:
             raise HTTPException(status_code=403, detail="Access denied")
 
         kg_filter = _kg_ids_for_governorate(db, governorate)
@@ -3803,7 +3803,7 @@ def compare_endpoint(
         raise HTTPException(status_code=422, detail="kg_ids is required for kindergarten comparison")
 
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
 
     period_start, period_end = get_date_range(start_date, end_date)
@@ -3846,7 +3846,7 @@ def get_metric_rankings(
     period_start, period_end = get_date_range(period_start, period_end)
 
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
 
     kg_filter = _kg_ids_for_governorate(db, governorate)
@@ -3901,7 +3901,7 @@ def get_governance_distribution_endpoint(
 ):
     """Get the distribution of kindergartens by governance band."""
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+    if not has_global_scope(current_user) and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
     period_start, period_end = get_date_range(start_date, end_date)
     return AnalyticsService.get_governance_distribution(db, period_start, period_end, allowed_kgs)
@@ -3924,7 +3924,7 @@ def get_kpi_analytics(
 
     # Scope by user role — use the standard scope helpers
     kg_id = kindergarten_id
-    if current_user.role not in [models.UserRole.ADMIN]:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         allowed_kgs = _allowed_kindergarten_ids(current_user, db)
         # allowed_kindergarten_ids() returns None for "unrestricted (admin)" and an
         # empty list for "no access at all". Both are falsy, so guarding on
@@ -4100,7 +4100,7 @@ def get_analytics_attendance(
     # kg_id became None and every query below ran unscoped, returning network-wide
     # figures. Establish that the caller has a scope before relying on it.
     kg_id = kindergarten_id
-    if current_user.role not in [models.UserRole.ADMIN]:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         allowed_kgs = _allowed_kindergarten_ids(current_user, db)
         if not allowed_kgs:
             raise HTTPException(status_code=403, detail="Access denied")
@@ -4185,7 +4185,7 @@ def get_analytics_dashboard(
     # kg_id became None and every query below ran unscoped, returning network-wide
     # figures. Establish that the caller has a scope before relying on it.
     kg_id = kindergarten_id
-    if current_user.role not in [models.UserRole.ADMIN]:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         allowed_kgs = _allowed_kindergarten_ids(current_user, db)
         if not allowed_kgs:
             raise HTTPException(status_code=403, detail="Access denied")

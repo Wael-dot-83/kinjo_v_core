@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 import models
 from database import get_db
-from dependencies import get_current_user, require_admin, require_admin_or_manager
+from dependencies import get_current_user, require_admin, require_admin_or_manager, Permission, has_permission
 import validators
 from translations import setup_translator
 from child_age_policy import get_child_age_bounds
@@ -2959,7 +2959,7 @@ def populate_ratio_compliance_data(
 
     if current_user.role == models.UserRole.MANAGER and kindergarten_id is None:
         kindergarten_id = current_user.kindergarten_id
-    elif current_user.role != models.UserRole.ADMIN:
+    elif not has_permission(current_user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=403, detail="Admin or Manager role required")
 
     if not kindergarten_id:

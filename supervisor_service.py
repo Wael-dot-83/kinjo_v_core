@@ -9,6 +9,7 @@ from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_, func
 import models
+from dependencies import has_role
 import validators
 from audit_actions import AuditAction
 from validators import ValidationError
@@ -45,7 +46,7 @@ class SupervisorService:
         """
         Get all classes assigned to a supervisor
         """
-        if supervisor_user.role != models.UserRole.SUPERVISOR:
+        if not has_role(supervisor_user, models.UserRole.SUPERVISOR):
             raise ValidationError("User is not a supervisor", level=4)
 
         # Get current date
@@ -423,7 +424,7 @@ class SupervisorService:
         Record observation for a child in supervisor's class
         """
         # Verify supervisor role
-        if supervisor_user.role != models.UserRole.SUPERVISOR:
+        if not has_role(supervisor_user, models.UserRole.SUPERVISOR):
             raise ValidationError("Only supervisors can record observations", level=4)
 
         # Verify child is in supervisor's classes

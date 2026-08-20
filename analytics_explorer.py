@@ -38,7 +38,7 @@ from sqlalchemy.orm import Session
 
 import models
 from database import get_db
-from dependencies import get_current_user_or_redirect, require_admin
+from dependencies import get_current_user_or_redirect, require_admin, Permission, has_permission
 from services.jordan_locations import (
     get_all_governorates,
     governorate_name_ar,
@@ -1388,7 +1388,7 @@ def explorer_page(
     """The guided explorer page itself."""
     from frontend import templates
 
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         return RedirectResponse("/dashboard", status_code=303)
 
     today = today_amman()

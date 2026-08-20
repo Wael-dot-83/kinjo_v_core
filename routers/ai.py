@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from api.daily_reports_routes import DailyReportCreateRequest, _authorize_report_for_child
 from config import settings
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, has_role
 import models
 
 router = APIRouter(prefix="/ai/supervisor", tags=["AI Supervisor"])
@@ -26,7 +26,7 @@ def _require_ai_enabled(current_user: models.User, *, supervisor_only: bool = Fa
     """Fail closed unless AI-capable features are explicitly enabled."""
     if not settings.AI_ASSISTANT_ENABLED:
         raise HTTPException(status_code=403, detail="AI assistant is disabled")
-    if supervisor_only and current_user.role != models.UserRole.SUPERVISOR:
+    if supervisor_only and not has_role(current_user, models.UserRole.SUPERVISOR):
         raise HTTPException(status_code=403, detail="Supervisor access required")
 
 

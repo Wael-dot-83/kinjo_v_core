@@ -16,7 +16,7 @@ from audit_actions import AuditAction
 import validators
 from config import settings
 from database import get_db
-from dependencies import get_current_user, get_class_or_404, get_class_for_user_or_404
+from dependencies import get_current_user, get_class_or_404, get_class_for_user_or_404, Permission, has_permission, has_role
 
 router = APIRouter(tags=["Classes"])
 
@@ -47,7 +47,7 @@ def _validate_supervisor_for_kindergarten(db: Session, supervisor_id: int, kinde
     )
     if (
         not supervisor
-        or supervisor.role != models.UserRole.SUPERVISOR
+        or not has_role(supervisor, models.UserRole.SUPERVISOR)
         or supervisor.status != models.UserStatus.ACTIVE
         or supervisor.kindergarten_id != kindergarten_id
     ):
@@ -188,7 +188,7 @@ def list_classes(
     query = db.query(models.Class).filter(models.Class.deleted_at.is_(None))
 
     # Filter by kindergarten for non-admins
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         query = query.filter(models.Class.kindergarten_id == current_user.kindergarten_id)
     elif kindergarten_id:
         query = query.filter(models.Class.kindergarten_id == kindergarten_id)
@@ -487,7 +487,7 @@ def deactivate_class(
 @router.delete("/classes/{class_id}")
 def delete_class(class_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Hard delete class (Admin only, when no dependencies exist)"""
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=403, detail="Admin access required for permanent deletion")
 
     class_obj = db.query(models.Class).filter(models.Class.id == class_id).first()

@@ -15,7 +15,7 @@ from audit_actions import AuditAction
 import validators
 from config import settings
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, Permission, has_global_scope, has_permission
 from rbac import assert_supervisor_owns_child, assert_supervisor_owns_class, get_supervisor_child_ids
 from services.jordan_locations import governorate_filter
 
@@ -199,7 +199,7 @@ def get_attendance_report(
     if current_user.role == models.UserRole.SUPERVISOR:
         raise HTTPException(status_code=403, detail="Supervisors must use the scoped attendance endpoint")
     # Authorization: Admin can see all, others only their kindergarten
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         validators.validate_supervisor_role(current_user)
 
     # Validate kindergarten exists and user has access
@@ -209,7 +209,7 @@ def get_attendance_report(
     if not kindergarten:
         raise HTTPException(status_code=404, detail="Kindergarten not found")
 
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         validators.validate_kindergarten_scope(current_user, request.kindergarten_id)
 
     # Determine date range
@@ -470,7 +470,7 @@ def _attendance_summary(db: Session, target_date: date, current_user: models.Use
         enrolled_q = enrolled_q.filter(
             models.EnrollmentApplication.child_id.in_(get_supervisor_child_ids(current_user.id, db))
         )
-    if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id:
+    if not has_global_scope(current_user) and current_user.kindergarten_id:
         enrolled_q = enrolled_q.filter(
             models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
         )
