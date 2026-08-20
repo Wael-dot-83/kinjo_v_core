@@ -253,6 +253,41 @@
                 </li>
             </ul>
             {% else %}
+            <!-- Public Navigation Links for guests -->
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 align-items-lg-center">
+                <li class="nav-item">
+                    <a class="nav-link" href="/services">
+                        <i class="bi bi-grid me-1"></i><span>{% if ui_lang == 'en' %}Services{% else %}الخدمات{% endif %}</span>
+                    </a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-shield-check me-1"></i><span>{% if ui_lang == 'en' %}Governance &amp; Partners{% else %}الحوكمة والشركاء{% endif %}</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/#trusted-partners"><i class="bi bi-building me-2"></i>{% if ui_lang == 'en' %}Institutional Partners{% else %}الجهات والمؤسسات المستفيدة{% endif %}</a></li>
+                        <li><a class="dropdown-item" href="/services#standards"><i class="bi bi-award me-2"></i>{% if ui_lang == 'en' %}Quality Standards{% else %}معايير الاعتماد والجودة{% endif %}</a></li>
+                        <li><a class="dropdown-item" href="/services#supervisors"><i class="bi bi-clipboard-check me-2"></i>{% if ui_lang == 'en' %}Supervisory Tools{% else %}الرقابة والتفتيش{% endif %}</a></li>
+                        <li><a class="dropdown-item" href="/services"><i class="bi bi-card-checklist me-2"></i>{% if ui_lang == 'en' %}Service Cards &amp; Guide{% else %}دليل بطاقات الخدمة{% endif %}</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/about">
+                        <span>{% if ui_lang == 'en' %}About{% else %}نبذة عنا{% endif %}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/contact">
+                        <span>{% if ui_lang == 'en' %}Contact{% else %}اتصل بنا{% endif %}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/faq">
+                        <span>{% if ui_lang == 'en' %}FAQ{% else %}الأسئلة الشائعة{% endif %}</span>
+                    </a>
+                </li>
+            </ul>
+
             <!-- Login/Register for guests -->
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
                 <li class="nav-item">
@@ -262,10 +297,6 @@
                 </li>
                 {% if public_registration_enabled %}
                 <li class="nav-item">
-                    {# btn-outline-light gives near-white text, which is for a DARK navbar.
-   This navbar is light, so the "create account" CTA measured 1.19:1 --
-   effectively invisible on every page that renders this component.
-   btn-outline-primary is the same shape in the action colour. #}
                     <a class="btn btn-outline-primary btn-sm ms-2" href="/register">
                         <span data-i18n="nav.register">{% if ui_lang == 'en' %}Create account{% else %}إنشاء حساب{% endif %}</span>
                     </a>

@@ -373,16 +373,130 @@ endblock %} {% block content %}
                   تالية{% endif %}
                 </h4>
                 <p class="mb-0 service-guide-copy">
-                  {% if ui_lang == 'en' %} Review the checklist below, then
+                  {% if ui_lang == 'en' %} Review the requirements above, then
                   create an account or sign in to start the enrollment flow. {%
-                  else %} راجع القائمة أدناه، ثم أنشئ حسابًا أو سجّل الدخول لبدء
+                  else %} راجع الشروط والمستندات أعلاه، ثم أنشئ حسابًا أو سجّل الدخول لبدء
                   مسار التسجيل. {% endif %}
                 </p>
               </div>
             </div>
           </div>
+
         </div>
       </div>
+
+      <!-- Parents Section Anchor -->
+      <div id="parents" class="card service-guide-card mt-4">
+        <div class="card-body p-4 p-lg-5">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="service-guide-stat-icon">
+              <i class="bi bi-people" aria-hidden="true"></i>
+            </div>
+            <h3 class="h5 mb-0" style="color: #17312a">
+              {% if ui_lang == 'en' %}Parent &amp; Family Services{% else %}خدمات أولياء الأمور والأسر{% endif %}
+            </h3>
+          </div>
+          <p class="service-guide-copy mb-4">
+            {% if ui_lang == 'en' %}
+            KinJo gives parents direct access to manage kindergarten applications, receive real-time attendance notifications, view daily nutrition and rest logs, and maintain a secure channel with educators.
+            {% else %}
+            تتيح منصة KinJo لأولياء الأمور تقديم طلبات التسجيل ومتابعتها، واستلام إشعارات الحضور والانصراف الفورية، ومتابعة سجلات التغذية والنوم اليومية والتواصل المباشر مع كادر الحضانة.
+            {% endif %}
+          </p>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="p-3 bg-light rounded-3">
+                <h4 class="h6 mb-2 text-primary font-bold"><i class="bi bi-check-circle-fill text-success me-2"></i>{% if ui_lang == 'en' %}Daily Care Reports{% else %}تقارير الرعاية اليومية{% endif %}</h4>
+                <p class="small text-muted mb-0">{% if ui_lang == 'en' %}Track meal times, sleep intervals, and activities logged directly by caregivers.{% else %}متابعة مواعيد الوجبات وفترات النوم والأنشطة الموثقة من المربيات أولاً بأول.{% endif %}</p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="p-3 bg-light rounded-3">
+                <h4 class="h6 mb-2 text-primary font-bold"><i class="bi bi-check-circle-fill text-success me-2"></i>{% if ui_lang == 'en' %}Absence Requests{% else %}طلبات الإجازة والغياب{% endif %}</h4>
+                <p class="small text-muted mb-0">{% if ui_lang == 'en' %}Submit planned absences or health notices online without paper forms.{% else %}تقديم إشعارات الغياب والإجازات المرضية إلكترونياً دون الحاجة لمعاملات ورقية.{% endif %}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Supervisors Section Anchor -->
+      <div id="supervisors" class="card service-guide-card mt-4">
+        <div class="card-body p-4 p-lg-5">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="service-guide-stat-icon">
+              <i class="bi bi-shield-check" aria-hidden="true"></i>
+            </div>
+            <h3 class="h5 mb-0" style="color: #17312a">
+              {% if ui_lang == 'en' %}Supervisory &amp; Inspection Tools{% else %}أدوات الإشراف والرقابة التربوية{% endif %}
+            </h3>
+          </div>
+          <p class="service-guide-copy mb-4">
+            {% if ui_lang == 'en' %}
+            Authorized ministry and institutional supervisors utilize KinJo for field audits, statutory educator-to-child ratio checks, incident report inspections, and national reporting exports.
+            {% else %}
+            يستخدم المشرفون المعتمدون المنصة في تنفيذ جولات التفتيش الميداني، ومطابقة النسب القانونية (مربية / طفل)، وتدقيق تقارير الحوادث، وتصدير التقارير الإحصائية الرسمية.
+            {% endif %}
+          </p>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="p-3 bg-light rounded-3">
+                <h4 class="h6 mb-2 text-primary font-bold"><i class="bi bi-diagram-3-fill text-primary me-2"></i>{% if ui_lang == 'en' %}Field Audit Checklists{% else %}قوائم التدقيق الميداني الرقمية{% endif %}</h4>
+                <p class="small text-muted mb-0">{% if ui_lang == 'en' %}Structured compliance audits aligned with national licensing regulations.{% else %}تدقيق معايير السلامة والبيئة التعليمية وفق اللائحة الوطنية المنظمة.{% endif %}</p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="p-3 bg-light rounded-3">
+                <h4 class="h6 mb-2 text-primary font-bold"><i class="bi bi-file-earmark-bar-graph text-primary me-2"></i>{% if ui_lang == 'en' %}Official Analytics Exports{% else %}تصدير التقارير الرسمية{% endif %}</h4>
+                <p class="small text-muted mb-0">{% if ui_lang == 'en' %}Generate official CSV and PDF performance reports across administrative districts.{% else %}توليد تقارير الأداء ومصفوفات الامتثال الإحصائية على مستوى الألوية والمحافظات.{% endif %}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Managers Section Anchor -->
+      <div id="managers" class="card service-guide-card mt-4">
+        <div class="card-body p-4 p-lg-5">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="service-guide-stat-icon">
+              <i class="bi bi-building" aria-hidden="true"></i>
+            </div>
+            <h3 class="h5 mb-0" style="color: #17312a">
+              {% if ui_lang == 'en' %}Kindergarten Administration Solutions{% else %}حلول إدارة وتشغيل الحضانات{% endif %}
+            </h3>
+          </div>
+          <p class="service-guide-copy mb-4">
+            {% if ui_lang == 'en' %}
+            Kindergarten administrators streamline admissions pipelines, organize classrooms and staff allocations, and verify licensing compliance in a unified environment.
+            {% else %}
+            تمكّن المنصة إدارات الحضانات من تنظيم مسار القبول والتسجيل، وتوزيع الشعب والصفوف والكوادر، ومتابعة الامتثال للمعايير ومتطلبات الترخيص المعتمدة.
+            {% endif %}
+          </p>
+        </div>
+      </div>
+
+      <!-- Standards Section Anchor -->
+      <div id="standards" class="card service-guide-card mt-4">
+        <div class="card-body p-4 p-lg-5">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="service-guide-stat-icon">
+              <i class="bi bi-award" aria-hidden="true"></i>
+            </div>
+            <h3 class="h5 mb-0" style="color: #17312a">
+              {% if ui_lang == 'en' %}National Early Childhood Standards{% else %}المعايير الوطنية للطفولة المبكرة{% endif %}
+            </h3>
+          </div>
+          <p class="service-guide-copy mb-0">
+            {% if ui_lang == 'en' %}
+            All participating institutions operate in accordance with Jordan's national childcare standards, ensuring safe educator-to-child ratios, hygienic facilities, certified staff credentials, and unified daily monitoring.
+            {% else %}
+            تلتزم جميع المنشآت المسجلة بالمعايير الوطنية المعتمدة لرعاية الطفولة المبكرة في الأردن، بما يشمل النسب القانونية للكادر، ومعايير السلامة والصحة العامة، والمؤهلات المعتمدة للمربيات.
+            {% endif %}
+          </p>
+        </div>
+      </div>
+
     </div>
   </div>
   {% endblock %}

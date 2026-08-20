@@ -3,21 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>{% if ui_lang == 'en' %}KinJo - Jordan Kindergarten Portal{% else %}KinJo - بوابة الحضانات الرسمية{% endif %}</title>
+  <title>{% if ui_lang == 'en' %}KinJo — Jordan Kindergarten &amp; Early Childhood Portal{% else %}KinJo — بوابة الحضانات والطفولة المبكرة الأردنية{% endif %}</title>
   <meta name="description" content="KinJo connects parents, kindergarten teams, and supervisors so enrollment, daily care, attendance, and official reporting stay in one secure, bilingual record.">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif:wght@400;500;600;700&family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
   <!-- Chatbot CSS -->
   <link rel="stylesheet" href="/static/css/chatbot.css?v=558c206e2e26">
-
-  <link rel="stylesheet" href="/static/css/home_premium.css?v=1">
+  <link rel="stylesheet" href="/static/css/home_premium.css?v=2">
 
   <style>
     .material-symbols-outlined {
@@ -25,19 +24,29 @@
     }
 
     body.lang-ar {
-      font-family: 'Cairo', 'Noto Serif', serif;
+      font-family: 'Cairo', system-ui, -apple-system, sans-serif;
     }
     body.lang-en {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
 
-    a:focus-visible, button:focus-visible {
+    a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible {
       outline: 3px solid #c5a059;
       outline-offset: 2px;
     }
 
     [dir="rtl"] *:not([lang="en"]):not([lang="en"] *):not(.allow-tracking):not(.allow-tracking *) {
       letter-spacing: normal !important;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    
+    .nav-dropdown-menu {
+      transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
     }
   </style>
 
@@ -48,375 +57,765 @@
       theme: {
         extend: {
           "colors": {
-            "on-secondary-fixed": "#171c20",
-            "on-background": "#1b1c1d",
-            "primary-container": "#3366cc",
-            "tertiary-fixed-dim": "#dcc661",
-            "inverse-on-surface": "#f2f0f1",
-            "background": "#faf9fa",
             "primary": "#002f6c",
-            "on-secondary-fixed-variant": "#42474b",
-            "on-tertiary-fixed-variant": "#524600",
-            "surface-container-low": "#f8f9ff",
-            "inverse-surface": "#303031",
-            "on-tertiary-fixed": "#211b00",
-            "on-error-container": "#93000a",
-            "surface-dim": "#dbdadb",
-            "tertiary-fixed": "#f9e37a",
-            "surface-variant": "#e3e2e3",
-            "secondary-container": "#dfe3e8",
-            "secondary-fixed": "#dfe3e8",
-            "primary-fixed-dim": "#b1c5ff",
-            "outline": "#737784",
-            "on-primary": "#ffffff",
-            "inverse-primary": "#b1c5ff",
-            "on-primary-fixed-variant": "#00419d",
-            "surface-tint": "#2259bf",
-            "secondary": "#5a5f63",
-            "on-error": "#ffffff",
-            "on-primary-container": "#e7ebff",
-            "on-secondary": "#ffffff",
-            "surface-container": "#efedee",
-            "surface-container-highest": "#e3e2e3",
-            "surface-container-lowest": "#ffffff",
-            "error-container": "#ffdad6",
-            "surface-container-high": "#e9e8e9",
-            "on-primary-fixed": "#001946",
+            "primary-container": "#1e4c9a",
             "tertiary": "#c5a059",
-            "primary-fixed": "#d9e2ff",
-            "error": "#ba1a1a",
-            "on-surface": "#1b1c1d",
-            "on-surface-variant": "#434653",
+            "tertiary-container": "#e8d697",
+            "background": "#faf9fa",
             "surface": "#ffffff",
-            "on-tertiary": "#ffffff",
-            "tertiary-container": "#bfab49",
-            "outline-variant": "#c3c6d5",
-            "surface-bright": "#faf9fa",
-            "secondary-fixed-dim": "#c2c7cc",
-            "on-tertiary-container": "#4a3f00",
-            "on-secondary-container": "#606569",
+            "surface-container-low": "#f8f9fc",
+            "surface-container": "#f1f3f8",
+            "surface-container-high": "#e8ecf4",
+            "on-surface": "#1b1c1d",
+            "on-surface-variant": "#4a5568",
+            "outline": "#718096",
+            "outline-variant": "#cbd5e1",
+            "error": "#ba1a1a",
             "brand-orange": "#c5a059"
           },
           "borderRadius": {
-            "DEFAULT": "0.125rem",
+            "DEFAULT": "0.25rem",
             "lg": "1rem",
             "xl": "1.5rem",
+            "2xl": "2rem",
             "full": "9999px"
           },
-          "spacing": {
-            "margin-desktop": "64px",
-            "gutter": "24px",
-            "margin-mobile": "16px",
-            "base": "8px",
-            "max-width": "1280px",
-            "lg": "48px",
-            "md": "24px",
-            "xl": "80px",
-            "sm": "12px",
-            "xs": "4px"
-          },
           "fontFamily": {
-            "headline-lg": ["Noto Serif", "Cairo", "serif"],
-            "label-bold": ["Inter", "sans-serif"],
-            "body-lg": ["Inter", "Cairo", "sans-serif"],
-            "headline-lg-mobile": ["Noto Serif", "Cairo", "serif"],
-            "label-sm": ["Inter", "sans-serif"],
-            "headline-md": ["Noto Serif", "Cairo", "serif"],
-            "body-md": ["Inter", "Cairo", "sans-serif"],
-            "display-lg": ["Noto Serif", "Cairo", "serif"],
-            "title-lg": ["Noto Serif", "Cairo", "serif"],
-            "label-caps": ["Inter", "sans-serif"],
-            "body-sm": ["Inter", "Cairo", "sans-serif"],
-            "display-lg-mobile": ["Noto Serif", "Cairo", "serif"]
-          },
-          "fontSize": {
-            "headline-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
-            "label-bold": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600" }],
-            "body-lg": ["18px", { "lineHeight": "28px", "letterSpacing": "0", "fontWeight": "400" }],
-            "headline-lg-mobile": ["32px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
-            "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
-            "headline-md": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
-            "body-md": ["16px", { "lineHeight": "24px", "letterSpacing": "0", "fontWeight": "400" }],
-            "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
-            "title-lg": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
-            "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
-            "body-sm": ["14px", { "lineHeight": "20px", "letterSpacing": "0", "fontWeight": "400" }],
-            "display-lg-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+            "cairo": ["Cairo", "sans-serif"],
+            "inter": ["Inter", "sans-serif"]
           }
         }
       }
     };
   </script>
 </head>
-<body class="bg-surface text-on-surface font-body-md {% if ui_lang == 'en' %}lang-en{% else %}lang-ar{% endif %} min-h-screen flex flex-col antialiased">
+<body class="bg-surface text-on-surface {% if ui_lang == 'en' %}lang-en{% else %}lang-ar{% endif %} min-h-screen flex flex-col antialiased selection:bg-tertiary/30 selection:text-primary">
 
   <!-- TopNavBar -->
-  <header class="bg-primary text-white border-b border-white/20 docked full-width top-0 z-50 shadow-sm" role="banner">
-    <div class="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop max-w-7xl mx-auto h-24">
-      <a href="/" class="flex items-center gap-base" aria-label="KinJo Homepage">
-        <img alt="KinJo Logo" class="h-16 w-auto object-contain rounded-sm bg-white p-2 shadow-sm" src="/static/img/landing/logo.png">
-        <span class="font-title-lg text-title-lg font-bold text-white">
-          {% if ui_lang == 'en' %}Jordan Kindergarten Portal{% else %}بوابة الحضانات الأردنية{% endif %}
-        </span>
+  <header class="sticky top-0 z-50 bg-primary text-white border-b border-white/15 shadow-md backdrop-blur-md bg-opacity-95" role="banner">
+    <div class="flex justify-between items-center w-full px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto h-20">
+      
+      <!-- Brand Logo -->
+      <a href="/" class="flex items-center gap-3 group focus:outline-none" aria-label="KinJo Homepage">
+        <img alt="KinJo Logo" class="h-12 w-auto object-contain rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-black/5 group-hover:scale-105 transition-transform" src="/static/img/landing/logo.png">
+        <div class="flex flex-col">
+          <span class="text-lg sm:text-xl font-bold tracking-tight text-white leading-tight">
+            {% if ui_lang == 'en' %}KinJo National Portal{% else %}بوابة كينجو الوطنية{% endif %}
+          </span>
+          <span class="text-xs text-white/80 font-medium">
+            {% if ui_lang == 'en' %}Jordan Kindergarten Platform{% else %}المنصة الموحدة للحضانات ورياض الأطفال{% endif %}
+          </span>
+        </div>
       </a>
 
-      <nav class="hidden md:flex gap-md" aria-label="Main Navigation">
-        <a class="font-body-md text-body-md text-white font-bold border-b-2 border-tertiary h-24 flex items-center px-2" href="/services">
-          {% if ui_lang == 'en' %}Services{% else %}الخدمات{% endif %}
+      <!-- Desktop Navigation Links -->
+      <nav class="hidden lg:flex items-center gap-1 xl:gap-2" aria-label="Main Navigation">
+        
+        <a class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1" href="/services">
+          <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">dashboard_customize</span>
+          <span>{% if ui_lang == 'en' %}Services{% else %}الخدمات{% endif %}</span>
         </a>
-        <a class="font-body-md text-body-md text-white/80 hover:text-tertiary transition-colors h-24 flex items-center px-2" href="/about">
+
+        <!-- Governance Dropdown Menu -->
+        <div class="relative group" id="governance-dropdown-container">
+          <button type="button" class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 focus:outline-none" aria-expanded="false" aria-haspopup="true" id="governance-menu-btn">
+            <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">gavel</span>
+            <span>{% if ui_lang == 'en' %}Governance &amp; Partners{% else %}الحوكمة والشركاء{% endif %}</span>
+            <span class="material-symbols-outlined text-xs transition-transform duration-200 group-hover:rotate-180" aria-hidden="true">expand_more</span>
+          </button>
+          
+          <div class="nav-dropdown-menu absolute top-full start-0 w-80 bg-white text-on-surface rounded-2xl shadow-2xl border border-outline-variant/30 py-2.5 hidden group-hover:block hover:block z-50 mt-1" role="menu">
+            <div class="px-4 py-2 border-b border-outline-variant/20 mb-1">
+              <p class="text-xs font-bold uppercase tracking-wider text-primary">
+                {% if ui_lang == 'en' %}Institutional Governance{% else %}منظومة الحوكمة والرقابة{% endif %}
+              </p>
+              <p class="text-[11px] text-on-surface-variant mt-0.5">
+                {% if ui_lang == 'en' %}National Early Childhood Standards{% else %}المعايير الوطنية لقطاع الطفولة المبكرة{% endif %}
+              </p>
+            </div>
+
+            <a href="#trusted-partners" class="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-xs sm:text-sm font-semibold text-primary" role="menuitem">
+              <div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary flex-shrink-0">
+                <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">assured_workload</span>
+              </div>
+              <div>
+                <div class="font-bold">{% if ui_lang == 'en' %}Beneficiary &amp; Partner Entities{% else %}الجهات والمؤسسات المستفيدة{% endif %}</div>
+                <div class="text-[11px] text-on-surface-variant font-normal">{% if ui_lang == 'en' %}NCFA, MoSD, MoPIC &amp; Ministries{% else %}المجلس الوطني، التنمية والوزارات المعنية{% endif %}</div>
+              </div>
+            </a>
+
+            <a href="#governance-framework" class="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-xs sm:text-sm font-semibold text-primary" role="menuitem">
+              <div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary flex-shrink-0">
+                <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">verified_user</span>
+              </div>
+              <div>
+                <div class="font-bold">{% if ui_lang == 'en' %}National Quality Standards{% else %}معايير الاعتماد وضمان الجودة{% endif %}</div>
+                <div class="text-[11px] text-on-surface-variant font-normal">{% if ui_lang == 'en' %}Statutory child-to-staff ratios{% else %}النسب القانونية وشروط السلامة المعتمدة{% endif %}</div>
+              </div>
+            </a>
+
+            <a href="/services#supervisors" class="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-xs sm:text-sm font-semibold text-primary" role="menuitem">
+              <div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary flex-shrink-0">
+                <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">fact_check</span>
+              </div>
+              <div>
+                <div class="font-bold">{% if ui_lang == 'en' %}Supervisory Inspection Tools{% else %}الرقابة والتفتيش الميداني{% endif %}</div>
+                <div class="text-[11px] text-on-surface-variant font-normal">{% if ui_lang == 'en' %}Audit checklists &amp; reports{% else %}أدوات التدقيق الميداني والتقارير الإشرافية{% endif %}</div>
+              </div>
+            </a>
+
+            <a href="/services" class="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-xs sm:text-sm font-semibold text-primary" role="menuitem">
+              <div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary flex-shrink-0">
+                <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">menu_book</span>
+              </div>
+              <div>
+                <div class="font-bold">{% if ui_lang == 'en' %}Service Guide &amp; Cards{% else %}دليل بطاقات الخدمة الرسمية{% endif %}</div>
+                <div class="text-[11px] text-on-surface-variant font-normal">{% if ui_lang == 'en' %}Registration procedures &amp; rules{% else %}إجراءات وشروط تسجيل الحضانات والقبول{% endif %}</div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <a class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg text-sm font-semibold transition-all" href="/about">
           {% if ui_lang == 'en' %}About{% else %}نبذة عنا{% endif %}
         </a>
-        <a class="font-body-md text-body-md text-white/80 hover:text-tertiary transition-colors h-24 flex items-center px-2" href="/contact">
+        <a class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg text-sm font-semibold transition-all" href="/contact">
           {% if ui_lang == 'en' %}Contact{% else %}اتصل بنا{% endif %}
         </a>
-        <a class="font-body-md text-body-md text-white/80 hover:text-tertiary transition-colors h-24 flex items-center px-2" href="/faq">
+        <a class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg text-sm font-semibold transition-all" href="/faq">
           {% if ui_lang == 'en' %}FAQ{% else %}الأسئلة الشائعة{% endif %}
         </a>
       </nav>
 
-      <div class="flex items-center gap-sm">
-        <button type="button" class="flex items-center gap-xs px-sm py-2 rounded-lg border border-white/30 hover:bg-white/10 transition-colors min-h-[44px]" onclick="toggleLanguage()" aria-label="Switch Language / تبديل اللغة">
-          <span class="material-symbols-outlined text-sm text-white" aria-hidden="true" data-icon="language">language</span>
-          <span class="font-label-caps text-label-caps uppercase text-white">{% if ui_lang == 'en' %}عربي{% else %}EN{% endif %}</span>
+      <!-- Right Header Actions (Language + Auth) -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        
+        <!-- Language Switcher -->
+        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/25 hover:bg-white/10 transition-colors text-xs font-bold text-white min-h-[40px]" onclick="toggleLanguage()" aria-label="Switch Language / تبديل اللغة">
+          <span class="material-symbols-outlined text-sm text-tertiary" aria-hidden="true">language</span>
+          <span class="uppercase">{% if ui_lang == 'en' %}عربي{% else %}EN{% endif %}</span>
         </button>
 
         {% if current_user %}
-        <a class="inline-flex px-md py-3 bg-tertiary text-primary font-label-bold text-label-bold rounded-lg hover:bg-tertiary/90 transition-colors shadow-sm items-center gap-2 min-h-[44px]" href="/dashboard" aria-label="Dashboard">
-          <span class="material-symbols-outlined text-base" aria-hidden="true" data-icon="dashboard">dashboard</span>
-          {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
+        <a class="inline-flex items-center gap-1.5 px-4 py-2 bg-tertiary text-primary font-bold text-sm rounded-lg hover:bg-tertiary/90 transition-all shadow-sm min-h-[40px]" href="/dashboard" aria-label="Dashboard">
+          <span class="material-symbols-outlined text-base" aria-hidden="true">dashboard</span>
+          <span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
         </a>
         {% else %}
-        <a class="hidden md:inline-flex px-md py-2 text-white font-label-bold text-label-bold hover:bg-white/10 transition-colors rounded-lg items-center min-h-[44px]" href="/login" aria-label="Sign In">
-          {% if ui_lang == 'en' %}Login{% else %}تسجيل الدخول{% endif %}
+        <a class="hidden sm:inline-flex items-center px-3.5 py-2 text-white font-semibold text-sm hover:bg-white/10 transition-colors rounded-lg min-h-[40px]" href="/login" aria-label="Sign In">
+          {% if ui_lang == 'en' %}Sign In{% else %}تسجيل الدخول{% endif %}
         </a>
         {% if public_registration_enabled %}
-        <a class="inline-flex px-md py-3 bg-tertiary text-primary font-label-bold text-label-bold rounded-lg hover:bg-tertiary/90 transition-colors shadow-sm items-center min-h-[44px]" href="/register" aria-label="Register">
-          {% if ui_lang == 'en' %}Register{% else %}حساب جديد{% endif %}
+        <a class="inline-flex items-center px-4 py-2 bg-tertiary text-primary font-bold text-sm rounded-lg hover:bg-tertiary/90 transition-all shadow-sm min-h-[40px]" href="/register" aria-label="Register">
+          {% if ui_lang == 'en' %}Register{% else %}إنشاء حساب{% endif %}
         </a>
         {% endif %}
         {% endif %}
+
+        <!-- Mobile Menu Toggle Button -->
+        <button type="button" id="mobile-menu-toggle-btn" class="lg:hidden p-2 rounded-lg text-white hover:bg-white/10 transition-colors focus:outline-none" aria-label="Toggle navigation menu" aria-expanded="false">
+          <span class="material-symbols-outlined text-2xl" aria-hidden="true">menu</span>
+        </button>
+
       </div>
+    </div>
+
+    <!-- Mobile Navigation Drawer -->
+    <div id="mobile-nav-drawer" class="lg:hidden hidden bg-primary border-t border-white/15 px-4 pt-3 pb-6 space-y-2">
+      <a class="block text-white font-semibold px-3 py-2 rounded-lg hover:bg-white/10 text-sm" href="/services">
+        {% if ui_lang == 'en' %}Services{% else %}الخدمات{% endif %}
+      </a>
+      
+      <!-- Mobile Governance Section -->
+      <div class="py-2 px-3 bg-white/5 rounded-xl border border-white/10 space-y-2">
+        <p class="text-xs font-bold text-tertiary uppercase tracking-wider">
+          {% if ui_lang == 'en' %}Governance &amp; Partners{% else %}الحوكمة والشركاء{% endif %}
+        </p>
+        <a class="block text-white/90 hover:text-white text-xs py-1" href="#trusted-partners">
+          • {% if ui_lang == 'en' %}Institutional Partners{% else %}الجهات والمؤسسات المستفيدة{% endif %}
+        </a>
+        <a class="block text-white/90 hover:text-white text-xs py-1" href="#governance-framework">
+          • {% if ui_lang == 'en' %}National Standards &amp; QA{% else %}معايير الاعتماد والجودة{% endif %}
+        </a>
+        <a class="block text-white/90 hover:text-white text-xs py-1" href="/services#supervisors">
+          • {% if ui_lang == 'en' %}Supervisory Tools{% else %}الرقابة والتفتيش الإشرافي{% endif %}
+        </a>
+        <a class="block text-white/90 hover:text-white text-xs py-1" href="/services">
+          • {% if ui_lang == 'en' %}Service Cards &amp; Guide{% else %}دليل بطاقات الخدمة{% endif %}
+        </a>
+      </div>
+
+      <a class="block text-white font-semibold px-3 py-2 rounded-lg hover:bg-white/10 text-sm" href="/about">
+        {% if ui_lang == 'en' %}About{% else %}نبذة عنا{% endif %}
+      </a>
+      <a class="block text-white font-semibold px-3 py-2 rounded-lg hover:bg-white/10 text-sm" href="/contact">
+        {% if ui_lang == 'en' %}Contact{% else %}اتصل بنا{% endif %}
+      </a>
+      <a class="block text-white font-semibold px-3 py-2 rounded-lg hover:bg-white/10 text-sm" href="/faq">
+        {% if ui_lang == 'en' %}FAQ{% else %}الأسئلة الشائعة{% endif %}
+      </a>
+
+      {% if not current_user %}
+      <div class="pt-3 border-t border-white/15 flex gap-2">
+        <a class="flex-1 text-center py-2 bg-white/10 text-white rounded-lg text-xs font-bold" href="/login">
+          {% if ui_lang == 'en' %}Login{% else %}دخول{% endif %}
+        </a>
+        {% if public_registration_enabled %}
+        <a class="flex-1 text-center py-2 bg-tertiary text-primary rounded-lg text-xs font-bold" href="/register">
+          {% if ui_lang == 'en' %}Register{% else %}تسجيل جديد{% endif %}
+        </a>
+        {% endif %}
+      </div>
+      {% endif %}
     </div>
   </header>
 
   <main class="flex-grow" role="main">
 
     <!-- Section 1: Search-First Hero -->
-    <section class="relative bg-surface-container-low overflow-hidden" aria-label="Search Kindergartens">
+    <section class="relative bg-surface-container-low overflow-hidden py-10 md:py-16 border-b border-outline-variant/20" aria-label="Search Kindergartens">
       <div class="absolute inset-0 z-0">
-        <div class="bg-cover bg-center w-full h-full opacity-100" style="background-image: url('/static/img/landing/hero_bg.jpg');"></div>
-        <div class="absolute inset-0 bg-gradient-to-l from-surface-container-low/90 via-surface-container-low/60 to-transparent"></div>
+        <div class="bg-cover bg-center w-full h-full opacity-30" style="background-image: url('/static/img/landing/hero_bg.jpg');"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-surface-container-low via-surface-container-low/95 to-white"></div>
       </div>
 
-      <div class="relative z-10 max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop py-xl md:py-[120px] grid md:grid-cols-2 gap-lg items-center">
-        <div class="max-w-3xl">
-          {% if ui_lang == 'en' %}
-          <h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary mb-md animate-fade-in-up">
-            Find the perfect kindergarten in Jordan.
-          </h1>
-          <p class="font-body-lg text-body-lg text-on-surface-variant mb-lg animate-fade-in-up" style="animation-delay: 0.1s;">
-            Search accredited nurseries by governorate, district, and status. Compare options and start your child's journey with confidence.
-          </p>
-          {% else %}
-          <h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary font-bold leading-tight mb-md animate-fade-in-up">
-            اعثر على الحضانة المثالية لطفلك في الأردن
-          </h1>
-          <p class="font-body-lg text-body-lg text-on-surface-variant mb-lg leading-relaxed animate-fade-in-up" style="animation-delay: 0.1s;">
-            ابحث عن الحضانات المعتمدة حسب المحافظة والمنطقة والحالة. قارن الخيارات وابدأ رحلة طفلك بثقة.
-          </p>
-          {% endif %}
+      <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- National Authority Badge -->
+        <div class="flex justify-center mb-6">
+          <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white border border-outline-variant/40 shadow-sm text-primary text-xs sm:text-sm font-bold">
+            <span class="flex h-2 w-2 rounded-full bg-tertiary"></span>
+            <span>{% if ui_lang == 'en' %}Official Early Childhood &amp; Kindergarten National Portal — Jordan{% else %}المنصة الوطنية الموحدة للحضانات ورياض الأطفال — المملكة الأردنية الهاشمية{% endif %}</span>
+          </div>
+        </div>
 
-          <!-- Search Bar -->
-          <div class="bg-white rounded-xl shadow-lg border border-outline-variant/30 p-4 md:p-6 animate-fade-in-up" style="animation-delay: 0.2s;">
+        <!-- Hero Headline & Description -->
+        <div class="text-center max-w-3xl mx-auto mb-10">
+          <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-primary tracking-tight leading-tight mb-4">
+            {% if ui_lang == 'en' %}
+            Find &amp; Verify Accredited Kindergartens in Jordan
+            {% else %}
+            البحث عن الحضانات ورياض الأطفال المعتمدة في الأردن
+            {% endif %}
+          </h1>
+          <p class="text-base sm:text-lg text-on-surface-variant leading-relaxed">
+            {% if ui_lang == 'en' %}
+            Explore licensed nurseries across all 12 governorates with official accreditation, statutory child ratios, and standardized daily care standards.
+            {% else %}
+            استكشف الحضانات المرخصة عبر محافظات المملكة الـ 12 وفق معايير الاعتماد الرسمية، والنسب القانونية لكوادر الرعاية، وسجلات المتابعة اليومية المعتمدة.
+            {% endif %}
+          </p>
+        </div>
+
+        <!-- Justified, Professional Search Widget -->
+        <div class="max-w-4xl mx-auto">
+          <div class="glass-card rounded-2xl shadow-xl border border-outline-variant/40 p-5 sm:p-7 transition-all">
+            
             <div class="flex flex-col gap-4">
+              
+              <!-- Search Box Header -->
+              <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
+                <div class="flex items-center gap-2 text-primary font-bold text-sm sm:text-base">
+                  <span class="material-symbols-outlined text-tertiary" aria-hidden="true">travel_explore</span>
+                  <span>{% if ui_lang == 'en' %}Direct Kindergarten Search{% else %}محرك البحث الموحد للحضانات{% endif %}</span>
+                </div>
+                <span class="text-xs text-on-surface-variant font-medium">
+                  {% if ui_lang == 'en' %}Accredited Registry{% else %}السجل الوطني المعتمد{% endif %}
+                </span>
+              </div>
+
+              <!-- Row 1: Keyword Input with Clear button -->
               <div class="relative">
-                <span class="material-symbols-outlined absolute start-3 top-1/2 -translate-y-1/2 text-on-surface-variant" aria-hidden="true">search</span>
+                <div class="absolute inset-y-0 start-0 ps-3.5 flex items-center pointer-events-none text-on-surface-variant">
+                  <span class="material-symbols-outlined text-xl text-primary/70" aria-hidden="true">search</span>
+                </div>
                 <input
                   type="text"
                   id="kg-search-input"
-                  class="w-full ps-12 pe-4 py-3 rounded-lg border border-outline-variant/50 bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-body-md"
-                  placeholder="{% if ui_lang == 'en' %}Search kindergartens by name...{% else %}ابحث عن حضانات بالاسم...{% endif %}"
+                  class="w-full ps-11 pe-10 py-3.5 rounded-xl border border-outline-variant/60 bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-sm sm:text-base font-medium shadow-sm"
+                  placeholder="{% if ui_lang == 'en' %}Search by kindergarten name, neighborhood, or keywords...{% else %}ابحث باسم الحضانة، الحي، أو الكلمات المفتاحية...{% endif %}"
                   autocomplete="off"
                 >
+                <button type="button" id="kg-search-clear" class="absolute inset-y-0 end-0 pe-3.5 flex items-center text-on-surface-variant hover:text-error transition-colors hidden" aria-label="Clear search">
+                  <span class="material-symbols-outlined text-lg" aria-hidden="true">close</span>
+                </button>
               </div>
 
+              <!-- Row 2: Justified Filter Grid -->
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <select id="kg-filter-governorate" class="w-full py-2.5 px-3 rounded-lg border border-outline-variant/50 bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-body-md">
-                  <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
-                </select>
-                <select id="kg-filter-district" class="w-full py-2.5 px-3 rounded-lg border border-outline-variant/50 bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-body-md">
-                  <option value="">{% if ui_lang == 'en' %}All Districts{% else %}جميع المناطق{% endif %}</option>
-                </select>
-                <select id="kg-filter-status" class="w-full py-2.5 px-3 rounded-lg border border-outline-variant/50 bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-body-md">
-                  <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}جميع الحالات{% endif %}</option>
-                  <option value="active">{% if ui_lang == 'en' %}Active{% else %}نشطة{% endif %}</option>
-                  <option value="frozen">{% if ui_lang == 'en' %}Frozen{% else %}مجمدة{% endif %}</option>
-                  <option value="draft">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</option>
-                </select>
+                
+                <!-- Governorate Filter -->
+                <div class="relative">
+                  <label for="kg-filter-governorate" class="block text-[11px] font-bold text-primary mb-1 uppercase tracking-wider">
+                    {% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}
+                  </label>
+                  <div class="relative">
+                    <select id="kg-filter-governorate" class="w-full py-2.5 ps-3 pe-8 rounded-xl border border-outline-variant/60 bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-xs sm:text-sm font-medium shadow-sm appearance-none">
+                      <option value="">{% if ui_lang == 'en' %}All Governorates (12){% else %}جميع المحافظات (12){% endif %}</option>
+                    </select>
+                    <div class="absolute inset-y-0 end-0 pe-2.5 flex items-center pointer-events-none text-on-surface-variant">
+                      <span class="material-symbols-outlined text-base" aria-hidden="true">expand_more</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- District Filter -->
+                <div class="relative">
+                  <label for="kg-filter-district" class="block text-[11px] font-bold text-primary mb-1 uppercase tracking-wider">
+                    {% if ui_lang == 'en' %}District / City{% else %}اللواء / المنطقة{% endif %}
+                  </label>
+                  <div class="relative">
+                    <select id="kg-filter-district" class="w-full py-2.5 ps-3 pe-8 rounded-xl border border-outline-variant/60 bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-xs sm:text-sm font-medium shadow-sm appearance-none">
+                      <option value="">{% if ui_lang == 'en' %}All Districts{% else %}جميع المناطق / الألوية{% endif %}</option>
+                    </select>
+                    <div class="absolute inset-y-0 end-0 pe-2.5 flex items-center pointer-events-none text-on-surface-variant">
+                      <span class="material-symbols-outlined text-base" aria-hidden="true">expand_more</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="relative">
+                  <label for="kg-filter-status" class="block text-[11px] font-bold text-primary mb-1 uppercase tracking-wider">
+                    {% if ui_lang == 'en' %}Licensing Status{% else %}حالة الاعتماد والترخيص{% endif %}
+                  </label>
+                  <div class="relative">
+                    <select id="kg-filter-status" class="w-full py-2.5 ps-3 pe-8 rounded-xl border border-outline-variant/60 bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-xs sm:text-sm font-medium shadow-sm appearance-none">
+                      <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}جميع الحالات{% endif %}</option>
+                      <option value="active">{% if ui_lang == 'en' %}Active &amp; Licensed{% else %}نشطة ومعتمدة رسمياً{% endif %}</option>
+                      <option value="frozen">{% if ui_lang == 'en' %}Temporarily Frozen{% else %}مجمدة مؤقتاً{% endif %}</option>
+                      <option value="draft">{% if ui_lang == 'en' %}In Registration Process{% else %}قيد استكمال الترخيص{% endif %}</option>
+                    </select>
+                    <div class="absolute inset-y-0 end-0 pe-2.5 flex items-center pointer-events-none text-on-surface-variant">
+                      <span class="material-symbols-outlined text-base" aria-hidden="true">expand_more</span>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
-              <button id="kg-search-btn" type="button" class="w-full sm:w-auto inline-flex items-center justify-center px-xl py-3 bg-primary text-white font-label-bold text-label-bold rounded-lg hover:bg-primary/90 transition-colors shadow-md min-h-[48px]">
-                {% if ui_lang == 'en' %}Search Kindergartens{% else %}بحث عن حضانات{% endif %}
-              </button>
+              <!-- Row 3: Quick Governorate Pills & Search Action Button -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-outline-variant/20">
+                
+                <!-- Quick Filter Pills -->
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-xs text-on-surface-variant font-bold me-1">
+                    {% if ui_lang == 'en' %}Popular:{% else %}الأكثر بحثاً:{% endif %}
+                  </span>
+                  <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="عمان">
+                    {% if ui_lang == 'en' %}Amman{% else %}عمان{% endif %}
+                  </button>
+                  <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="الزرقاء">
+                    {% if ui_lang == 'en' %}Zarqa{% else %}الزرقاء{% endif %}
+                  </button>
+                  <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="إربد">
+                    {% if ui_lang == 'en' %}Irbid{% else %}إربد{% endif %}
+                  </button>
+                  <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="البلقاء">
+                    {% if ui_lang == 'en' %}Balqa{% else %}البلقاء{% endif %}
+                  </button>
+                  <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="العقبة">
+                    {% if ui_lang == 'en' %}Aqaba{% else %}العقبة{% endif %}
+                  </button>
+                </div>
+
+                <!-- Submit Button -->
+                <button id="kg-search-btn" type="button" class="inline-flex items-center justify-center gap-2 px-7 py-3 bg-primary text-white font-bold text-sm sm:text-base rounded-xl hover:bg-primary-container transition-all shadow-md active:scale-98 min-h-[46px]">
+                  <span class="material-symbols-outlined text-lg" aria-hidden="true">search</span>
+                  <span>{% if ui_lang == 'en' %}Search Results{% else %}تنفيذ البحث{% endif %}</span>
+                  <span class="kg-btn-spinner hidden material-symbols-outlined text-lg animate-spin" aria-hidden="true">sync</span>
+                </button>
+
+              </div>
+
             </div>
 
             <!-- Results Preview Panel -->
-            <div id="kg-search-results" class="mt-6 hidden">
+            <div id="kg-search-results" class="mt-6 pt-6 border-t border-outline-variant/25 hidden">
+              
               <div class="flex items-center justify-between mb-4">
-                <h3 class="font-title-lg text-title-lg text-primary font-bold">{% if ui_lang == 'en' %}Results{% else %}النتائج{% endif %}</h3>
-                <a href="/kindergartens" class="font-label-bold text-label-bold text-primary hover:text-tertiary transition-colors">
-                  {% if ui_lang == 'en' %}View all{% else %}عرض الكل{% endif %}
+                <div class="flex items-center gap-2">
+                  <h3 class="text-base sm:text-lg text-primary font-bold">
+                    {% if ui_lang == 'en' %}Available Kindergartens{% else %}نتائج البحث والتصفية{% endif %}
+                  </h3>
+                  <span id="kg-results-count" class="text-xs text-on-surface-variant font-medium"></span>
+                </div>
+                <a href="/kindergartens" class="text-xs sm:text-sm font-bold text-primary hover:text-tertiary flex items-center gap-1 transition-colors">
+                  <span>{% if ui_lang == 'en' %}View Full Directory{% else %}استعراض السجل الكامل{% endif %}</span>
+                  <span class="material-symbols-outlined text-xs rtl:rotate-180" aria-hidden="true">arrow_forward</span>
                 </a>
               </div>
+
+              <!-- Loading State Skeleton -->
+              <div id="kg-results-loading" class="hidden text-center py-10">
+                <div class="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-surface-container text-primary font-semibold text-sm shadow-sm">
+                  <span class="material-symbols-outlined animate-spin text-tertiary text-xl" aria-hidden="true">sync</span>
+                  <span>{% if ui_lang == 'en' %}Loading verified kindergartens...{% else %}جارٍ تحميل الحضانات المعتمدة...{% endif %}</span>
+                </div>
+              </div>
+
+              <!-- Results Grid -->
               <div id="kg-results-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-              <div id="kg-results-empty" class="hidden text-center py-8 text-on-surface-variant">
-                {% if ui_lang == 'en' %}No kindergartens match your search.{% else %}لا توجد حضانات مطابقة لبحثك.{% endif %}
+
+              <!-- Empty State -->
+              <div id="kg-results-empty" class="hidden text-center py-10 bg-surface-container-low rounded-xl border border-outline-variant/30">
+                <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 block" aria-hidden="true">search_off</span>
+                <p class="font-bold text-primary text-base">{% if ui_lang == 'en' %}No kindergartens match your criteria.{% else %}لم يتم العثور على حضانات مطابقة لمعايير البحث.{% endif %}</p>
+                <p class="text-xs text-on-surface-variant mt-1">{% if ui_lang == 'en' %}Try clearing filters or changing the governorate.{% else %}يرجى محاولة تغيير المحافظة أو تخفيف معايير التصفية.{% endif %}</p>
               </div>
-              <div id="kg-results-error" class="hidden text-center py-8 text-error">
-                {% if ui_lang == 'en' %}Unable to load results. Please try again.{% else %}تعذر تحميل النتائج. يرجى المحاولة مرة أخرى.{% endif %}
+
+              <!-- Error State -->
+              <div id="kg-results-error" class="hidden text-center py-8 text-error bg-red-50 rounded-xl border border-red-200">
+                <span class="material-symbols-outlined text-3xl mb-1" aria-hidden="true">error</span>
+                <p class="font-semibold text-sm">{% if ui_lang == 'en' %}Unable to load results. Please check connection and try again.{% else %}تعذر تحميل نتائج البحث. يرجى التأكد من الاتصال والمحاولة ثانية.{% endif %}</p>
               </div>
+
             </div>
+
           </div>
         </div>
 
-        <div class="hidden md:block relative h-[560px] rounded-xl overflow-hidden shadow-2xl border-4 border-white/50 bg-white rotate-1 hover:rotate-0 transition-transform duration-500">
-          <img alt="Kindergarten Classroom" class="w-full h-full object-cover" src="/static/img/landing/classroom.jpg">
+      </div>
+    </section>
+
+    <!-- Key Metrics & National Scale Strip -->
+    <section class="bg-primary text-white py-8 border-y border-white/10" aria-label="Key Portal Highlights">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          
+          <div class="p-3">
+            <div class="text-2xl sm:text-3xl font-extrabold text-tertiary mb-1">12</div>
+            <div class="text-xs sm:text-sm font-semibold text-white/90">
+              {% if ui_lang == 'en' %}Governorates Covered{% else %}محافظة مشمولة بالكامل{% endif %}
+            </div>
+            <div class="text-[11px] text-white/70 mt-0.5">{% if ui_lang == 'en' %}Nationwide coverage{% else %}تغطية جغرافية شاملة{% endif %}</div>
+          </div>
+
+          <div class="p-3 border-s border-white/15">
+            <div class="text-2xl sm:text-3xl font-extrabold text-tertiary mb-1">100%</div>
+            <div class="text-xs sm:text-sm font-semibold text-white/90">
+              {% if ui_lang == 'en' %}Accreditation Compliance{% else %}مطابقة لمعايير الاعتماد{% endif %}
+            </div>
+            <div class="text-[11px] text-white/70 mt-0.5">{% if ui_lang == 'en' %}Official licensing matrix{% else %}سجل رسمي معتمد{% endif %}</div>
+          </div>
+
+          <div class="p-3 border-s border-white/15">
+            <div class="text-2xl sm:text-3xl font-extrabold text-tertiary mb-1">24/7</div>
+            <div class="text-xs sm:text-sm font-semibold text-white/90">
+              {% if ui_lang == 'en' %}Digital Care &amp; Attendance{% else %}متابعة الحضور والرعاية اليومية{% endif %}
+            </div>
+            <div class="text-[11px] text-white/70 mt-0.5">{% if ui_lang == 'en' %}Instant parent visibility{% else %}سجلات فورية لأولياء الأمور{% endif %}</div>
+          </div>
+
+          <div class="p-3 border-s border-white/15">
+            <div class="text-2xl sm:text-3xl font-extrabold text-tertiary mb-1">7+</div>
+            <div class="text-xs sm:text-sm font-semibold text-white/90">
+              {% if ui_lang == 'en' %}Partner Institutions{% else %}جهات ومؤسسات شريكة{% endif %}
+            </div>
+            <div class="text-[11px] text-white/70 mt-0.5">{% if ui_lang == 'en' %}Integrated governance{% else %}حوكمة وتنسيق وطني متكامل{% endif %}</div>
+          </div>
+
         </div>
       </div>
     </section>
 
-    <!-- Section 2: Trust Band -->
-    <section class="bg-white border-y border-outline-variant/20 py-xl" aria-label="Trusted Partners">
-      <div class="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop flex flex-col items-center justify-center gap-lg">
-        <div class="flex flex-col items-center justify-center gap-md w-full">
-          <p class="font-title-lg text-title-lg text-primary text-center flex items-center justify-center gap-2 mb-md">
-            <span class="material-symbols-outlined text-on-tertiary-fixed-variant" aria-hidden="true" data-icon="verified">verified</span>
-            {% if ui_lang == 'en' %}Official Institutional Partners{% else %}الجهات والمؤسسات المستفيدة{% endif %}
-          </p>
-
-          <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-lg items-center justify-items-center opacity-80">
-            <img alt="NCFA" class="h-16 md:h-20 object-contain grayscale hover:grayscale-0 transition-all duration-300" src="/static/img/landing/ncfa.png">
-            <img alt="MoSD" class="h-16 md:h-20 object-contain grayscale hover:grayscale-0 transition-all duration-300" src="/static/img/landing/mosd.png">
-            <img alt="MoPIC" class="h-16 md:h-20 object-contain grayscale hover:grayscale-0 transition-all duration-300" src="/static/img/landing/mopic.png">
-            <img alt="MoL" class="h-16 md:h-20 object-contain grayscale hover:grayscale-0 transition-all duration-300" src="/static/img/landing/mol.png">
-            <img alt="MoH" class="h-16 md:h-20 object-contain grayscale hover:grayscale-0 transition-all duration-300" src="/static/img/landing/moh.png">
-            <img alt="MoE" class="h-16 md:h-20 object-contain grayscale hover:grayscale-0 transition-all duration-300" src="/static/img/landing/moe.png">
-            <img alt="DOS" class="h-16 md:h-20 object-contain grayscale hover:grayscale-0 transition-all duration-300" src="/static/img/landing/dos.png">
+    <!-- Section 2: Institutional Partners & Governance -->
+    <section id="trusted-partners" class="bg-white py-14 md:py-20 border-b border-outline-variant/20" aria-label="Trusted Institutional Partners">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="text-center max-w-3xl mx-auto mb-10">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container text-primary text-xs font-bold mb-3">
+            <span class="material-symbols-outlined text-sm text-tertiary" aria-hidden="true">verified</span>
+            <span>{% if ui_lang == 'en' %}Institutional Governance &amp; Cooperation{% else %}الحوكمة المؤسسية والشراكات الوطنية{% endif %}</span>
           </div>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-primary mb-3">
+            {% if ui_lang == 'en' %}Official Institutional Partners &amp; Beneficiaries{% else %}الجهات والمؤسسات الشريكة والمستفيدة{% endif %}
+          </h2>
+          <p class="text-sm sm:text-base text-on-surface-variant">
+            {% if ui_lang == 'en' %}
+            Coordinated under Jordan's national childcare strategy and early childhood digital governance framework.
+            {% else %}
+            بالتنسيق مع الجهات المعنية ضمن الاستراتيجية الوطنية للطفولة المبكرة والتحول الرقمي لخدمات الرعاية والحضانات.
+            {% endif %}
+          </p>
         </div>
 
-        <div class="mt-md bg-surface-container-low px-6 py-2 rounded-full border border-tertiary/30 shadow-sm">
-          <p class="font-label-caps text-label-caps text-primary text-center tracking-wider">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 items-stretch justify-items-center">
+          
+          <div class="flex flex-col items-center justify-center p-4 rounded-xl border border-outline-variant/30 bg-surface-container-low hover:bg-white hover:shadow-md transition-all w-full text-center group">
+            <img alt="NCFA Logo" class="h-14 w-auto object-contain mb-2 grayscale group-hover:grayscale-0 transition-all" src="/static/img/landing/ncfa.png">
+            <span class="text-xs font-bold text-primary">NCFA</span>
+            <span class="text-[10px] text-on-surface-variant leading-tight">{% if ui_lang == 'en' %}National Council for Family Affairs{% else %}المجلس الوطني لشؤون الأسرة{% endif %}</span>
+          </div>
+
+          <div class="flex flex-col items-center justify-center p-4 rounded-xl border border-outline-variant/30 bg-surface-container-low hover:bg-white hover:shadow-md transition-all w-full text-center group">
+            <img alt="MoSD Logo" class="h-14 w-auto object-contain mb-2 grayscale group-hover:grayscale-0 transition-all" src="/static/img/landing/mosd.png">
+            <span class="text-xs font-bold text-primary">MoSD</span>
+            <span class="text-[10px] text-on-surface-variant leading-tight">{% if ui_lang == 'en' %}Ministry of Social Development{% else %}وزارة التنمية الاجتماعية{% endif %}</span>
+          </div>
+
+          <div class="flex flex-col items-center justify-center p-4 rounded-xl border border-outline-variant/30 bg-surface-container-low hover:bg-white hover:shadow-md transition-all w-full text-center group">
+            <img alt="MoPIC Logo" class="h-14 w-auto object-contain mb-2 grayscale group-hover:grayscale-0 transition-all" src="/static/img/landing/mopic.png">
+            <span class="text-xs font-bold text-primary">MoPIC</span>
+            <span class="text-[10px] text-on-surface-variant leading-tight">{% if ui_lang == 'en' %}Ministry of Planning{% else %}وزارة التخطيط والتعاون الدولي{% endif %}</span>
+          </div>
+
+          <div class="flex flex-col items-center justify-center p-4 rounded-xl border border-outline-variant/30 bg-surface-container-low hover:bg-white hover:shadow-md transition-all w-full text-center group">
+            <img alt="MoL Logo" class="h-14 w-auto object-contain mb-2 grayscale group-hover:grayscale-0 transition-all" src="/static/img/landing/mol.png">
+            <span class="text-xs font-bold text-primary">MoL</span>
+            <span class="text-[10px] text-on-surface-variant leading-tight">{% if ui_lang == 'en' %}Ministry of Labour{% else %}وزارة العمل{% endif %}</span>
+          </div>
+
+          <div class="flex flex-col items-center justify-center p-4 rounded-xl border border-outline-variant/30 bg-surface-container-low hover:bg-white hover:shadow-md transition-all w-full text-center group">
+            <img alt="MoH Logo" class="h-14 w-auto object-contain mb-2 grayscale group-hover:grayscale-0 transition-all" src="/static/img/landing/moh.png">
+            <span class="text-xs font-bold text-primary">MoH</span>
+            <span class="text-[10px] text-on-surface-variant leading-tight">{% if ui_lang == 'en' %}Ministry of Health{% else %}وزارة الصحة{% endif %}</span>
+          </div>
+
+          <div class="flex flex-col items-center justify-center p-4 rounded-xl border border-outline-variant/30 bg-surface-container-low hover:bg-white hover:shadow-md transition-all w-full text-center group">
+            <img alt="MoE Logo" class="h-14 w-auto object-contain mb-2 grayscale group-hover:grayscale-0 transition-all" src="/static/img/landing/moe.png">
+            <span class="text-xs font-bold text-primary">MoE</span>
+            <span class="text-[10px] text-on-surface-variant leading-tight">{% if ui_lang == 'en' %}Ministry of Education{% else %}وزارة التربية والتعليم{% endif %}</span>
+          </div>
+
+          <div class="flex flex-col items-center justify-center p-4 rounded-xl border border-outline-variant/30 bg-surface-container-low hover:bg-white hover:shadow-md transition-all w-full text-center group">
+            <img alt="DOS Logo" class="h-14 w-auto object-contain mb-2 grayscale group-hover:grayscale-0 transition-all" src="/static/img/landing/dos.png">
+            <span class="text-xs font-bold text-primary">DOS</span>
+            <span class="text-[10px] text-on-surface-variant leading-tight">{% if ui_lang == 'en' %}Department of Statistics{% else %}دائرة الإحصاءات العامة{% endif %}</span>
+          </div>
+
+        </div>
+
+        <div class="mt-8 text-center">
+          <span class="inline-block bg-surface-container px-6 py-2 rounded-full border border-outline-variant/40 text-xs font-bold text-primary">
             {% if ui_lang == 'en' %}Part of Jordan's National Digital Transformation Strategy{% else %}إحدى مبادرات التحول الرقمي الوطني وحوكمة قطاع الطفولة في المملكة الأردنية الهاشمية{% endif %}
-          </p>
+          </span>
         </div>
 
       </div>
     </section>
 
-    <!-- Section 3: Animated Value-Proposition Cards -->
-    <section class="py-[80px] bg-surface-container-low max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop" aria-label="Role Portals">
-      <div class="text-center mb-xl">
-        <h2 class="font-display-lg-mobile md:font-headline-lg text-display-lg-mobile md:text-headline-lg text-primary mb-sm font-bold">
-          {% if ui_lang == 'en' %}Comprehensive Portals Built for Every Role{% else %}منظومة متكاملة تلبي احتياجات جميع أطراف الرعاية والتعليم{% endif %}
-        </h2>
-      </div>
-
-      <div class="grid md:grid-cols-3 gap-xl">
-
-        <div class="kinjo-home-value-card bg-white rounded-xl p-lg flex flex-col border border-outline-variant/20 animate-fade-in-up" style="animation-delay: 0s;">
-          <div class="w-14 h-14 bg-surface-container-low text-primary border border-tertiary/30 rounded-xl flex items-center justify-center mb-md group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
-            <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="family_home">family_home</span>
-          </div>
-          <h3 class="font-title-lg text-title-lg text-primary mb-sm font-bold">
-            {% if ui_lang == 'en' %}Parents &amp; Guardians{% else %}أولياء الأمور{% endif %}
-          </h3>
-          <p class="font-body-md text-body-md text-on-surface-variant mb-lg flex-grow leading-relaxed">
-            {% if ui_lang == 'en' %}Stay connected with real-time visibility into attendance, daily care reports, and secure communication with educators.{% else %}متابعة فورية للحضور والانصراف، وسجلات التغذية والنوم اليومية، والتواصل المباشر مع الكادر التعليمي.{% endif %}
+    <!-- Section 3: National Governance Framework Highlights -->
+    <section id="governance-framework" class="py-14 md:py-20 bg-surface-container-low border-b border-outline-variant/20" aria-label="Governance & Quality Standards">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="text-center max-w-3xl mx-auto mb-12">
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-primary mb-3">
+            {% if ui_lang == 'en' %}National Early Childhood Governance Framework{% else %}ركائز الحوكمة وضمان الجودة في قطاع الطفولة المبكرة{% endif %}
+          </h2>
+          <p class="text-sm sm:text-base text-on-surface-variant">
+            {% if ui_lang == 'en' %}
+            Structured mechanisms ensuring high safety, regulatory compliance, and transparency for every registered facility.
+            {% else %}
+            آليات عمل معتمدة تضمن أعلى درجات الأمان والامتثال القانوني والشفافية لكل منشأة مسجلة في المملكة.
+            {% endif %}
           </p>
-          <a class="font-label-bold text-label-bold text-primary flex items-center gap-2 group-hover:text-tertiary transition-colors min-h-[44px]" href="/services#parents">
-            {% if ui_lang == 'en' %}Explore Parent Services{% else %}استعراض خدمات أولياء الأمور{% endif %}
-            <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true" data-icon="arrow_forward">arrow_forward</span>
-          </a>
         </div>
 
-        <div class="kinjo-home-value-card bg-white rounded-xl p-lg flex flex-col border border-outline-variant/20 animate-fade-in-up" style="animation-delay: 0.15s;">
-          <div class="w-14 h-14 bg-surface-container-low text-primary border border-tertiary/30 rounded-xl flex items-center justify-center mb-md group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
-            <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="fact_check">fact_check</span>
-          </div>
-          <h3 class="font-title-lg text-title-lg text-primary mb-sm font-bold">
-            {% if ui_lang == 'en' %}Supervisors &amp; Auditors{% else %}المشرفون والمدققون التربويون{% endif %}
-          </h3>
-          <p class="font-body-md text-body-md text-on-surface-variant mb-lg flex-grow leading-relaxed">
-            {% if ui_lang == 'en' %}Ensure compliance with streamlined oversight, official data exports, and standardized quality assurance tools.{% else %}أدوات تدقيق رقمية ميدانية، ومطابقة النسب القانونية (مربية / طفل)، وتصدير التقارير الإحصائية المعتمدة.{% endif %}
-          </p>
-          <a class="font-label-bold text-label-bold text-primary flex items-center gap-2 group-hover:text-tertiary transition-colors min-h-[44px]" href="/services#supervisors">
-            {% if ui_lang == 'en' %}Explore Supervisor Tools{% else %}استعراض أدوات الإشراف والرقابة{% endif %}
-            <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true" data-icon="arrow_forward">arrow_forward</span>
-          </a>
-        </div>
-
-        <div class="kinjo-home-value-card bg-white rounded-xl p-lg flex flex-col border border-outline-variant/20 animate-fade-in-up" style="animation-delay: 0.3s;">
-          <div class="w-14 h-14 bg-surface-container-low text-primary border border-tertiary/30 rounded-xl flex items-center justify-center mb-md group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
-            <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="domain">domain</span>
-          </div>
-          <h3 class="font-title-lg text-title-lg text-primary mb-sm font-bold">
-            {% if ui_lang == 'en' %}Kindergarten Managers{% else %}إدارات الحضانات والروضات{% endif %}
-          </h3>
-          <p class="font-body-md text-body-md text-on-surface-variant mb-lg flex-grow leading-relaxed">
-            {% if ui_lang == 'en' %}Drive operational efficiency by managing the enrollment pipeline, staff allocation, and facility compliance in one place.{% else %}إدارة مسار القبول والتسجيل، وتنظيم الشعب وتوزيع الكادر، ومتابعة الامتثال لمعايير الترخيص والسلامة.{% endif %}
-          </p>
-          <a class="font-label-bold text-label-bold text-primary flex items-center gap-2 group-hover:text-tertiary transition-colors min-h-[44px]" href="/services#managers">
-            {% if ui_lang == 'en' %}Explore Manager Solutions{% else %}استعراض حلول إدارة الحضانات{% endif %}
-            <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true" data-icon="arrow_forward">arrow_forward</span>
-          </a>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- Section 4: App Ecosystem -->
-    <section class="py-[80px] bg-white border-y border-outline-variant/20" aria-label="Mobile App">
-      <div class="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop">
-        <div class="grid md:grid-cols-2 gap-xl items-center">
-          <div class="animate-fade-in-up">
-            <h2 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary mb-md font-bold">
-              {% if ui_lang == 'en' %}KinJo in Your Pocket{% else %}KinJo في جيبك{% endif %}
-            </h2>
-            <p class="font-body-lg text-body-lg text-on-surface-variant mb-lg leading-relaxed">
-              {% if ui_lang == 'en' %}Download the KinJo mobile app and stay connected to your kindergarten community wherever you are.{% else %}نزل تطبيق KinJo وابقَ على تواصل مع مجتمع الحضانة أينما كنت.{% endif %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          
+          <div class="bg-white p-6 rounded-2xl border border-outline-variant/30 shadow-sm hover:shadow-md transition-all">
+            <div class="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+              <span class="material-symbols-outlined text-2xl text-primary" aria-hidden="true">policy</span>
+            </div>
+            <h3 class="text-base font-bold text-primary mb-2">
+              {% if ui_lang == 'en' %}Accreditation &amp; Licensing{% else %}الترخيص والاعتماد القانوني{% endif %}
+            </h3>
+            <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+              {% if ui_lang == 'en' %}Direct verification of facility registration, health compliance certificates, and valid operating licenses.{% else %}التحقق المباشر من التراخيص الرسمية، وشهادات السلامة العامة، وتحديث السجلات القانونية للمنشآت.{% endif %}
             </p>
-            <ul class="space-y-3 mb-8">
-              <li class="flex items-start gap-3">
-                <span class="material-symbols-outlined text-tertiary mt-0.5" aria-hidden="true">notifications_active</span>
-                <span class="font-body-md text-body-md text-on-surface-variant">{% if ui_lang == 'en' %}Real-time push notifications for attendance and announcements{% else %}إشعارات فورية للحضور والإعلانات{% endif %}</span>
-              </li>
-              <li class="flex items-start gap-3">
-                <span class="material-symbols-outlined text-tertiary mt-0.5" aria-hidden="true">dashboard</span>
-                <span class="font-body-md text-body-md text-on-surface-variant">{% if ui_lang == 'en' %}Instant access to daily reports and care logs{% else %}وصول فوري إلى التقارير اليومية وسجلات الرعاية{% endif %}</span>
-              </li>
-              <li class="flex items-start gap-3">
-                <span class="material-symbols-outlined text-tertiary mt-0.5" aria-hidden="true">analytics</span>
-                <span class="font-body-md text-body-md text-on-surface-variant">{% if ui_lang == 'en' %}Smart analytics and insights for parents and managers{% else %}تحليلات وتقارير ذكية لأولياء الأمور والإدارات{% endif %}</span>
-              </li>
-            </ul>
+          </div>
+
+          <div class="bg-white p-6 rounded-2xl border border-outline-variant/30 shadow-sm hover:shadow-md transition-all">
+            <div class="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+              <span class="material-symbols-outlined text-2xl text-primary" aria-hidden="true">groups_3</span>
+            </div>
+            <h3 class="text-base font-bold text-primary mb-2">
+              {% if ui_lang == 'en' %}Statutory Staff Ratios{% else %}معايير نسب الكادر للأطفال{% endif %}
+            </h3>
+            <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+              {% if ui_lang == 'en' %}Monitoring educator-to-child ratios per age group to ensure individual care and safety standards.{% else %}مطابقة النسب القانونية (مربية / طفل) حسب الفئات العمرية لضمان جودة الرعاية والتفاعل الإيجابي.{% endif %}
+            </p>
+          </div>
+
+          <div class="bg-white p-6 rounded-2xl border border-outline-variant/30 shadow-sm hover:shadow-md transition-all">
+            <div class="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+              <span class="material-symbols-outlined text-2xl text-primary" aria-hidden="true">health_and_safety</span>
+            </div>
+            <h3 class="text-base font-bold text-primary mb-2">
+              {% if ui_lang == 'en' %}Daily Care &amp; Safety Logs{% else %}سجلات الرعاية والسلامة اليومية{% endif %}
+            </h3>
+            <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+              {% if ui_lang == 'en' %}Real-time logging of daily attendance, meals, naps, and health checks accessible to parents and supervisors.{% else %}توثيق فوري للحضور، والوجبات الغذائية، وفترات النوم، والحالة الصحية بمتابعة الأهل والمشرفين.{% endif %}
+            </p>
+          </div>
+
+          <div class="bg-white p-6 rounded-2xl border border-outline-variant/30 shadow-sm hover:shadow-md transition-all">
+            <div class="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+              <span class="material-symbols-outlined text-2xl text-primary" aria-hidden="true">analytics</span>
+            </div>
+            <h3 class="text-base font-bold text-primary mb-2">
+              {% if ui_lang == 'en' %}National Analytics &amp; KPIs{% else %}مؤشرات أداء وتقارير وطنية{% endif %}
+            </h3>
+            <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+              {% if ui_lang == 'en' %}Aggregated reporting and geographic dashboards supporting official evidence-based policy planning.{% else %}لوحات مؤشرات تحليلية وتقارير جغرافية تدعم صناع القرار والجهات الرسمية في تطوير القطاع.{% endif %}
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Section 4: Role Portals -->
+    <section class="py-14 md:py-20 bg-white border-b border-outline-variant/20" aria-label="Role Portals">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="text-center max-w-3xl mx-auto mb-12">
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-primary mb-3">
+            {% if ui_lang == 'en' %}Tailored Portals for Every Stakeholder{% else %}منظومة متكاملة تلبي احتياجات جميع أطراف المنظومة{% endif %}
+          </h2>
+          <p class="text-sm sm:text-base text-on-surface-variant">
+            {% if ui_lang == 'en' %}Dedicated workflows empowering parents, educators, managers, and government supervisors.{% else %}أدوات متخصصة تخدم أولياء الأمور، وإدارات الحضانات، والمشرفين التربويين والجهات الرسمية.{% endif %}
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+          <!-- Parents Card -->
+          <div class="kinjo-home-value-card bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col border border-outline-variant/30 hover:border-primary/40 transition-all group">
+            <div class="w-14 h-14 bg-white text-primary border border-outline-variant/40 rounded-xl flex items-center justify-center mb-6 shadow-sm group-hover:bg-primary group-hover:text-white transition-colors">
+              <span class="material-symbols-outlined text-2xl" aria-hidden="true">family_restroom</span>
+            </div>
+            <h3 class="text-xl font-bold text-primary mb-3">
+              {% if ui_lang == 'en' %}Parents &amp; Guardians{% else %}أولياء الأمور والأسر{% endif %}
+            </h3>
+            <p class="text-xs sm:text-sm text-on-surface-variant mb-6 flex-grow leading-relaxed">
+              {% if ui_lang == 'en' %}
+              Direct enrollment, live attendance alerts, daily nutrition &amp; sleep logs, and private bilingual messaging with kindergarten staff.
+              {% else %}
+              تسجيل إلكتروني مباشر، وإشعارات حضور وانصراف فورية، ومتابعة سجلات التغذية والنوم، وتواصل موثوق مع الكادر التعليمي.
+              {% endif %}
+            </p>
+            <a class="inline-flex items-center gap-2 text-sm font-bold text-primary group-hover:text-tertiary transition-colors" href="/services#parents">
+              <span>{% if ui_lang == 'en' %}Explore Parent Services{% else %}استعراض خدمات أولياء الأمور{% endif %}</span>
+              <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true">arrow_forward</span>
+            </a>
+          </div>
+
+          <!-- Supervisors Card -->
+          <div class="kinjo-home-value-card bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col border border-outline-variant/30 hover:border-primary/40 transition-all group">
+            <div class="w-14 h-14 bg-white text-primary border border-outline-variant/40 rounded-xl flex items-center justify-center mb-6 shadow-sm group-hover:bg-primary group-hover:text-white transition-colors">
+              <span class="material-symbols-outlined text-2xl" aria-hidden="true">fact_check</span>
+            </div>
+            <h3 class="text-xl font-bold text-primary mb-3">
+              {% if ui_lang == 'en' %}Supervisors &amp; Auditors{% else %}المشرفون والمدققون التربويون{% endif %}
+            </h3>
+            <p class="text-xs sm:text-sm text-on-surface-variant mb-6 flex-grow leading-relaxed">
+              {% if ui_lang == 'en' %}
+              Field inspection tools, statutory ratio compliance validation, incident audit logs, and standardized official export reports.
+              {% else %}
+              أدوات تفتيش ميدانية رقمية، وتدقيق النسب القانونية، ومتابعة بلاغات الحوادث، وتصدير التقارير الإحصائية الرسمية.
+              {% endif %}
+            </p>
+            <a class="inline-flex items-center gap-2 text-sm font-bold text-primary group-hover:text-tertiary transition-colors" href="/services#supervisors">
+              <span>{% if ui_lang == 'en' %}Explore Supervisor Tools{% else %}استعراض أدوات الإشراف والرقابة{% endif %}</span>
+              <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true">arrow_forward</span>
+            </a>
+          </div>
+
+          <!-- Managers Card -->
+          <div class="kinjo-home-value-card bg-surface-container-low rounded-2xl p-6 sm:p-8 flex flex-col border border-outline-variant/30 hover:border-primary/40 transition-all group">
+            <div class="w-14 h-14 bg-white text-primary border border-outline-variant/40 rounded-xl flex items-center justify-center mb-6 shadow-sm group-hover:bg-primary group-hover:text-white transition-colors">
+              <span class="material-symbols-outlined text-2xl" aria-hidden="true">domain</span>
+            </div>
+            <h3 class="text-xl font-bold text-primary mb-3">
+              {% if ui_lang == 'en' %}Kindergarten Managers{% else %}إدارات الحضانات والروضات{% endif %}
+            </h3>
+            <p class="text-xs sm:text-sm text-on-surface-variant mb-6 flex-grow leading-relaxed">
+              {% if ui_lang == 'en' %}
+              Manage admissions pipeline, class scheduling, educator assignments, facility licensing documentation, and compliance in one unified portal.
+              {% else %}
+              إدارة طلبات القبول والتسجيل، وتنظيم الشعب والصفوف، وتوزيع الكوادر، ومتابعة تجديد التراخيص ومعايير السلامة.
+              {% endif %}
+            </p>
+            <a class="inline-flex items-center gap-2 text-sm font-bold text-primary group-hover:text-tertiary transition-colors" href="/services#managers">
+              <span>{% if ui_lang == 'en' %}Explore Manager Solutions{% else %}استعراض حلول إدارة الحضانات{% endif %}</span>
+              <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true">arrow_forward</span>
+            </a>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Section 5: Mobile App Ecosystem -->
+    <section class="py-14 md:py-20 bg-surface-container-low" aria-label="KinJo Mobile App">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid md:grid-cols-2 gap-10 items-center">
+          
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-3">
+              <span class="material-symbols-outlined text-sm" aria-hidden="true">phone_iphone</span>
+              <span>{% if ui_lang == 'en' %}Mobile Accessibility{% else %}تطبيق الهاتف المحمول{% endif %}</span>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-primary mb-4">
+              {% if ui_lang == 'en' %}KinJo in Your Pocket{% else %}منصة KinJo في متناول يدك دائماً{% endif %}
+            </h2>
+            <p class="text-sm sm:text-base text-on-surface-variant mb-6 leading-relaxed">
+              {% if ui_lang == 'en' %}
+              Stay instantly connected with push notifications, daily care reports, and secure communication wherever you are.
+              {% else %}
+              ابقَ على اطلاع فوري بإشعارات الحضور والانصراف، وسجلات الرعاية اليومية، والتواصل الآمن مع الحضانة من أي مكان.
+              {% endif %}
+            </p>
+            
+            <div class="space-y-3 mb-8">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-tertiary text-lg" aria-hidden="true">notifications_active</span>
+                <span class="text-xs sm:text-sm text-on-surface-variant font-medium">{% if ui_lang == 'en' %}Instant push alerts for check-in and pick-up{% else %}تنبيهات فورية عند تسجيل الحضور والاستلام{% endif %}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-tertiary text-lg" aria-hidden="true">restaurant</span>
+                <span class="text-xs sm:text-sm text-on-surface-variant font-medium">{% if ui_lang == 'en' %}Live meal, nap, and activity summaries{% else %}ملخص فوري للوجبات، وأوقات النوم، والأنشطة{% endif %}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-tertiary text-lg" aria-hidden="true">security</span>
+                <span class="text-xs sm:text-sm text-on-surface-variant font-medium">{% if ui_lang == 'en' %}Bilingual, high-security child data protection{% else %}حماية متقدمة لبيانات الأطفال باللغتين العربية والإنجليزية{% endif %}</span>
+              </div>
+            </div>
+
             <div class="flex flex-wrap gap-3">
-              <a href="#" class="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors min-h-[44px]">
-                <span class="material-symbols-outlined" aria-hidden="true">android</span>
-                <span class="font-label-bold text-label-bold text-white">{% if ui_lang == 'en' %}Google Play{% else %}Google Play{% endif %}</span>
+              <a href="#" class="inline-flex items-center gap-2 px-4 py-2.5 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors text-xs font-bold">
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">android</span>
+                <span>Google Play</span>
               </a>
-              <a href="#" class="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors min-h-[44px]">
-                <span class="material-symbols-outlined" aria-hidden="true">apple</span>
-                <span class="font-label-bold text-label-bold text-white">{% if ui_lang == 'en' %}App Store{% else %}App Store{% endif %}</span>
+              <a href="#" class="inline-flex items-center gap-2 px-4 py-2.5 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors text-xs font-bold">
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">apple</span>
+                <span>App Store</span>
               </a>
             </div>
           </div>
-          <div class="hidden md:flex items-center justify-center animate-fade-in-up" style="animation-delay: 0.2s;">
-            <div class="w-64 h-[500px] bg-surface-container-low rounded-[2.5rem] border-4 border-outline-variant/30 shadow-xl flex items-center justify-center">
-              <span class="material-symbols-outlined text-6xl text-primary" aria-hidden="true">smartphone</span>
+
+          <div class="flex items-center justify-center">
+            <div class="w-64 h-[440px] bg-white rounded-[2.5rem] border-8 border-gray-900 shadow-2xl p-4 flex flex-col justify-between relative overflow-hidden">
+              <div class="w-20 h-4 bg-gray-900 rounded-full mx-auto mb-3"></div>
+              <div class="bg-surface-container p-3 rounded-xl border border-outline-variant/30 text-center">
+                <div class="w-10 h-10 bg-primary text-white rounded-full mx-auto flex items-center justify-center mb-2">
+                  <span class="material-symbols-outlined text-xl" aria-hidden="true">child_care</span>
+                </div>
+                <div class="text-xs font-bold text-primary">{% if ui_lang == 'en' %}Daily Care Update{% else %}تقرير الرعاية اليومي{% endif %}</div>
+                <div class="text-[10px] text-on-surface-variant mt-1">{% if ui_lang == 'en' %}All daily activities verified{% else %}تم توثيق كافة الأنشطة بنجاح{% endif %}</div>
+              </div>
+              <div class="text-center py-4">
+                <span class="material-symbols-outlined text-4xl text-primary animate-pulse" aria-hidden="true">verified_user</span>
+                <div class="text-[11px] font-bold text-primary mt-1">KinJo Mobile</div>
+              </div>
+              <div class="w-16 h-1 bg-gray-400 rounded-full mx-auto"></div>
             </div>
           </div>
+
         </div>
       </div>
     </section>
@@ -424,31 +823,65 @@
   </main>
 
   <!-- Footer -->
-  <footer class="bg-white border-t border-outline-variant/30 full-width" role="contentinfo">
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-gutter px-margin-mobile md:px-margin-desktop py-xl max-w-7xl mx-auto">
-
-      <div class="col-span-1 md:col-span-2 mb-md md:mb-0 flex flex-col gap-sm">
-        <div class="flex items-center gap-sm mb-4">
-          <img alt="KinJo Logo" class="h-12 w-auto object-contain rounded-sm" src="/static/img/landing/logo.png">
-          <span class="font-title-lg text-title-lg font-bold text-primary block">
-            {% if ui_lang == 'en' %}Jordan Kindergarten Portal{% else %}بوابة الحضانات الأردنية{% endif %}
-          </span>
+  <footer class="bg-white border-t border-outline-variant/30" role="contentinfo">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        
+        <!-- Column 1: Brand & National Context -->
+        <div class="col-span-1 md:col-span-2">
+          <div class="flex items-center gap-3 mb-3">
+            <img alt="KinJo Logo" class="h-10 w-auto object-contain rounded bg-white p-1" src="/static/img/landing/logo.png">
+            <span class="text-lg font-bold text-primary">
+              {% if ui_lang == 'en' %}Jordan Kindergarten Portal{% else %}بوابة الحضانات والطفولة المبكرة الأردنية{% endif %}
+            </span>
+          </div>
+          <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed max-w-md">
+            {% if ui_lang == 'en' %}
+            The national integrated platform for early childhood care, kindergarten licensing, statutory compliance, and transparent family-educator collaboration in Jordan.
+            {% else %}
+            المنصة الوطنية الموحدة لخدمات الحضانات ورعاية الطفولة المبكرة، والتحقق من التراخيص والامتثال لمعايير الجودة في المملكة الأردنية الهاشمية.
+            {% endif %}
+          </p>
         </div>
+
+        <!-- Column 2: Governance & Services -->
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-primary mb-3">
+            {% if ui_lang == 'en' %}Governance &amp; Services{% else %}الحوكمة والخدمات{% endif %}
+          </h4>
+          <ul class="space-y-2 text-xs">
+            <li><a href="/services" class="text-on-surface-variant hover:text-primary transition-colors">{% if ui_lang == 'en' %}Public Service Cards{% else %}بطاقات الخدمة الرسمية{% endif %}</a></li>
+            <li><a href="#trusted-partners" class="text-on-surface-variant hover:text-primary transition-colors">{% if ui_lang == 'en' %}Institutional Partners{% else %}الجهات والمؤسسات المستفيدة{% endif %}</a></li>
+            <li><a href="#governance-framework" class="text-on-surface-variant hover:text-primary transition-colors">{% if ui_lang == 'en' %}Quality Standards{% else %}معايير الاعتماد والجودة{% endif %}</a></li>
+            <li><a href="/services#supervisors" class="text-on-surface-variant hover:text-primary transition-colors">{% if ui_lang == 'en' %}Supervisory Tools{% else %}الرقابة والتفتيش{% endif %}</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3: Legal & Support -->
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-primary mb-3">
+            {% if ui_lang == 'en' %}Support &amp; Legal{% else %}الدعم والمحددات القانونية{% endif %}
+          </h4>
+          <ul class="space-y-2 text-xs">
+            <li><a href="/faq" class="text-on-surface-variant hover:text-primary transition-colors">{% if ui_lang == 'en' %}FAQ{% else %}الأسئلة الشائعة{% endif %}</a></li>
+            <li><a href="/contact" class="text-on-surface-variant hover:text-primary transition-colors">{% if ui_lang == 'en' %}Contact Support{% else %}اتصل بنا{% endif %}</a></li>
+            <li><a href="/privacy" class="text-on-surface-variant hover:text-primary transition-colors">{% if ui_lang == 'en' %}Privacy Policy{% else %}سياسة الخصوصية{% endif %}</a></li>
+            <li><a href="/terms" class="text-on-surface-variant hover:text-primary transition-colors">{% if ui_lang == 'en' %}Terms of Service{% else %}شروط الاستخدام{% endif %}</a></li>
+          </ul>
+        </div>
+
       </div>
 
-      <div class="col-span-1 md:col-span-2 flex flex-col md:flex-row gap-lg md:justify-end items-start md:items-center">
-        <a class="font-body-sm text-body-sm text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="/privacy">
-          {% if ui_lang == 'en' %}Privacy Policy{% else %}سياسة الخصوصية{% endif %}
-        </a>
-        <a class="font-body-sm text-body-sm text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="/terms">
-          {% if ui_lang == 'en' %}Terms of Service{% else %}شروط الخدمة{% endif %}
-        </a>
-        <a class="font-body-sm text-body-sm text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="/about">
-          {% if ui_lang == 'en' %}Accessibility Statement{% else %}بيان إمكانية الوصول{% endif %}
-        </a>
-        <a class="font-body-sm text-body-sm text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="/services">
-          {% if ui_lang == 'en' %}National Portal{% else %}البوابة الوطنية{% endif %}
-        </a>
+      <div class="pt-6 border-t border-outline-variant/20 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-on-surface-variant">
+        <div>
+          &copy; {{ current_year | default(2026) }} KinJo — {% if ui_lang == 'en' %}All Rights Reserved.{% else %}جميع الحقوق محفوظة.{% endif %}
+        </div>
+        <div class="flex items-center gap-4">
+          <a href="/privacy" class="hover:text-primary transition-colors">{% if ui_lang == 'en' %}Privacy{% else %}الخصوصية{% endif %}</a>
+          <a href="/terms" class="hover:text-primary transition-colors">{% if ui_lang == 'en' %}Terms{% else %}الشروط{% endif %}</a>
+          <a href="/about" class="hover:text-primary transition-colors">{% if ui_lang == 'en' %}About{% else %}عن المنصة{% endif %}</a>
+        </div>
       </div>
 
     </div>
@@ -458,12 +891,14 @@
   {% include "components/chatbot.html" %}
   <script src="/static/js/chatbot.js?v=81c1ad2b58bc"></script>
 
-  <script src="/static/js/home-search.js?v=1"></script>
+  <!-- Search Engine Script -->
+  <script src="/static/js/home-search.js?v=2"></script>
 
+  <!-- Navigation and Mobile Drawer Script -->
   <script>
     function toggleLanguage() {
-      const body = document.body;
-      const targetLang = body.classList.contains('lang-en') ? 'ar' : 'en';
+      const isEn = document.documentElement.lang === 'en';
+      const targetLang = isEn ? 'ar' : 'en';
       fetch('/api/ui-language', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -476,6 +911,22 @@
         }
       }).catch(function() {
         window.location.href = '/?lang=' + targetLang;
+      });
+    }
+
+    // Mobile menu toggle
+    const mobileBtn = document.getElementById('mobile-menu-toggle-btn');
+    const mobileDrawer = document.getElementById('mobile-nav-drawer');
+    if (mobileBtn && mobileDrawer) {
+      mobileBtn.addEventListener('click', function () {
+        const isHidden = mobileDrawer.classList.contains('hidden');
+        if (isHidden) {
+          mobileDrawer.classList.remove('hidden');
+          mobileBtn.setAttribute('aria-expanded', 'true');
+        } else {
+          mobileDrawer.classList.add('hidden');
+          mobileBtn.setAttribute('aria-expanded', 'false');
+        }
       });
     }
   </script>

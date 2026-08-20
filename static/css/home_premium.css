@@ -864,3 +864,27 @@
     animation: none;
   }
 }
+
+/* ── Governance Menu and Modern Search Additions ───────────────────────── */
+.kg-quick-gov-pill {
+  user-select: none;
+  cursor: pointer;
+}
+
+.kg-quick-gov-pill:active {
+  transform: scale(0.95);
+}
+
+.nav-dropdown-menu {
+  box-shadow: 0 20px 40px -15px rgba(0, 47, 108, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.kinjo-home-search-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.kinjo-home-search-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -10px rgba(0, 47, 108, 0.15);
+}
+
