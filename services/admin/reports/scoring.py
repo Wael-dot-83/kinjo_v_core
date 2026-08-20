@@ -34,6 +34,10 @@ _STATUS_BANDS: tuple[tuple[float, str], ...] = (
     (70.0, "orange"),
 )
 
+# TODO(i18n-review): ADMIN-I18N-001 -- 4 Arabic band labels below.
+# Authored against docs/TERMINOLOGY_GLOSSARY.md and static/i18n/admin_ar.json
+# because the source specification's Arabic did not survive PDF text
+# extraction. Pending a native-speaker pass in Phase 5.
 _STATUS_LABELS: dict[str, tuple[str, str]] = {
     "green": ("ممتاز", "Excellent"),
     "yellow": ("مقبول", "Acceptable"),
@@ -78,6 +82,9 @@ class ViolationSeverity(Enum):
 
 
 # violation key -> (severity, Arabic description, English description)
+# TODO(i18n-review): ADMIN-I18N-001 -- 8 Arabic violation descriptions below.
+# Terminology follows docs/TERMINOLOGY_GLOSSARY.md: حضانة (not روضة) for a
+# facility, مشرف for a supervisor, صف for a class. Pending native-speaker review.
 VIOLATION_RULES: dict[str, tuple[ViolationSeverity, str, str]] = {
     "class_with_children_no_supervisor": (
         ViolationSeverity.CRITICAL,
@@ -204,6 +211,7 @@ DATA_QUALITY_WEIGHTS: dict[str, float] = {
     "uniqueness": 0.20,
 }
 
+# TODO(i18n-review): ADMIN-I18N-001 -- 4 Arabic dimension labels below.
 _DIMENSION_LABELS: dict[str, tuple[str, str]] = {
     "completeness": ("الاكتمال", "Completeness"),
     "timeliness": ("التوقيت", "Timeliness"),
@@ -301,6 +309,7 @@ def _inverse_ratio_pct(bad: int, total: int) -> float:
 # ADMIN-SCORING-003 — Risk ranking
 # ---------------------------------------------------------------------------
 
+# TODO(i18n-review): ADMIN-I18N-001 -- 4 Arabic risk-band labels below.
 _RISK_LABELS: dict[str, tuple[str, str]] = {
     "critical": ("حرج", "Critical"),
     "warning": ("تحذير", "Warning"),

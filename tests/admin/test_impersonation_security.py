@@ -2,6 +2,12 @@
 
 One test per numbered requirement, plus the module-level invariants that keep
 the limits from being widened by accident.
+
+
+TODO(i18n-review): ADMIN-I18N-001 -- this file asserts on Arabic literals
+authored in this branch rather than taken from the specification. If the
+native-speaker pass in Phase 5 changes any wording, these assertions change
+with it.
 """
 
 import json

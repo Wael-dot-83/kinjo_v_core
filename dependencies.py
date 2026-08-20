@@ -359,10 +359,13 @@ class Permission(str, Enum):
     SYSTEM_HEALTH = "admin:system:health"
 
     # --- Extensions beyond the specification's enum (ADMIN-001) ---------------
-    # ADMIN_PANEL: the spec grants MANAGER the ADMIN_READ permission, so mapping
-    # the existing ``require_admin`` dependency onto ADMIN_READ would silently
-    # open every admin-only endpoint to managers. ADMIN_PANEL preserves today's
-    # admin-only semantics without weakening the spec's role table.
+    # DEVIATION from spec section 2.1: require_admin() must NOT map to
+    # ADMIN_READ, because ROLE_PERMISSIONS grants ADMIN_READ to MANAGER.
+    # Following the pseudocode literally would silently promote every manager
+    # onto admin-only endpoints, violating mandate 2 (no regressions).
+    # Using ADMIN_PANEL ensures true admin-only isolation.
+    # Guarded by tests/admin/test_rbac_decorator.py::test_admin_panel_is_admin_only.
+    # Refs: ADMIN-SEC-001
     ADMIN_PANEL = "admin:panel"
     # SCOPE_ALL: "this actor is not restricted to an assigned kindergarten or
     # governorate". Carries the branch semantics of the old compound checks.
@@ -388,6 +391,8 @@ ROLE_PERMISSIONS: "dict[models.UserRole, list[Permission]]" = {
     models.UserRole.PARENT: [],
 }
 
+# TODO(i18n-review): ADMIN-I18N-001 -- Arabic authored here, not taken from
+# the specification (its Arabic did not survive PDF extraction).
 _INSUFFICIENT_PERMISSIONS_AR = "ليس لديك الصلاحية المطلوبة"
 _INSUFFICIENT_PERMISSIONS_EN = "You do not have the required permission"
 

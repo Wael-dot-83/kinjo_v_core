@@ -2,6 +2,12 @@
 
 Covers the validation cases named in specification section 3.1 plus the edge
 cases the old formula got wrong.
+
+
+TODO(i18n-review): ADMIN-I18N-001 -- this file asserts on Arabic literals
+authored in this branch rather than taken from the specification. If the
+native-speaker pass in Phase 5 changes any wording, these assertions change
+with it.
 """
 
 import pytest

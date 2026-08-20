@@ -2,6 +2,12 @@
 
 The headline case is the one named in specification section 3.3: rank 100
 kindergartens and get exactly 10 critical, 15 warning, 25 elevated, 50 normal.
+
+
+TODO(i18n-review): ADMIN-I18N-001 -- this file asserts on Arabic literals
+authored in this branch rather than taken from the specification. If the
+native-speaker pass in Phase 5 changes any wording, these assertions change
+with it.
 """
 
 import pytest

@@ -185,6 +185,10 @@ def _notify_target(target: User, admin: User, started_at: datetime, ip: Optional
     when = started_at.strftime("%Y-%m-%d %H:%M")
     where = ip or "unknown"
 
+    # TODO(i18n-review): ADMIN-I18N-001 -- the Arabic subject and body below
+    # were authored here, not taken from the specification (its Arabic did not
+    # survive PDF extraction). This text reaches a real user as a security
+    # notice, so it should get the native-speaker pass first.
     subject = "تنبيه أمني: تم الوصول إلى حسابك | Security alert: your account was accessed"
     body = "\n".join([
         f"قام المسؤول {admin_name} بالوصول إلى حسابك بتاريخ {when} "
@@ -378,6 +382,7 @@ def start_impersonation(
         # Requirement 7: the banner text the UI must display, supplied by the
         # server so both languages stay in one place.
         "banner": {
+            # TODO(i18n-review): ADMIN-I18N-001 -- Arabic banner text authored here.
             "ar": f"أنت تعمل باسم {target_display} — تنتهي الجلسة في {expires_at}",
             "en": f"You are acting as {target_display} — session ends at {expires_at}",
         },

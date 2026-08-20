@@ -3,6 +3,12 @@
 The old score was report-filing rate alone. These tests pin the four
 dimensions, their weights, and the clamping that keeps a dimension in range
 when counts arrive from differently scoped queries.
+
+
+TODO(i18n-review): ADMIN-I18N-001 -- this file asserts on Arabic literals
+authored in this branch rather than taken from the specification. If the
+native-speaker pass in Phase 5 changes any wording, these assertions change
+with it.
 """
 
 import pytest
