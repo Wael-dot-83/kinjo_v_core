@@ -17,7 +17,7 @@ import models
 import validators
 from config import settings
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, Permission, has_permission, has_role
 from rbac import assert_supervisor_owns_child
 
 router = APIRouter(tags=["Daily Reports"])
@@ -210,7 +210,7 @@ def create_daily_report(
     db: Session = Depends(get_db),
 ):
     """Create a new daily report (Supervisor only)"""
-    if current_user.role != models.UserRole.SUPERVISOR:
+    if not has_role(current_user, models.UserRole.SUPERVISOR):
         raise HTTPException(status_code=403, detail="Only supervisors can create daily reports")
 
     try:
@@ -336,7 +336,7 @@ def create_daily_reports_batch(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if current_user.role != models.UserRole.SUPERVISOR:
+    if not has_role(current_user, models.UserRole.SUPERVISOR):
         raise HTTPException(status_code=403, detail="Only supervisors can create daily reports")
 
     report_date = date.fromisoformat(payload.date)
@@ -431,7 +431,7 @@ def submit_daily_report(
     report_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Submit daily report for approval — Supervisor only, must own the report."""
-    if current_user.role != models.UserRole.SUPERVISOR:
+    if not has_role(current_user, models.UserRole.SUPERVISOR):
         raise HTTPException(status_code=403, detail="Only supervisors can submit daily reports")
 
     report = db.query(models.DailyReport).filter(models.DailyReport.id == report_id).with_for_update().first()
@@ -474,7 +474,7 @@ def approve_daily_report(
         raise HTTPException(status_code=404, detail="Daily report not found")
 
     # Cross-KG scope: managers cannot approve reports outside their kindergarten
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         if report.kindergarten_id != current_user.kindergarten_id:
             raise HTTPException(status_code=404, detail="Daily report not found")
 
@@ -511,7 +511,7 @@ def get_child_daily_reports(
         parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
         if not parent_profile or parent_profile.id != child.parent_id:
             raise HTTPException(status_code=403, detail="Forbidden")
-    elif current_user.role != models.UserRole.ADMIN:
+    elif not has_permission(current_user, Permission.ADMIN_PANEL):
         # Supervisors and managers are scoped to their kindergarten
         enrollment = (
             db.query(models.EnrollmentApplication)
@@ -605,7 +605,7 @@ def get_daily_report_by_id(
             raise HTTPException(status_code=404, detail="Daily report not found")
         if current_user.role == models.UserRole.SUPERVISOR:
             _authorize_supervisor_report_access(db, current_user, report)
-    elif current_user.role != models.UserRole.ADMIN:
+    elif not has_permission(current_user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     return {
@@ -650,7 +650,7 @@ def record_daily_report_view(
 ):
     """Record that a parent has viewed a daily report."""
     # 1. Restrict to PARENT role only
-    if current_user.role != models.UserRole.PARENT:
+    if not has_role(current_user, models.UserRole.PARENT):
         raise HTTPException(status_code=403, detail="Only parents can record report views")
 
     report = db.query(models.DailyReport).filter(models.DailyReport.id == report_id).first()

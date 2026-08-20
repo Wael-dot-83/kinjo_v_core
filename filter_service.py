@@ -13,6 +13,7 @@ from sqlalchemy import and_, or_, func
 from database import get_db
 from cache_service import cache_service
 import models
+from dependencies import Permission, has_permission
 from utils.time_utils import jordan_date_range_filter
 from utils.time_utils import jordan_date_range_filter
 
@@ -162,7 +163,7 @@ class DashboardFilterService:
 
         # Kindergarten filter
         kindergarten_ids = filters.get("kindergarten_ids", [])
-        if user.role != models.UserRole.ADMIN:
+        if not has_permission(user, Permission.ADMIN_PANEL):
             kindergarten_ids = [user.kindergarten_id] if user.kindergarten_id else []
 
         if kindergarten_ids:
@@ -259,7 +260,7 @@ class DashboardFilterService:
             db = next(get_db())
 
             kg_query = db.query(models.Kindergarten)
-            if user.role != models.UserRole.ADMIN:
+            if not has_permission(user, Permission.ADMIN_PANEL):
                 kg_query = kg_query.filter(models.Kindergarten.id == user.kindergarten_id)
 
             kindergartens = kg_query.all()
@@ -306,7 +307,7 @@ class DashboardFilterService:
                 )
             )
 
-            if user.role != models.UserRole.ADMIN:
+            if not has_permission(user, Permission.ADMIN_PANEL):
                 kg_query = kg_query.filter(models.Kindergarten.id == user.kindergarten_id)
 
             kindergartens = kg_query.order_by(models.Kindergarten.name_ar.asc()).limit(limit).all()

@@ -18,7 +18,7 @@ from admin_security import forbidden_error, not_found_error, validation_error, l
 from audit_actions import AuditAction
 from config import settings
 from database import get_db, SessionLocal
-from dependencies import get_current_user
+from dependencies import get_current_user, Permission, has_permission, has_role
 from notification_service import (
     create_message_notifications,
     dispatch_message_notification_tasks,
@@ -1201,7 +1201,7 @@ def list_my_messages(
         )
     )
 
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         announcement_recipient_exists = exists(
             select(models.MessageRecipient.id).where(
                 models.MessageRecipient.message_id == models.Message.id,
@@ -1302,7 +1302,7 @@ def get_unread_count(
         )
     )
 
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         announcement_recipient_exists = exists(
             select(models.MessageRecipient.id).where(
                 models.MessageRecipient.message_id == models.Message.id,
@@ -1340,7 +1340,7 @@ def get_available_recipients(
     db: Session = Depends(get_db)
 ):
     """Get available recipients for messaging (managers only)"""
-    if current_user.role != models.UserRole.MANAGER:
+    if not has_role(current_user, models.UserRole.MANAGER):
         raise forbidden_error("Only managers can access available recipients")
 
     if not current_user.kindergarten_id:
@@ -2270,7 +2270,7 @@ def submit_survey_response(
                 raise HTTPException(status_code=403, detail="No children enrolled in this survey's kindergarten")
         else:
             raise HTTPException(status_code=403, detail="Parent profile not found")
-    elif current_user.role != models.UserRole.ADMIN:
+    elif not has_permission(current_user, Permission.ADMIN_PANEL):
         validators.validate_kindergarten_scope(current_user, survey.kindergarten_id)
 
     # Check if already responded

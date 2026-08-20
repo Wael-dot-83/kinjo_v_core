@@ -43,7 +43,7 @@ import validators
 from database import get_db
 from utils.time_utils import jordan_day_bounds, jordan_date_range_filter, now_amman, to_jordan_date, to_jordan_iso
 from export_service import export_service
-from dependencies import get_current_user
+from dependencies import get_current_user, has_role
 from rate_limiter import limiter
 from config import settings
 from auth import change_user_password, get_password_hash, verify_password
@@ -278,7 +278,7 @@ def list_users(
     # Apply role-based scoping
     if current_user.role == models.UserRole.ADMIN:
         # Admins see all except other admins
-        query = query.filter(models.User.role != models.UserRole.ADMIN)
+        query = query.filter(models.user_role_is_not(models.UserRole.ADMIN))
         if kindergarten_id:
             query = query.filter(models.User.kindergarten_id == kindergarten_id)
     else:
@@ -561,7 +561,7 @@ def export_users(
     """
     Export users list with filtering.
     """
-    query = db.query(models.User).filter(models.User.role != models.UserRole.ADMIN)
+    query = db.query(models.User).filter(models.user_role_is_not(models.UserRole.ADMIN))
 
     if kindergarten_id:
         query = query.filter(models.User.kindergarten_id == kindergarten_id)
@@ -749,7 +749,7 @@ def update_user(
         current_user.role == models.UserRole.ADMIN
         and target_role == models.UserRole.MANAGER
         and (
-            user.role != models.UserRole.MANAGER
+            not has_role(user, models.UserRole.MANAGER)
             or (user_data.kindergarten_id is not None
                 and user_data.kindergarten_id != user.kindergarten_id)
         )

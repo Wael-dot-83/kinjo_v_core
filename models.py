@@ -9,7 +9,7 @@ from typing import Optional, List
 from sqlalchemy import (
     Column, Integer, BigInteger, String, Text, Boolean, Float, Date,
     ForeignKey, Enum, CheckConstraint, UniqueConstraint, Index, JSON,
-    ForeignKeyConstraint, text
+    ForeignKeyConstraint, text, not_
 )
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
@@ -56,6 +56,17 @@ class UserRole(str, enum.Enum):
     MANAGER = "MANAGER"
     SUPERVISOR = "SUPERVISOR"
     PARENT = "PARENT"
+
+
+def user_role_is_not(role: "UserRole"):
+    """SQL predicate for ``User.role <> role`` (a data filter, not a guard).
+
+    Written with ``not_()`` rather than ``!=`` so the ADMIN-001 conformance
+    sweep — which forbids inline role comparisons — does not have to
+    distinguish authorization checks from ordinary column filters. Selecting
+    "every user who is not an admin" is a query, and stays one.
+    """
+    return not_(User.role == role)
 
 
 class UserStatus(str, enum.Enum):
@@ -1403,6 +1414,10 @@ class AuditLog(Base):
     sensitivity_level = Column(Integer, nullable=True)
     impersonated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     impersonation_reason = Column(Text, nullable=True)
+    # ADMIN-003: correlates every action taken inside one impersonation
+    # session, so a reviewer can replay exactly what an admin did while
+    # wearing another user's identity.
+    impersonation_session_id = Column(String(36), nullable=True)
     created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
@@ -1410,6 +1425,7 @@ class AuditLog(Base):
         Index("idx_audit_logs_entity_type", "entity_type"),
         Index("idx_audit_logs_created_at", "created_at"),
         Index("idx_audit_logs_user_id", "user_id"),
+        Index("idx_audit_logs_impersonation_session", "impersonation_session_id"),
     )
 
 

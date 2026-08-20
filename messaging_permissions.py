@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func, text
 
 import models
+from dependencies import has_role
 import validators
 from admin_security import forbidden_error, not_found_error, validation_error
 from config import settings
@@ -514,11 +515,11 @@ def validate_direct_permissions(
             return
         raise forbidden_error("Managers can only message supervisors and parents")
     if current_user.role == models.UserRole.SUPERVISOR:
-        if recipient.role != models.UserRole.MANAGER or recipient.kindergarten_id != current_user.kindergarten_id:
+        if not has_role(recipient, models.UserRole.MANAGER) or recipient.kindergarten_id != current_user.kindergarten_id:
             raise forbidden_error("Supervisors can only message their kindergarten manager")
         return
     if current_user.role == models.UserRole.PARENT:
-        if recipient.role != models.UserRole.MANAGER:
+        if not has_role(recipient, models.UserRole.MANAGER):
             raise forbidden_error("Parents can only message kindergarten managers")
         if not recipient.kindergarten_id:
             raise forbidden_error("Recipient must belong to a kindergarten")
@@ -801,7 +802,7 @@ def _apply_user_filter(query, field: str, op: FilterOperator, value):
             roles = [models.UserRole(r) for r in value]
             query = query.filter(models.User.role.in_(roles))
         elif op == FilterOperator.NEQ:
-            query = query.filter(models.User.role != models.UserRole(value))
+            query = query.filter(models.user_role_is_not(models.UserRole(value)))
         elif op == FilterOperator.NOT_IN:
             roles = [models.UserRole(r) for r in value]
             query = query.filter(models.User.role.not_in_(roles))

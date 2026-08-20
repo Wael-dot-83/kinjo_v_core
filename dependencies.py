@@ -2,6 +2,7 @@
 FastAPI Dependencies for KinJo platform
 """
 import logging
+from enum import Enum
 from typing import Optional
 from urllib.parse import quote
 
@@ -161,10 +162,15 @@ async def get_current_user(
             raise credentials_exception
         db.info["impersonated_by"] = impersonated_by
         db.info["impersonation_reason"] = payload.get("impersonation_reason")
+        # ADMIN-003 requirement 6: carry the session id so the before_flush
+        # audit listener can stamp every row written during this request.
+        db.info["impersonation_session_id"] = payload.get("impersonation_session_id")
         request.state.impersonated_by = impersonated_by
+        request.state.impersonation_session_id = payload.get("impersonation_session_id")
     else:
         db.info.pop("impersonated_by", None)
         db.info.pop("impersonation_reason", None)
+        db.info.pop("impersonation_session_id", None)
 
     # Cache resolved id on request.state so middleware (e.g. structured access log)
     # can read it without re-decoding the JWT.
@@ -209,7 +215,7 @@ async def get_current_user_with_password_check(
 async def get_current_admin_user(
     current_user: models.User = Depends(get_current_user)
 ) -> models.User:
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access only"
@@ -268,10 +274,13 @@ async def get_current_user_optional(
                 return None
             db.info["impersonated_by"] = impersonated_by
             db.info["impersonation_reason"] = payload.get("impersonation_reason")
+            db.info["impersonation_session_id"] = payload.get("impersonation_session_id")
             request.state.impersonated_by = impersonated_by
+            request.state.impersonation_session_id = payload.get("impersonation_session_id")
         else:
             db.info.pop("impersonated_by", None)
             db.info.pop("impersonation_reason", None)
+            db.info.pop("impersonation_session_id", None)
         return user
     return None
 
@@ -319,6 +328,186 @@ def require_kindergarten_scoped_access(allow_admin: bool = True):
             )
     return kg_scope_checker
 
+# =============================================================================
+# ADMIN-001 — Centralized permission model
+# =============================================================================
+# Replaces the inline role-comparison checks that were scattered
+# across endpoints and service helpers with one declarative permission layer.
+#
+# Three entry points, one policy table:
+#   require_permission(*perms)          FastAPI dependency  -> use with Depends()
+#   enforce_permission(user, *perms)    imperative guard    -> raises 403
+#   has_permission(user, *perms)        predicate           -> returns bool
+#
+# The predicate form exists because a large share of the replaced checks were
+# not gates but *branches* ("admin sees every kindergarten, everyone else is
+# scoped"), and rewriting those as gates would change behaviour.
+
+
+class Permission(str, Enum):
+    """Discrete capabilities that can be granted to a role."""
+
+    ADMIN_READ = "admin:read"
+    ADMIN_WRITE = "admin:write"
+    USER_MANAGE = "admin:users:manage"
+    KG_READ = "admin:kindergartens:read"
+    KG_WRITE = "admin:kindergartens:write"
+    REPORT_EXPORT = "admin:reports:export"
+    REPORT_GENERATE = "admin:reports:generate"
+    IMPERSONATE = "admin:impersonate"
+    AUDIT_READ = "admin:audit:read"
+    SYSTEM_HEALTH = "admin:system:health"
+
+    # --- Extensions beyond the specification's enum (ADMIN-001) ---------------
+    # DEVIATION from spec section 2.1: require_admin() must NOT map to
+    # ADMIN_READ, because ROLE_PERMISSIONS grants ADMIN_READ to MANAGER.
+    # Following the pseudocode literally would silently promote every manager
+    # onto admin-only endpoints, violating mandate 2 (no regressions).
+    # Using ADMIN_PANEL ensures true admin-only isolation.
+    # Guarded by tests/admin/test_rbac_decorator.py::test_admin_panel_is_admin_only.
+    # Refs: ADMIN-SEC-001
+    ADMIN_PANEL = "admin:panel"
+    # SCOPE_ALL: "this actor is not restricted to an assigned kindergarten or
+    # governorate". Carries the branch semantics of the old compound checks.
+    SCOPE_ALL = "admin:scope:all"
+
+
+# Role -> permission grants. Admin is handled by the ``is_admin`` short-circuit
+# in the checkers below, but is listed explicitly so the table is readable and
+# so ``ROLE_PERMISSIONS`` can be introspected by tests and audit tooling.
+ROLE_PERMISSIONS: "dict[models.UserRole, list[Permission]]" = {
+    models.UserRole.ADMIN: list(Permission),
+    models.UserRole.SUPERVISOR: [
+        Permission.KG_READ,
+        Permission.REPORT_GENERATE,
+    ],
+    models.UserRole.MANAGER: [
+        Permission.ADMIN_READ,
+        Permission.KG_READ,
+        Permission.KG_WRITE,
+        Permission.REPORT_GENERATE,
+        Permission.REPORT_EXPORT,
+    ],
+    models.UserRole.PARENT: [],
+}
+
+# TODO(i18n-review): ADMIN-I18N-001 -- Arabic authored here, not taken from
+# the specification (its Arabic did not survive PDF extraction).
+_INSUFFICIENT_PERMISSIONS_AR = "ليس لديك الصلاحية المطلوبة"
+_INSUFFICIENT_PERMISSIONS_EN = "You do not have the required permission"
+
+
+def permissions_for_role(role: "models.UserRole") -> "set[Permission]":
+    """Return the permission set granted to *role* (empty for unknown roles)."""
+    return set(ROLE_PERMISSIONS.get(role, ()))
+
+
+def has_permission(user: Optional["models.User"], *permissions: Permission) -> bool:
+    """True when *user* holds every one of *permissions*.
+
+    Predicate form — use inside compound conditions. An unauthenticated user
+    (``None``) holds nothing.
+    """
+    if user is None:
+        return False
+    if user.role == models.UserRole.ADMIN:
+        return True
+    granted = permissions_for_role(user.role)
+    return all(p in granted for p in permissions)
+
+
+def missing_permissions(user: Optional["models.User"], *permissions: Permission) -> "list[Permission]":
+    """Return the subset of *permissions* that *user* does not hold."""
+    if user is None:
+        return list(permissions)
+    if user.role == models.UserRole.ADMIN:
+        return []
+    granted = permissions_for_role(user.role)
+    return [p for p in permissions if p not in granted]
+
+
+def permission_denied(missing: "list[Permission]") -> HTTPException:
+    """Build the bilingual 403 raised on a failed permission check."""
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail={
+            "code": "INSUFFICIENT_PERMISSIONS",
+            "message": _INSUFFICIENT_PERMISSIONS_AR,
+            "message_ar": _INSUFFICIENT_PERMISSIONS_AR,
+            "message_en": _INSUFFICIENT_PERMISSIONS_EN,
+            "missing": [p.value for p in missing],
+        },
+    )
+
+
+def enforce_permission(user: Optional["models.User"], *permissions: Permission) -> "models.User":
+    """Imperative guard — raise 403 unless *user* holds every permission.
+
+    For service-layer helpers and non-endpoint call sites, where a FastAPI
+    dependency is not available.
+    """
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+    missing = missing_permissions(user, *permissions)
+    if missing:
+        raise permission_denied(missing)
+    return user
+
+
+def require_permission(*permissions: Permission):
+    """FastAPI dependency factory — ``Depends(require_permission(Permission.X))``.
+
+    Returns the checker callable itself (not a pre-wrapped ``Depends``) so the
+    same factory works both as a dependency and as a direct call on a user
+    object, which is how the specification uses it in both §2.1 and §5.1.
+    """
+
+    def checker(current_user: "models.User" = Depends(get_current_user)) -> "models.User":
+        return enforce_permission(current_user, *permissions)
+
+    return checker
+
+
+def has_role(user: Optional["models.User"], *roles: "models.UserRole") -> bool:
+    """True when *user* holds one of *roles*.
+
+    Predicate replacement for the inline role-identity comparisons. Roles are
+    identity, not capability: a parent-only or supervisor-only endpoint is not
+    expressible as an admin permission grant, so those guards keep using roles
+    while routing through this single helper.
+    """
+    if user is None:
+        return False
+    return user.role in roles
+
+
+def enforce_role(
+    user: Optional["models.User"],
+    *roles: "models.UserRole",
+    detail: str = "Access denied.",
+) -> "models.User":
+    """Imperative guard — raise 403 unless *user* holds one of *roles*."""
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+    if not has_role(user, *roles):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+    return user
+
+
+def has_global_scope(user: Optional["models.User"]) -> bool:
+    """True when *user* is not restricted to an assigned kindergarten/governorate.
+
+    Replacement for the ``role != ADMIN and not allowed_kgs`` branch idiom.
+    """
+    return has_permission(user, Permission.SCOPE_ALL)
+
+
 # Common role dependencies
 require_admin = require_role(models.UserRole.ADMIN)
 require_admin_or_manager = require_role(models.UserRole.ADMIN, models.UserRole.MANAGER)
@@ -353,7 +542,7 @@ def get_current_parent(
 
     lang = getattr(current_user, "preferred_language", None) or "ar"
 
-    if current_user.role != models.UserRole.PARENT:
+    if not has_role(current_user, models.UserRole.PARENT):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_("Parent access only", lang))
 
     profile = (
@@ -389,7 +578,7 @@ class ManagerScope:
     @staticmethod
     def validate_manager(user: models.User) -> None:
         """Require MANAGER role with a kindergarten assigned."""
-        if user.role != models.UserRole.MANAGER:
+        if not has_role(user, models.UserRole.MANAGER):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="This operation requires manager role")
         if not user.kindergarten_id:
@@ -435,7 +624,7 @@ def require_manager(current_user: models.User = Depends(get_current_user)) -> mo
     whole app to 400 would require touching the app-wide validators.validate_
     manager_role callers, which is outside this change.
     """
-    if current_user.role != models.UserRole.MANAGER:
+    if not has_role(current_user, models.UserRole.MANAGER):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Manager access only.")
     if current_user.kindergarten_id is None:

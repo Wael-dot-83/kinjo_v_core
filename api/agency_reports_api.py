@@ -24,14 +24,14 @@ from agency_reports_service import AgencyReportError, AgencyReportsService
 from services.agency_reports.registry import get_agency_service
 from config import settings
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, Permission, has_permission
 from upload_security import validate_xlsx_archive
 
 router = APIRouter(tags=["Admin Agency Reports"])
 
 
 def _require_admin(current_user: models.User = Depends(get_current_user)) -> models.User:
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=403, detail="Admin role required")
     return current_user
 

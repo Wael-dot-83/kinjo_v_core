@@ -12,7 +12,7 @@ import typing
 from typing import Optional
 
 from database import get_db
-from dependencies import get_current_user_optional, get_current_user_or_redirect, require_admin
+from dependencies import get_current_user_optional, get_current_user_or_redirect, require_admin, Permission, has_permission
 from models import User, UserRole, Kindergarten, EnrollmentApplication
 from config import settings
 from validators import validate_jordan_governorate
@@ -512,7 +512,7 @@ async def list_kindergartens(
 
 @router.get("/kindergartens/create", response_class=HTMLResponse)
 async def create_kindergarten_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         return templates.TemplateResponse(request=request, name="403.html", status_code=403)
     return templates.TemplateResponse(request=request, name="kindergartens/form.html", context={"current_user": current_user, "kindergarten": None})
 
@@ -526,7 +526,7 @@ async def view_kindergarten(request: Request, kg_id: int, db: Session = Depends(
     if current_user.role == models.UserRole.MANAGER:
         if current_user.kindergarten_id != kg_id:
             return templates.TemplateResponse(request=request, name="403.html", status_code=403)
-    elif current_user.role != models.UserRole.ADMIN:
+    elif not has_permission(current_user, Permission.ADMIN_PANEL):
         return templates.TemplateResponse(request=request, name="403.html", status_code=403)
     
     return templates.TemplateResponse(request=request, name="kindergartens/view.html", context={"current_user": current_user, "kindergarten": kg})
@@ -541,7 +541,7 @@ async def edit_kindergarten_page(request: Request, kg_id: int, db: Session = Dep
     if current_user.role == models.UserRole.MANAGER:
         if current_user.kindergarten_id != kg_id:
             return templates.TemplateResponse(request=request, name="403.html", status_code=403)
-    elif current_user.role != models.UserRole.ADMIN:
+    elif not has_permission(current_user, Permission.ADMIN_PANEL):
         return templates.TemplateResponse(request=request, name="403.html", status_code=403)
     
     return templates.TemplateResponse(request=request, name="kindergartens/form.html", context={"current_user": current_user, "kindergarten": kg})

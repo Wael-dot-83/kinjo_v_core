@@ -2,7 +2,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = ROOT / "templates" / "admin" / "impersonate.html"
-ROUTER = ROOT / "routers" / "admin_impersonation.py"
+ROUTER = ROOT / "routers" / "admin" / "impersonation.py"
 
 
 def test_dead_breadcrumb_block_removed():

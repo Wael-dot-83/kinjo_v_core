@@ -36,6 +36,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 import models
+from dependencies import Permission, has_permission, has_role
 from config import settings
 from child_age_policy import (
     calculate_age_days,
@@ -71,6 +72,16 @@ class ManagerRuleError(Exception):
         super().__init__(message)
 
 
+def _role_equals(value, role: "models.UserRole") -> bool:
+    """Equality test for a role *value* that may not be a UserRole instance.
+
+    ``_coerce_user_role`` returns the raw input when it cannot be parsed, so
+    identity (``is``) would not be equivalent here. This is a value comparison,
+    not an authorization check -- see ADMIN-001.
+    """
+    return value == role
+
+
 def _coerce_user_role(role):
     if isinstance(role, models.UserRole):
         return role
@@ -100,7 +111,7 @@ def validate_manager_rules(
     role = _coerce_user_role(role)
     status_value = _coerce_user_status(status_value)
 
-    if role != models.UserRole.MANAGER:
+    if not _role_equals(role, models.UserRole.MANAGER):
         return
 
     if kindergarten_id is None:
@@ -374,7 +385,7 @@ def get_child_age_info(date_of_birth: date) -> dict:
 
 def validate_manager_role(user: models.User) -> None:
     """Validate user has manager or admin role"""
-    if user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+    if not has_role(user, models.UserRole.ADMIN, models.UserRole.MANAGER):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager or Admin role required")
 
 
@@ -385,7 +396,7 @@ def require_manager_with_kindergarten(user: models.User, *, allow_admin: bool = 
             return None
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager role required")
 
-    if user.role != models.UserRole.MANAGER:
+    if not has_role(user, models.UserRole.MANAGER):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager role required")
 
     if not user.kindergarten_id:
@@ -398,7 +409,7 @@ def require_manager_with_kindergarten(user: models.User, *, allow_admin: bool = 
 
 def validate_supervisor_role(user: models.User) -> None:
     """Validate user has supervisor, manager, or admin role"""
-    if user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR]:
+    if not has_role(user, models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Supervisor, Manager, or Admin role required")
 
 
@@ -426,7 +437,7 @@ def ensure_supervisor_profile(db: Session, supervisor: models.User, kindergarten
 
 def validate_admin_role(user: models.User) -> None:
     """Validate user has admin role"""
-    if user.role != models.UserRole.ADMIN:
+    if not has_permission(user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
 
 
@@ -846,7 +857,7 @@ def validate_child_class_assignment(db: Session, child_id: int, class_id: int, a
 
 def validate_supervisor_class_access(db: Session, supervisor: models.User, class_id: int, access_date: date) -> None:
     """Validate that a supervisor has access to a specific class on a given date"""
-    if supervisor.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR]:
+    if not has_role(supervisor, models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: insufficient role")
 
     # Admins and managers can access all classes in their kindergarten

@@ -16,7 +16,7 @@ from admin_security import log_audit_event
 import validators
 from config import settings
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, Permission, has_permission
 from api.users import DUPLICATE_ERROR_MAP
 from auth import get_password_hash
 from services.jordan_locations import (
@@ -435,7 +435,7 @@ def _serialize(kg: models.Kindergarten, child_count: Optional[int] = None,
 
 
 def _admin_only(user: models.User):
-    if user.role != models.UserRole.ADMIN:
+    if not has_permission(user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=403, detail="Admin access only")
 
 
@@ -477,7 +477,7 @@ def list_kindergartens(
 ):
     query = db.query(models.Kindergarten)
     role = current_user.role
-    if include_deleted and role != models.UserRole.ADMIN:
+    if include_deleted and not has_permission(current_user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=403, detail="Only administrators may include deleted kindergartens")
     if not include_deleted:
         query = query.filter(models.Kindergarten.status != models.KindergartenStatus.DELETED)
@@ -489,7 +489,7 @@ def list_kindergartens(
             query = query.filter(models.Kindergarten.id == current_user.kindergarten_id)
     elif role == models.UserRole.PARENT:
         query = query.filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
-    elif role != models.UserRole.ADMIN:
+    elif not has_permission(current_user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     if q:

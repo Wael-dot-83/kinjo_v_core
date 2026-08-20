@@ -76,7 +76,7 @@ from config import settings
 from ui_language import set_ui_language_cookie
 from ui_language import normalize_ui_language
 from ui_language import ensure_default_ui_language_cookie
-from dependencies import get_current_user, get_current_user_optional, ManagerScope, RedirectToLogin
+from dependencies import get_current_user, get_current_user_optional, ManagerScope, RedirectToLogin, Permission, has_permission, has_role
 from middleware.auth import (
     build_generic_auth_exception,
     classify_login_identifier,
@@ -257,7 +257,7 @@ from api.manager import router as manager_router
 from api.portfolio import router as portfolio_router
 from routers.supervisor import router as supervisor_scoped_router
 from routers.manager import router as manager_scoped_router
-from routers.admin_impersonation import router as admin_impersonation_router
+from routers.admin import impersonation_router as admin_impersonation_router
 from routers.messaging import router as messaging_router
 from me_endpoints import router as me_router
 from government_api import router as government_api_router
@@ -1496,7 +1496,7 @@ async def heatmap_websocket(websocket: WebSocket):
         except SessionStoreUnavailable:
             await websocket.close(code=1013, reason="Authentication store unavailable")
             return
-        if user.role != models.UserRole.ADMIN:
+        if not has_permission(user, Permission.ADMIN_PANEL):
             await websocket.close(code=4003, reason="Admin role required")
             return
     finally:
@@ -1740,7 +1740,7 @@ async def api_health_check(
     current_user: models.User = Depends(get_current_user),
 ):
     """Comprehensive health check with all system components (admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=403, detail="Admin access required")
     health_results = {}
     system_health_score = performance_monitor.get_system_health_score()
@@ -1810,7 +1810,7 @@ async def get_system_metrics(
     current_user: models.User = Depends(get_current_user),
 ):
     """Get system performance metrics (admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=403, detail="Admin access required")
     try:
         recent_metrics = performance_monitor.get_recent_metrics(minutes)
@@ -1869,7 +1869,7 @@ async def get_scaling_history(
     current_user: models.User = Depends(get_current_user),
 ):
     """Get auto-scaling history (admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=403, detail="Admin access required")
     try:
         history = auto_scaler.get_scaling_history(hours)
@@ -1916,7 +1916,7 @@ async def predict_attendance_rate(
         # inline check it replaces returned 403 (an enumeration oracle) and, worse,
         # exempted SUPERVISOR from the ownership test entirely -- a supervisor could
         # read any kindergarten's analytics.
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER]:
+        if not has_role(current_user, models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER):
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
         ManagerScope.assert_kindergarten_access(current_user, kindergarten_id)
@@ -1964,7 +1964,7 @@ async def predict_incident_trend(
         # inline check it replaces returned 403 (an enumeration oracle) and, worse,
         # exempted SUPERVISOR from the ownership test entirely -- a supervisor could
         # read any kindergarten's analytics.
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER]:
+        if not has_role(current_user, models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER):
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
         ManagerScope.assert_kindergarten_access(current_user, kindergarten_id)
@@ -2012,7 +2012,7 @@ async def predict_capacity_utilization(
         # inline check it replaces returned 403 (an enumeration oracle) and, worse,
         # exempted SUPERVISOR from the ownership test entirely -- a supervisor could
         # read any kindergarten's analytics.
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER]:
+        if not has_role(current_user, models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER):
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
         ManagerScope.assert_kindergarten_access(current_user, kindergarten_id)
@@ -2056,7 +2056,7 @@ async def predict_enrollment_trend(
         # the role gate rather than by the tenant gate, so the canonical scope check
         # below still applies to whoever gets past it. See the note on the other
         # predict endpoints: a cross-tenant target must answer 404, not 403.
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+        if not has_role(current_user, models.UserRole.ADMIN, models.UserRole.MANAGER):
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
         ManagerScope.assert_kindergarten_access(current_user, kindergarten_id)
@@ -2108,7 +2108,7 @@ async def analyze_trends(
         # inline check it replaces returned 403 (an enumeration oracle) and, worse,
         # exempted SUPERVISOR from the ownership test entirely -- a supervisor could
         # read any kindergarten's analytics.
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER]:
+        if not has_role(current_user, models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER):
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
         ManagerScope.assert_kindergarten_access(current_user, kindergarten_id)
@@ -2161,7 +2161,7 @@ async def get_predictive_insights(
         # inline check it replaces returned 403 (an enumeration oracle) and, worse,
         # exempted SUPERVISOR from the ownership test entirely -- a supervisor could
         # read any kindergarten's analytics.
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER]:
+        if not has_role(current_user, models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER):
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
         ManagerScope.assert_kindergarten_access(current_user, kindergarten_id)

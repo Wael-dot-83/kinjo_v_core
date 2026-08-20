@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field, field_validator, EmailStr
 from sqlalchemy.orm import Session
 
 import models
+from dependencies import Permission, has_permission, has_role
 import validators
 from cache_service import cache_service
 
@@ -387,7 +388,7 @@ def require_admin_role(current_user: models.User) -> models.User:
     if current_user is None:
         raise unauthenticated_error("Authentication required")
 
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         raise forbidden_error("Admin access required")
 
     return current_user
@@ -400,7 +401,7 @@ def require_admin_or_manager_role(current_user: models.User) -> models.User:
     if current_user is None:
         raise unauthenticated_error("Authentication required")
 
-    if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+    if not has_role(current_user, models.UserRole.ADMIN, models.UserRole.MANAGER):
         raise forbidden_error("Admin or Manager access required")
 
     if current_user.role == models.UserRole.MANAGER and current_user.kindergarten_id is None:

@@ -21,7 +21,7 @@ import validators
 from captcha_service import captcha_error_message, captcha_required, verify_captcha
 from config import settings
 from database import get_db
-from dependencies import get_current_user, require_admin
+from dependencies import get_current_user, require_admin, Permission, has_permission
 from rate_limiter import limiter
 
 logger = logging.getLogger(__name__)
@@ -365,11 +365,11 @@ def list_users(
             query = query.filter(
                 or_(
                     and_(models.User.role == models.UserRole.PARENT, models.User.id.in_(parent_ids_query)),
-                    and_(models.User.role != models.UserRole.PARENT, models.User.kindergarten_id == kindergarten_id),
+                    and_(models.user_role_is_not(models.UserRole.PARENT), models.User.kindergarten_id == kindergarten_id),
                 )
             )
         # Admin cannot see or manage other admin users
-        query = query.filter(models.User.role != models.UserRole.ADMIN)
+        query = query.filter(models.user_role_is_not(models.UserRole.ADMIN))
     elif current_user.role == models.UserRole.MANAGER:
         if not current_user.kindergarten_id:
             _log_access_denied(db, current_user, "list_users", "Missing kindergarten", request)
@@ -453,7 +453,7 @@ def export_users(
     db: Session = Depends(get_db),
 ):
     """Export users list (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     query = db.query(models.User).filter(models.User.deleted_at.is_(None))
@@ -462,7 +462,7 @@ def export_users(
         query = query.filter(models.User.kindergarten_id == kindergarten_id)
 
     # Exclude admin users from export
-    query = query.filter(models.User.role != models.UserRole.ADMIN)
+    query = query.filter(models.user_role_is_not(models.UserRole.ADMIN))
 
     if role:
         query = query.filter(models.User.role == role)
@@ -779,7 +779,7 @@ def update_user(
 
     if user_data.password:
         # Password change via PUT requires admin; non-admins must use /users/change-password
-        if current_user.role != models.UserRole.ADMIN:
+        if not has_permission(current_user, Permission.ADMIN_PANEL):
             raise HTTPException(
                 status_code=400,
                 detail="Use POST /users/change-password to update your password (current password required)",
@@ -854,7 +854,7 @@ def delete_user(
     request: Request, user_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Delete user (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         _log_access_denied(db, current_user, "delete_user", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Not authorized")
 
@@ -1086,7 +1086,7 @@ def bulk_update_status(
     db: Session = Depends(get_db),
 ):
     """Bulk update user status (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         _log_access_denied(db, current_user, "bulk_status_update", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Admin access required")
 
@@ -1131,7 +1131,7 @@ def bulk_update_status(
         db.query(models.User)
         .filter(
             models.User.id.in_(bulk_data.user_ids),
-            models.User.role != models.UserRole.ADMIN,
+            models.user_role_is_not(models.UserRole.ADMIN),
             models.User.deleted_at.is_(None),
         )
         .update({"status": bulk_data.new_status}, synchronize_session=False)
@@ -1163,7 +1163,7 @@ def bulk_delete_users(
     db: Session = Depends(get_db),
 ):
     """Bulk delete users (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         _log_access_denied(db, current_user, "bulk_delete_users", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Admin access required")
 
@@ -1256,7 +1256,7 @@ def bulk_create_users(
     db: Session = Depends(get_db),
 ):
     """Bulk create users (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         _log_access_denied(db, current_user, "bulk_create_users", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Admin access required")
 

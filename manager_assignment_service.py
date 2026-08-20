@@ -30,6 +30,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 import models
+from dependencies import has_role
 import validators
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
@@ -100,7 +101,7 @@ def guard_supervisor_coverage(db: Session, user: models.User) -> None:
 
     Only relevant when the user is currently an ACTIVE SUPERVISOR.
     """
-    if user.role != models.UserRole.SUPERVISOR:
+    if not has_role(user, models.UserRole.SUPERVISOR):
         return
     if not user.kindergarten_id:
         return

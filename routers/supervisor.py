@@ -51,7 +51,7 @@ import validators
 import models
 import schemas
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, has_role
 from mfa_service import (
     decrypt_secret,
     encrypt_secret,
@@ -2156,7 +2156,7 @@ def create_observation(
     db: Session = Depends(get_db)
 ):
     """Create a new observation (Supervisor/Manager/Admin only)"""
-    if current_user.role not in [models.UserRole.SUPERVISOR, models.UserRole.MANAGER, models.UserRole.ADMIN]:
+    if not has_role(current_user, models.UserRole.SUPERVISOR, models.UserRole.MANAGER, models.UserRole.ADMIN):
         raise HTTPException(status_code=403, detail="Only staff can create observations")
     
     # Verify child exists
@@ -2245,7 +2245,7 @@ def upload_observation_photo(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if current_user.role not in [models.UserRole.SUPERVISOR, models.UserRole.MANAGER, models.UserRole.ADMIN]:
+    if not has_role(current_user, models.UserRole.SUPERVISOR, models.UserRole.MANAGER, models.UserRole.ADMIN):
         raise HTTPException(status_code=403, detail="Only staff can upload observation photo")
 
     observation = db.query(models.Observation).filter(models.Observation.id == observation_id).first()
@@ -2299,7 +2299,7 @@ def record_observation(
     db: Session = Depends(get_db)
 ):
     """Record child observation (Supervisor only). Accepts either JSON body or query params for compatibility."""
-    if current_user.role != models.UserRole.SUPERVISOR:
+    if not has_role(current_user, models.UserRole.SUPERVISOR):
         raise HTTPException(status_code=403, detail="Only supervisors can record observations")
 
     # Build observation_data from query params if body not provided
@@ -2394,7 +2394,7 @@ def get_supervisor_children(
     db: Session = Depends(get_db)
 ):
     """Legacy detailed supervisor children listing retained on a non-canonical path."""
-    if current_user.role != models.UserRole.SUPERVISOR:
+    if not has_role(current_user, models.UserRole.SUPERVISOR):
         raise HTTPException(status_code=403, detail="Only supervisors can access this endpoint")
 
     from supervisor_service import SupervisorService
@@ -2476,7 +2476,7 @@ def get_supervisor_child_details(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if current_user.role != models.UserRole.SUPERVISOR:
+    if not has_role(current_user, models.UserRole.SUPERVISOR):
         raise HTTPException(status_code=403, detail="Only supervisors can access this endpoint")
 
     enrollment = _get_supervisor_child_enrollment(db, current_user.id, child_id)
@@ -2574,7 +2574,7 @@ def list_supervisor_child_daily_reports(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if current_user.role != models.UserRole.SUPERVISOR:
+    if not has_role(current_user, models.UserRole.SUPERVISOR):
         raise HTTPException(status_code=403, detail="Only supervisors can view daily reports")
 
     enrollment = _get_supervisor_child_enrollment(db, current_user.id, child_id)
@@ -2622,7 +2622,7 @@ def get_supervisor_dashboard(
     db: Session = Depends(get_db)
 ):
     """Get supervisor dashboard data"""
-    if current_user.role != models.UserRole.SUPERVISOR:
+    if not has_role(current_user, models.UserRole.SUPERVISOR):
         raise HTTPException(status_code=403, detail="Only supervisors can access dashboard")
     
     # Get supervisor's classes

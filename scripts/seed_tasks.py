@@ -8,6 +8,7 @@ import secrets
 from sqlalchemy.orm import Session
 from database import SessionLocal, init_db
 import models
+from dependencies import has_role
 from auth import create_user, get_password_hash
 
 
@@ -120,7 +121,7 @@ def seed_tasks():
             (manager2, kg2, "manager2"),
         ):
             if (
-                expected_manager.role != models.UserRole.MANAGER
+                not has_role(expected_manager, models.UserRole.MANAGER)
                 or expected_manager.status != models.UserStatus.ACTIVE
                 or expected_manager.kindergarten_id != expected_kg.id
                 or expected_manager.deleted_at is not None

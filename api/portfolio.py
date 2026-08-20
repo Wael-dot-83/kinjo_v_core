@@ -17,7 +17,7 @@ import models
 import validators
 from config import settings
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, Permission, has_permission, has_role
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Portfolio"])
@@ -129,7 +129,7 @@ def get_child_portfolio(
         # file, so the two child-scoped reads now agree. Admins stay
         # unrestricted; every other staff role must hold an active enrolment
         # for this child in their own kindergarten.
-        if current_user.role != models.UserRole.ADMIN:
+        if not has_permission(current_user, Permission.ADMIN_PANEL):
             enrollment = (
                 db.query(models.EnrollmentApplication.id)
                 .filter(
@@ -175,7 +175,7 @@ def create_portfolio_entry(
     db: Session = Depends(get_db),
 ):
     """Create a new portfolio entry (Supervisor/Manager only)"""
-    if current_user.role not in [models.UserRole.SUPERVISOR, models.UserRole.MANAGER, models.UserRole.ADMIN]:
+    if not has_role(current_user, models.UserRole.SUPERVISOR, models.UserRole.MANAGER, models.UserRole.ADMIN):
         raise HTTPException(status_code=403, detail="Only staff can create portfolio entries")
 
     # Verify child exists
@@ -223,7 +223,7 @@ def publish_portfolio_entry(
         raise HTTPException(status_code=404, detail="Portfolio not found")
 
     # Cross-KG scope check: managers cannot publish portfolios outside their kindergarten
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         enrollment = (
             db.query(models.EnrollmentApplication)
             .filter(
@@ -274,7 +274,7 @@ def get_child_health_alerts(
         parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
         if not parent_profile or child.parent_id != parent_profile.id:
             raise HTTPException(status_code=403, detail="Access denied")
-    elif current_user.role != models.UserRole.ADMIN:
+    elif not has_permission(current_user, Permission.ADMIN_PANEL):
         # Supervisors and managers are scoped to their own kindergarten
         enrollment = (
             db.query(models.EnrollmentApplication.id)
@@ -328,7 +328,7 @@ def create_health_alert(
     db: Session = Depends(get_db),
 ):
     """Create a health alert for a child (Manager/Supervisor only)"""
-    if current_user.role not in [models.UserRole.SUPERVISOR, models.UserRole.MANAGER, models.UserRole.ADMIN]:
+    if not has_role(current_user, models.UserRole.SUPERVISOR, models.UserRole.MANAGER, models.UserRole.ADMIN):
         raise HTTPException(status_code=403, detail="Only staff can create health alerts")
 
     # Verify child exists
@@ -337,7 +337,7 @@ def create_health_alert(
         raise HTTPException(status_code=404, detail="Child not found")
 
     # Scope Check: Ensure child is active in user's KG
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         enrollment = (
             db.query(models.EnrollmentApplication)
             .filter(
@@ -377,7 +377,7 @@ def delete_health_alert(
         raise HTTPException(status_code=404, detail="Health alert not found")
 
     # Cross-KG scope check: managers cannot delete alerts outside their kindergarten
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         enrollment = (
             db.query(models.EnrollmentApplication)
             .filter(

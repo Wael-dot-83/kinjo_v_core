@@ -20,7 +20,7 @@ import models
 import validators
 from config import settings
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, Permission, has_permission, has_global_scope
 from i18n import gettext as _api
 from storage_service import compress_image_in_place
 from virus_scan_service import VirusFoundError, VirusScanUnavailable, scan_bytes, scan_error_message
@@ -128,7 +128,7 @@ def update_parent_profile(
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
     # Authorization — only the profile owner or ADMIN may update profile
-    if current_user.role != models.UserRole.ADMIN and parent.user_id != current_user.id:
+    if not has_global_scope(current_user) and parent.user_id != current_user.id:
         raise HTTPException(status_code=403, detail=_api("Not authorized to update this profile", _ulang(current_user)))
 
     # Keep this compatibility endpoint subject to the same input checks and
@@ -462,7 +462,7 @@ def verify_child_document(
         raise HTTPException(status_code=404, detail="Document not found")
 
     # Non-admin staff can only verify documents for children enrolled in their kindergarten
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         enrollment = db.query(models.EnrollmentApplication).filter(
             models.EnrollmentApplication.child_id == doc.child_id,
             models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
@@ -535,7 +535,7 @@ def export_children(
     enrollment_q = db.query(models.EnrollmentApplication).filter(
         models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
     )
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         enrollment_q = enrollment_q.filter(
             models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id
         )
@@ -618,7 +618,7 @@ def list_children(
         )
 
     # Filter by kindergarten for non-admins
-    if current_user.role != models.UserRole.ADMIN:
+    if not has_permission(current_user, Permission.ADMIN_PANEL):
         if current_user.role == models.UserRole.PARENT:
             raise HTTPException(status_code=403, detail="Parents cannot access this endpoint")
         query = query.filter(models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id)
