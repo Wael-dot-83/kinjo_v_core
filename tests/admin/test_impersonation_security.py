@@ -425,11 +425,7 @@ class TestRequirement8DailyQuota:
                 entity_id=manager_user.id,
                 created_at=_jordan_day_start(),
             ))
-            # One commit per row on purpose: batching these into an executemany
-            # trips the audit_logs.request_id type drift on Postgres (models.py
-            # declares String(36), the migration chain creates uuid). That is a
-            # real defect, but it is not what this test is measuring.
-            test_db.commit()
+        test_db.commit()
 
         response = _start(client, admin_token, manager_user.id)
 
@@ -447,11 +443,7 @@ class TestRequirement8DailyQuota:
                 entity_id=manager_user.id,
                 created_at=_jordan_day_start(),
             ))
-            # One commit per row on purpose: batching these into an executemany
-            # trips the audit_logs.request_id type drift on Postgres (models.py
-            # declares String(36), the migration chain creates uuid). That is a
-            # real defect, but it is not what this test is measuring.
-            test_db.commit()
+        test_db.commit()
 
         _start(client, admin_token, manager_user.id)
 
@@ -487,7 +479,7 @@ class TestRequirement8DailyQuota:
                 entity_id=manager_user.id,
                 created_at=_jordan_day_start(),
             ))
-            test_db.commit()
+        test_db.commit()
 
         response = _start(client, admin_token, manager_user.id)
 

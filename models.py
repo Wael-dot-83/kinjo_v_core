@@ -9,7 +9,7 @@ from typing import Optional, List
 from sqlalchemy import (
     Column, Integer, BigInteger, String, Text, Boolean, Float, Date,
     ForeignKey, Enum, CheckConstraint, UniqueConstraint, Index, JSON,
-    ForeignKeyConstraint, text, not_
+    ForeignKeyConstraint, text, not_, Uuid
 )
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
@@ -1445,7 +1445,20 @@ class AuditLog(Base):
     old_data = Column(JSON, nullable=True)
     new_data = Column(JSON, nullable=True)
     actor_role = Column(String(50), nullable=True)
-    request_id = Column(String(36), nullable=True)
+    # #98: production PostgreSQL has this column as `uuid`, created by
+    # c1a2b3d4e5f6_production_hardening.py:385. models.py declared
+    # String(36), so SQLAlchemy bound an explicit ::VARCHAR cast and every
+    # executemany INSERT of two or more audit rows failed with
+    # DatatypeMismatch. Single-row inserts adapted fine, which is why
+    # ordinary one-row-per-request traffic never surfaced it.
+    #
+    # UUID is the intended contract, not an accident: CorrelationIdMiddleware
+    # validates the inbound X-Correlation-ID to a UUID precisely so "malformed
+    # client input must never be able to make an audit insert fail", and the
+    # log_row_change() trigger function declares v_request_id UUID. models.py
+    # was the odd one out. sa.Uuid renders UUID on PostgreSQL and CHAR(32)
+    # elsewhere, so production needs no migration -- it is already correct.
+    request_id = Column(Uuid(as_uuid=False), nullable=True)
     ip_address = Column(String(50), nullable=True)
     sensitivity_level = Column(Integer, nullable=True)
     impersonated_by = Column(Integer, ForeignKey("users.id"), nullable=True)

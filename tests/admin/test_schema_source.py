@@ -133,3 +133,56 @@ class TestGuardCanFail:
         names = _index_names()
 
         assert "ix_this_index_does_not_exist" not in names
+
+
+class TestAuditLogBulkWrite:
+    """#98 — audit_logs.request_id must accept a batched insert.
+
+    models.py declared String(36) while production PostgreSQL has `uuid`, so
+    SQLAlchemy bound an explicit ::VARCHAR cast and every executemany of two or
+    more audit rows failed with DatatypeMismatch. Single-row inserts adapted
+    fine, which is why one-row-per-request traffic never surfaced it.
+
+    This is the regression test. It is meaningless on SQLite, which has no uuid
+    type and never had the mismatch, so it lives here with the other
+    Postgres-only schema guards.
+    """
+
+    def test_five_audit_rows_in_one_flush(self, test_db):
+        import models
+
+        for _ in range(5):
+            test_db.add(
+                models.AuditLog(action="BULK_PROBE", entity_type="User", entity_id=1)
+            )
+        test_db.commit()  # one executemany, not five inserts
+
+        written = (
+            test_db.query(models.AuditLog)
+            .filter(models.AuditLog.action == "BULK_PROBE")
+            .count()
+        )
+        assert written == 5
+
+    def test_request_id_round_trips_as_a_string(self, test_db):
+        """as_uuid=False keeps the Python-side value a plain dashed string."""
+        import models
+
+        value = "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0"
+        rows = [
+            models.AuditLog(
+                action="UUID_PROBE", entity_type="User", entity_id=1, request_id=value
+            )
+            for _ in range(3)
+        ]
+        for row in rows:
+            test_db.add(row)
+        test_db.commit()
+
+        stored = (
+            test_db.query(models.AuditLog)
+            .filter(models.AuditLog.action == "UUID_PROBE")
+            .first()
+        )
+        assert stored.request_id == value
+        assert isinstance(stored.request_id, str)
