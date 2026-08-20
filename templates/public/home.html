@@ -99,7 +99,7 @@
         <img alt="KinJo Logo" class="h-12 w-auto object-contain rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-black/5 group-hover:scale-105 transition-transform" src="/static/img/landing/logo.png">
         <div class="flex flex-col">
           <span class="text-lg sm:text-xl font-bold tracking-tight text-white leading-tight">
-            {% if ui_lang == 'en' %}KinJo National Portal{% else %}بوابة كينجو الوطنية{% endif %}
+            {% if ui_lang == 'en' %}KinJo National Portal{% else %}بوابة KinJo الوطنية{% endif %}
           </span>
           <span class="text-xs text-white/80 font-medium">
             {% if ui_lang == 'en' %}Jordan Kindergarten Platform{% else %}المنصة الموحدة للحضانات ورياض الأطفال{% endif %}
@@ -439,7 +439,7 @@
                 </button>
               </div>
 
-              <!-- Row 2: Justified Filter Grid -->
+              <!-- Row 2: Justified Filter & Location Grid (Governorates, Cascading Districts, GPS Nearest) -->
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 
                 <!-- Governorate Filter (List of all 12 Jordanian Governorates) -->
@@ -469,14 +469,14 @@
                   </div>
                 </div>
 
-                <!-- District Filter -->
+                <!-- District Filter (Populated dynamically upon selecting Governorate) -->
                 <div class="relative">
                   <label for="kg-filter-district" class="block text-[11px] font-bold text-primary mb-1 uppercase tracking-wider">
-                    {% if ui_lang == 'en' %}District / City{% else %}اللواء / المنطقة{% endif %}
+                    {% if ui_lang == 'en' %}District / Region{% else %}اللواء / المنطقة{% endif %}
                   </label>
                   <div class="relative">
                     <select id="kg-filter-district" class="w-full py-2.5 ps-3 pe-8 rounded-xl border border-outline-variant/60 bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-xs sm:text-sm font-medium shadow-sm appearance-none">
-                      <option value="">{% if ui_lang == 'en' %}All Districts{% else %}جميع المناطق / الألوية{% endif %}</option>
+                      <option value="">{% if ui_lang == 'en' %}Select Governorate First{% else %}اختر المحافظة أولاً لعرض الألوية{% endif %}</option>
                     </select>
                     <div class="absolute inset-y-0 end-0 pe-2.5 flex items-center pointer-events-none text-on-surface-variant">
                       <span class="material-symbols-outlined text-base" aria-hidden="true">expand_more</span>
@@ -484,22 +484,21 @@
                   </div>
                 </div>
 
-                <!-- Status Filter -->
-                <div class="relative">
-                  <label for="kg-filter-status" class="block text-[11px] font-bold text-primary mb-1 uppercase tracking-wider">
-                    {% if ui_lang == 'en' %}Licensing Status{% else %}حالة الاعتماد والترخيص{% endif %}
+                <!-- Geolocation Nearest Search Button (Browser / Phone GPS) -->
+                <div class="relative flex flex-col justify-end">
+                  <label class="block text-[11px] font-bold text-primary mb-1 uppercase tracking-wider">
+                    {% if ui_lang == 'en' %}Geolocation Search{% else %}البحث الجغرافي الذكي{% endif %}
                   </label>
-                  <div class="relative">
-                    <select id="kg-filter-status" class="w-full py-2.5 ps-3 pe-8 rounded-xl border border-outline-variant/60 bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-xs sm:text-sm font-medium shadow-sm appearance-none">
-                      <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}جميع الحالات{% endif %}</option>
-                      <option value="active">{% if ui_lang == 'en' %}Active &amp; Licensed{% else %}نشطة ومعتمدة رسمياً{% endif %}</option>
-                      <option value="frozen">{% if ui_lang == 'en' %}Temporarily Frozen{% else %}مجمدة مؤقتاً{% endif %}</option>
-                      <option value="draft">{% if ui_lang == 'en' %}In Registration Process{% else %}قيد استكمال الترخيص{% endif %}</option>
-                    </select>
-                    <div class="absolute inset-y-0 end-0 pe-2.5 flex items-center pointer-events-none text-on-surface-variant">
-                      <span class="material-symbols-outlined text-base" aria-hidden="true">expand_more</span>
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    id="kg-geo-btn"
+                    class="w-full py-2.5 px-3.5 rounded-xl border border-primary/40 bg-white hover:bg-surface-container-low text-primary font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-sm active:scale-98"
+                    title="{% if ui_lang == 'en' %}Find nearest kindergartens using GPS / device location{% else %}البحث عن أقرب حضانة لموقعك عبر GPS المتصفح أو الهاتف{% endif %}"
+                  >
+                    <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">my_location</span>
+                    <span id="kg-geo-btn-text">{% if ui_lang == 'en' %}Nearest to Me (GPS){% else %}أقرب حضانة لموقعي (GPS){% endif %}</span>
+                    <span id="kg-geo-spinner" class="hidden material-symbols-outlined text-sm animate-spin" aria-hidden="true">sync</span>
+                  </button>
                 </div>
 
               </div>
@@ -1181,6 +1180,104 @@
       });
     });
   </script>
+
+  <!-- Public Kindergarten Details Modal (Free Access - No Registration Required) -->
+  <div id="kg-details-modal" class="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="modal-kg-name">
+    <div class="relative bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-outline-variant/30 transform transition-all overflow-hidden max-h-[90vh] flex flex-col">
+      
+      <!-- Modal Header -->
+      <div class="flex items-start justify-between gap-4 border-b border-outline-variant/20 pb-4 mb-4">
+        <div class="flex-1 min-w-0">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-2">
+            <span class="material-symbols-outlined text-xs text-tertiary" aria-hidden="true">verified</span>
+            <span>{% if ui_lang == 'en' %}Officially Accredited Nursery{% else %}حضانة معتمدة ومرخصة رسمياً{% endif %}</span>
+          </div>
+          <h3 id="modal-kg-name" class="text-xl sm:text-2xl font-extrabold text-primary truncate leading-tight"></h3>
+          <p id="modal-kg-location" class="text-xs sm:text-sm text-on-surface-variant flex items-center gap-1 mt-1"></p>
+        </div>
+        <button type="button" id="modal-close-btn" class="w-10 h-10 rounded-full bg-surface hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors focus:outline-none" aria-label="Close modal">
+          <span class="material-symbols-outlined text-xl" aria-hidden="true">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="space-y-4 overflow-y-auto pe-1 flex-1 text-sm text-on-surface">
+        
+        <!-- Details Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          
+          <div class="p-3.5 bg-surface-container-low rounded-2xl border border-outline-variant/20">
+            <span class="text-xs font-bold text-on-surface-variant block mb-1">{% if ui_lang == 'en' %}Governorate &amp; District{% else %}المحافظة واللواء{% endif %}</span>
+            <span id="modal-kg-gov-dist" class="font-bold text-primary text-sm"></span>
+          </div>
+
+          <div class="p-3.5 bg-surface-container-low rounded-2xl border border-outline-variant/20">
+            <span class="text-xs font-bold text-on-surface-variant block mb-1">{% if ui_lang == 'en' %}Accreditation Status{% else %}حالة الاعتماد الرسمي{% endif %}</span>
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold">
+              <span class="w-2 h-2 rounded-full bg-tertiary"></span>
+              <span>{% if ui_lang == 'en' %}Active &amp; Licensed{% else %}نشطة ومطابقة للمعايير الوطنية{% endif %}</span>
+            </span>
+          </div>
+
+          <div class="p-3.5 bg-surface-container-low rounded-2xl border border-outline-variant/20">
+            <span class="text-xs font-bold text-on-surface-variant block mb-1">{% if ui_lang == 'en' %}Contact Phone{% else %}هاتف التواصل المباشر{% endif %}</span>
+            <a id="modal-kg-phone" href="#" class="font-bold text-primary hover:text-tertiary text-sm flex items-center gap-1.5 direction-ltr">
+              <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">call</span>
+              <span id="modal-kg-phone-text"></span>
+            </a>
+          </div>
+
+          <div class="p-3.5 bg-surface-container-low rounded-2xl border border-outline-variant/20">
+            <span class="text-xs font-bold text-on-surface-variant block mb-1">{% if ui_lang == 'en' %}Contact Email{% else %}البريد الإلكتروني{% endif %}</span>
+            <span id="modal-kg-email" class="font-medium text-primary text-sm truncate block"></span>
+          </div>
+
+        </div>
+
+        <!-- Address & Directions -->
+        <div class="p-4 bg-surface-container-low rounded-2xl border border-outline-variant/20">
+          <span class="text-xs font-bold text-on-surface-variant block mb-1">{% if ui_lang == 'en' %}Detailed Address{% else %}العنوان التفصيلي{% endif %}</span>
+          <p id="modal-kg-address" class="text-sm font-medium text-primary leading-relaxed mb-3"></p>
+          <div id="modal-kg-maps-wrap" class="hidden">
+            <a id="modal-kg-maps-btn" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-container transition-all shadow-sm">
+              <span class="material-symbols-outlined text-sm" aria-hidden="true">map</span>
+              <span>{% if ui_lang == 'en' %}Open Location in Google Maps{% else %}فتح الموقع في خرائط Google{% endif %}</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Capacity Information -->
+        <div class="p-4 bg-white rounded-2xl border border-outline-variant/30 shadow-sm">
+          <div class="flex justify-between items-center text-xs mb-2 font-medium">
+            <span class="text-on-surface-variant">{% if ui_lang == 'en' %}Statutory Capacity &amp; Ratios{% else %}الطاقة الاستيعابية ومعايير الرعاية{% endif %}</span>
+            <span id="modal-kg-capacity-text" class="font-bold text-primary"></span>
+          </div>
+          <div class="w-full bg-outline-variant/30 h-2 rounded-full overflow-hidden">
+            <div id="modal-kg-capacity-bar" class="bg-primary h-full rounded-full transition-all" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Free Public Notice -->
+        <div class="p-3 bg-surface rounded-xl border border-outline-variant/20 text-xs text-on-surface-variant flex items-center gap-2">
+          <span class="material-symbols-outlined text-tertiary text-base" aria-hidden="true">info</span>
+          <span>{% if ui_lang == 'en' %}Public registry details are verified in real time from official databases without registration required.{% else %}بيانات السجل الوطني متاحة مجاناً لكافة المواطنين وأولياء الأمور دون الحاجة لأي تسجيل دخول.{% endif %}</span>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="border-t border-outline-variant/20 pt-4 mt-4 flex items-center justify-between">
+        <button type="button" id="modal-close-footer-btn" class="px-5 py-2.5 rounded-xl bg-surface border border-outline-variant/40 hover:bg-surface-container text-xs sm:text-sm font-bold text-primary transition-all">
+          {% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}
+        </button>
+        <a id="modal-kg-call-btn" href="#" class="px-5 py-2.5 rounded-xl bg-primary text-white text-xs sm:text-sm font-bold hover:bg-primary-container transition-all flex items-center gap-1.5 shadow-sm">
+          <span class="material-symbols-outlined text-sm" aria-hidden="true">call</span>
+          <span>{% if ui_lang == 'en' %}Call Kindergarten{% else %}الاتصال بالحضانة{% endif %}</span>
+        </a>
+      </div>
+
+    </div>
+  </div>
 
 </body>
 </html>

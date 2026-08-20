@@ -579,10 +579,12 @@ def list_kindergartens(
 @limiter.limit(settings.RATE_LIMIT_PUBLIC_SEARCH)
 def public_kindergarten_search(
     request: Request,
-    q: Optional[str] = Query(None, description="search by name"),
+    q: Optional[str] = Query(None, description="search by name or keyword"),
     governorate: Optional[str] = None,
     district: Optional[str] = None,
     status: Optional[str] = None,
+    lat: Optional[float] = Query(None, description="user latitude for nearest search"),
+    lng: Optional[float] = Query(None, description="user longitude for nearest search"),
     limit: int = Query(20, ge=1, le=100),
     skip: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -596,6 +598,9 @@ def public_kindergarten_search(
                 models.Kindergarten.name_ar.ilike(f"%{q}%"),
                 models.Kindergarten.name_en.ilike(f"%{q}%"),
                 models.Kindergarten.legal_name.ilike(f"%{q}%"),
+                models.Kindergarten.area.ilike(f"%{q}%"),
+                models.Kindergarten.district.ilike(f"%{q}%"),
+                models.Kindergarten.address_line.ilike(f"%{q}%"),
             )
         )
     if governorate:
@@ -607,6 +612,9 @@ def public_kindergarten_search(
             query = query.filter(models.Kindergarten.status == _normalize_status(status))
         except ValueError:
             return _envelope(False, None, "قيمة الحالة غير صالحة / Invalid status value", 400)
+    else:
+        # Default public search strictly to active, officially accredited facilities
+        query = query.filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
 
     total = query.count()
     kgs = query.order_by(models.Kindergarten.id.desc()).offset(skip).limit(limit).all()
@@ -614,13 +622,52 @@ def public_kindergarten_search(
     items = []
     for kg in kgs:
         item = _serialize(kg)
-        items.append(_public_kindergarten_projection(item))
+        proj = _public_kindergarten_projection(item)
+        if lat is not None and lng is not None and kg.latitude and kg.longitude:
+            try:
+                import math
+                R = 6371.0
+                dlat = math.radians(kg.latitude - lat)
+                dlon = math.radians(kg.longitude - lng)
+                a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat)) * math.cos(math.radians(kg.latitude)) * math.sin(dlon / 2) ** 2
+                c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+                proj["distance_km"] = round(R * c, 1)
+            except Exception:
+                pass
+        items.append(proj)
+
+    if lat is not None and lng is not None:
+        items.sort(key=lambda x: x.get("distance_km", 999999))
 
     return _envelope(
         True,
         {"items": items, "total": total, "skip": skip, "limit": limit, "returned": len(items)},
         "تم جلب قائمة الحضانات بنجاح",
     )
+
+
+@router.get("/public/kindergartens/{kindergarten_id}")
+@limiter.limit(settings.RATE_LIMIT_PUBLIC_SEARCH)
+def public_get_kindergarten(
+    request: Request,
+    kindergarten_id: int,
+    db: Session = Depends(get_db),
+):
+    kg = (
+        db.query(models.Kindergarten)
+        .filter(
+            models.Kindergarten.id == kindergarten_id,
+            models.Kindergarten.status != models.KindergartenStatus.DELETED,
+        )
+        .first()
+    )
+    if not kg:
+        return _envelope(False, None, "الحضانة غير موجودة / Kindergarten not found", 404)
+
+    item = _serialize(kg)
+    projected = _public_kindergarten_projection(item)
+    return _envelope(True, projected, "تم جلب تفاصيل الحضانة بنجاح")
+
 
 
 @router.get("/admin/kindergartens/stats")
