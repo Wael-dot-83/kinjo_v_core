@@ -3,7 +3,7 @@
 
   const DEBOUNCE_MS = 300;
   const API_BASE = '/api/public/kindergartens/search';
-  const LOCATIONS_API = '/api/kindergartens/reference/governorates';
+  const LOCATIONS_API = '/api/reference/governorates';
   const RESULTS_LIMIT = 9;
 
   let debounceTimer = null;

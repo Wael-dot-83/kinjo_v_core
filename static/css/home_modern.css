@@ -1,0 +1,327 @@
+/* Public homepage visual layer.
+   The page keeps the existing public information architecture and search
+   behavior, but uses one coherent visual grammar instead of competing
+   Tailwind, Bootstrap, and legacy marketing overrides. */
+
+:root {
+  --home-ink: var(--kinjo-color-text-primary, #0f172a);
+  --home-muted: var(--kinjo-color-text-secondary, #475569);
+  --home-paper: var(--kinjo-color-bg-body, #faf9f6);
+  --home-surface: var(--kinjo-color-bg-surface, #ffffff);
+  --home-brand: var(--kinjo-brand, #1f5e47);
+  --home-action: var(--kinjo-action, #1e40af);
+  --home-action-dark: var(--kinjo-action-hover, #1e3a8a);
+  --home-gold: #c5a059;
+  --home-line: var(--kinjo-color-border-subtle, #dceae3);
+  --home-radius: 1.25rem;
+}
+
+html { scroll-behavior: smooth; }
+
+body.kinjo-public-home {
+  background: var(--home-paper) !important;
+  color: var(--home-ink) !important;
+  font-family: var(--kinjo-font-family, "Segoe UI", Tahoma, sans-serif) !important;
+}
+
+body.kinjo-public-home :where(h1, h2, h3, h4, p) {
+  text-wrap: pretty;
+}
+
+body.kinjo-public-home :where(a, button, input, select) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body.kinjo-public-home :where(a, button, input, select):focus-visible {
+  outline: 3px solid var(--home-gold) !important;
+  outline-offset: 3px;
+}
+
+body.kinjo-public-home .kinjo-public-header {
+  background: color-mix(in srgb, var(--home-brand) 96%, #000 4%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, .16) !important;
+  box-shadow: 0 10px 28px rgba(15, 61, 42, .16) !important;
+}
+
+body.kinjo-public-home .kinjo-public-header > div:first-child {
+  min-height: 4.75rem;
+}
+
+body.kinjo-public-home .kinjo-public-header .navbar-brand,
+body.kinjo-public-home .kinjo-public-header a,
+body.kinjo-public-home .kinjo-public-header button {
+  min-height: 2.75rem;
+}
+
+body.kinjo-public-home .kinjo-public-header .nav-link,
+body.kinjo-public-home .kinjo-public-header > div:first-child > nav > a,
+body.kinjo-public-home .kinjo-public-header > div:first-child > nav button {
+  border-radius: .65rem;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+body.kinjo-public-home .kinjo-public-header .nav-link:hover,
+body.kinjo-public-home .kinjo-public-header > div:first-child > nav > a:hover,
+body.kinjo-public-home .kinjo-public-header > div:first-child > nav button:hover {
+  background: rgba(255, 255, 255, .11) !important;
+}
+
+body.kinjo-public-home .kinjo-public-header .nav-dropdown-menu {
+  border: 1px solid var(--home-line) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, .16) !important;
+}
+
+body.kinjo-public-home #mobile-menu-toggle-btn {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+
+body.kinjo-public-home #kg-search-section {
+  isolation: isolate;
+  min-height: 39rem;
+  padding-block: clamp(4.5rem, 9vw, 7rem) clamp(3.5rem, 7vw, 5.5rem) !important;
+  background:
+    radial-gradient(circle at 8% 14%, rgba(197, 160, 89, .16), transparent 28%),
+    linear-gradient(180deg, #f8fafb 0%, var(--home-paper) 100%) !important;
+}
+
+body.kinjo-public-home #kg-search-section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(90deg, rgba(250, 249, 246, .92), rgba(250, 249, 246, .78)),
+    url('/static/img/landing/hero_bg.jpg') center / cover no-repeat;
+  opacity: .42;
+  pointer-events: none;
+}
+
+body.kinjo-public-home #kg-search-section > div.relative {
+  max-width: 76rem;
+}
+
+body.kinjo-public-home #kg-search-section > div.relative > div:first-child {
+  justify-content: flex-start;
+  margin-bottom: 1.75rem;
+}
+
+body.kinjo-public-home #kg-search-section > div.relative > div:first-child > div {
+  color: var(--home-brand) !important;
+  background: rgba(255, 255, 255, .82) !important;
+  border-color: rgba(31, 94, 71, .18) !important;
+  box-shadow: 0 10px 24px rgba(15, 61, 42, .07) !important;
+}
+
+body.kinjo-public-home #kg-search-section h1 {
+  max-width: 52rem;
+  margin-inline: 0;
+  color: var(--home-brand) !important;
+  font-size: clamp(2.25rem, 5vw, 4.75rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.08 !important;
+  letter-spacing: -.035em !important;
+}
+
+body.kinjo-public-home #kg-search-section .text-center.max-w-3xl {
+  max-width: 76rem;
+  margin-inline: 0;
+  text-align: start;
+}
+
+body.kinjo-public-home #kg-search-section .text-center.max-w-3xl > p {
+  max-width: 42rem;
+  margin-inline: 0;
+  color: var(--home-muted) !important;
+  font-size: clamp(1rem, 1.6vw, 1.2rem);
+  line-height: 1.8;
+}
+
+body.kinjo-public-home #kg-search-section > div.relative > div.max-w-4xl {
+  max-width: 68rem;
+  margin-inline: 0;
+}
+
+body.kinjo-public-home #kg-search-section .glass-card {
+  background: rgba(255, 255, 255, .96) !important;
+  border: 1px solid rgba(31, 94, 71, .22) !important;
+  border-radius: var(--home-radius) !important;
+  box-shadow: 0 24px 56px -32px rgba(15, 61, 42, .42) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.kinjo-public-home #kg-search-section input,
+body.kinjo-public-home #kg-search-section select {
+  min-height: 2.875rem;
+  border-color: #b9cfc4 !important;
+  color: var(--home-ink) !important;
+  box-shadow: none !important;
+}
+
+body.kinjo-public-home #kg-search-section input:focus,
+body.kinjo-public-home #kg-search-section select:focus {
+  border-color: var(--home-action) !important;
+  box-shadow: 0 0 0 4px rgba(30, 64, 175, .12) !important;
+}
+
+body.kinjo-public-home #kg-search-btn {
+  min-height: 2.875rem;
+  border-radius: .75rem !important;
+  background: var(--home-action) !important;
+  box-shadow: 0 12px 22px rgba(30, 64, 175, .2) !important;
+}
+
+body.kinjo-public-home #kg-search-btn:hover {
+  background: var(--home-action-dark) !important;
+  transform: translateY(-1px);
+}
+
+body.kinjo-public-home .kg-quick-gov-pill {
+  min-height: 2.25rem;
+  padding-inline: .8rem !important;
+  border-color: #c5d9d0 !important;
+  color: var(--home-brand) !important;
+}
+
+body.kinjo-public-home .kg-quick-gov-pill:hover,
+body.kinjo-public-home .kg-quick-gov-pill.bg-primary {
+  color: #fff !important;
+  background: var(--home-brand) !important;
+  border-color: var(--home-brand) !important;
+}
+
+body.kinjo-public-home #kg-results-results,
+body.kinjo-public-home #kg-search-results {
+  scroll-margin-top: 6rem;
+}
+
+body.kinjo-public-home #kg-search-results h2 {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+body.kinjo-public-home main > section[aria-label="Key Portal Highlights"] {
+  background: var(--home-brand) !important;
+  border-block: 1px solid rgba(255, 255, 255, .14) !important;
+}
+
+body.kinjo-public-home main > section[aria-label="Key Portal Highlights"] .text-tertiary {
+  color: #f1cd82 !important;
+}
+
+body.kinjo-public-home main > section[aria-label="Trusted Institutional Partners"],
+body.kinjo-public-home main > section[aria-label="Role Portals"] {
+  background: var(--home-paper) !important;
+}
+
+body.kinjo-public-home main > section[aria-label="Governance & Quality Standards"],
+body.kinjo-public-home main > section[aria-label="KinJo Mobile App"] {
+  background: #f0f6f2 !important;
+}
+
+body.kinjo-public-home main > section:not([aria-label="Search Kindergartens"]):not([aria-label="Key Portal Highlights"]) {
+  border-color: var(--home-line) !important;
+}
+
+body.kinjo-public-home main > section:not([aria-label="Search Kindergartens"]) h2 {
+  color: var(--home-brand) !important;
+  letter-spacing: -.025em !important;
+}
+
+body.kinjo-public-home .kinjo-home-value-card,
+body.kinjo-public-home main > section[aria-label="Governance & Quality Standards"] .bg-white {
+  border: 1px solid var(--home-line) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 12px 30px rgba(15, 61, 42, .05) !important;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+body.kinjo-public-home .kinjo-home-value-card:hover,
+body.kinjo-public-home main > section[aria-label="Governance & Quality Standards"] .bg-white:hover {
+  border-color: rgba(31, 94, 71, .42) !important;
+  box-shadow: 0 18px 36px rgba(15, 61, 42, .1) !important;
+  transform: translateY(-3px);
+}
+
+body.kinjo-public-home main > section[aria-label="KinJo Mobile App"] .w-64 {
+  border-color: #12241f !important;
+  box-shadow: 0 24px 48px rgba(15, 61, 42, .18) !important;
+}
+
+body.kinjo-public-home footer {
+  background: var(--home-brand) !important;
+  border-top: 0 !important;
+  color: rgba(255, 255, 255, .8) !important;
+}
+
+body.kinjo-public-home footer :where(h4, p, div, a) {
+  color: inherit;
+}
+
+body.kinjo-public-home footer h3,
+body.kinjo-public-home footer .text-primary {
+  color: #f1cd82 !important;
+}
+
+body.kinjo-public-home footer a:hover {
+  color: #fff !important;
+}
+
+@media (min-width: 900px) {
+  body.kinjo-public-home #kg-search-section > div.relative {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.kinjo-public-home #kg-search-section .glass-card {
+    max-width: 66rem;
+  }
+}
+
+@media (max-width: 899.98px) {
+  body.kinjo-public-home #kg-search-section {
+    min-height: auto;
+    padding-block: 3.5rem 3rem !important;
+  }
+
+  body.kinjo-public-home #kg-search-section .text-center.max-w-3xl {
+    text-align: center;
+  }
+
+  body.kinjo-public-home #kg-search-section .text-center.max-w-3xl > p {
+    margin-inline: auto;
+  }
+
+  body.kinjo-public-home #kg-search-section > div.relative > div:first-child {
+    justify-content: center;
+  }
+
+  body.kinjo-public-home #mobile-nav-drawer :where(a, button) {
+    min-height: 2.75rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  body.kinjo-public-home #kg-search-section h1 {
+    font-size: clamp(2rem, 10vw, 3rem) !important;
+    line-height: 1.15 !important;
+  }
+
+  body.kinjo-public-home #kg-search-section .glass-card {
+    padding: 1rem !important;
+  }
+
+  body.kinjo-public-home main > section[aria-label="Key Portal Highlights"] .border-s {
+    border-inline-start: 0 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  body.kinjo-public-home :where(*, *::before, *::after) {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
