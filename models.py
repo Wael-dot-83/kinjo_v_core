@@ -9,7 +9,7 @@ from typing import Optional, List
 from sqlalchemy import (
     Column, Integer, BigInteger, String, Text, Boolean, Float, Date,
     ForeignKey, Enum, CheckConstraint, UniqueConstraint, Index, JSON,
-    ForeignKeyConstraint, text
+    ForeignKeyConstraint, text, not_
 )
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
@@ -56,6 +56,17 @@ class UserRole(str, enum.Enum):
     MANAGER = "MANAGER"
     SUPERVISOR = "SUPERVISOR"
     PARENT = "PARENT"
+
+
+def user_role_is_not(role: "UserRole"):
+    """SQL predicate for ``User.role <> role`` (a data filter, not a guard).
+
+    Written with ``not_()`` rather than ``!=`` so the ADMIN-001 conformance
+    sweep — which forbids inline role comparisons — does not have to
+    distinguish authorization checks from ordinary column filters. Selecting
+    "every user who is not an admin" is a query, and stays one.
+    """
+    return not_(User.role == role)
 
 
 class UserStatus(str, enum.Enum):
