@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from enum import Enum
 import csv
 import io
+from collections.abc import Mapping
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -330,6 +331,48 @@ def _interpret_overview(metrics: dict[str, Any], lang: str) -> dict[str, Any]:
     }
 
 
+class _LazyMetrics(Mapping):
+    """Metrics bundle that computes each expensive section on first read.
+
+    ADMIN-SCORING (Phase 2): _collect_core_metrics used to run every query and
+    every rollup for every caller, so an endpoint that only wants age buckets
+    still paid for the duplicate-children scan, the daily-report recency probe
+    and three geography rollups.
+
+    Reads look exactly like the dict this replaced -- ``metrics["key"]`` -- so
+    no caller changes. Deferred sections are memoized, so two reads of the same
+    key cost one computation, and sections that share work read each other
+    through this same mapping rather than recomputing.
+    """
+
+    __slots__ = ("_values", "_thunks")
+
+    def __init__(self, values: dict[str, Any], thunks: dict[str, Any]):
+        self._values = values
+        self._thunks = thunks
+
+    def __getitem__(self, key):
+        if key in self._values:
+            return self._values[key]
+        thunk = self._thunks.get(key)
+        if thunk is None:
+            raise KeyError(key)
+        value = thunk()
+        self._values[key] = value
+        return value
+
+    def __iter__(self):
+        # Iterating asks for everything, so materialise everything. Callers that
+        # only read individual keys never reach this.
+        return iter({**self._thunks, **self._values})
+
+    def __len__(self):
+        return len(set(self._values) | set(self._thunks))
+
+    def __contains__(self, key):
+        return key in self._values or key in self._thunks
+
+
 def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, date_to: date) -> dict[str, Any]:
     enroll_q = _base_enrollment_query(db, filters)
 
@@ -450,169 +493,189 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
     kg_missing_location = {kg.id for kg in kindergartens if not kg.governorate or not kg.district}
     children_missing_location = len({r.child_id for r in official_rows if r.kindergarten_id in kg_missing_location})
 
-    # Geography aggregations
-    by_governorate: dict[str, dict[str, Any]] = {}
-    by_city: dict[tuple[str, str], dict[str, Any]] = {}
-    by_area: dict[tuple[str, str, str], dict[str, Any]] = {}
-    for kg in kindergartens:
-        gov = kg.governorate or "Unknown"
-        city = kg.district or "Unknown"
-        area = kg.area or "Unknown"
-        if gov not in by_governorate:
-            by_governorate[gov] = {
-                "governorate": gov,
-                "kindergarten_count": 0,
-                "class_count": 0,
-                "children_count": 0,
-                "supervisor_count": 0,
-                "capacity": 0,
-            }
-        key = (gov, city)
-        if key not in by_city:
-            by_city[key] = {
-                "governorate": gov,
-                "city": city,
-                "kindergarten_count": 0,
-                "class_count": 0,
-                "children_count": 0,
-                "supervisor_count": 0,
-                "capacity": 0,
-            }
-        area_key = (gov, city, area)
-        if area_key not in by_area:
-            by_area[area_key] = {
-                "governorate": gov,
-                "city": city,
-                "area": area,
-                "kindergarten_count": 0,
-                "class_count": 0,
-                "children_count": 0,
-                "supervisor_count": 0,
-                "capacity": 0,
-            }
-
-        by_governorate[gov]["kindergarten_count"] += 1
-        by_city[key]["kindergarten_count"] += 1
-        by_area[area_key]["kindergarten_count"] += 1
-
-    kg_id_map = {k.id: k for k in kindergartens}
-    kg_class_counts: dict[int, int] = {}
-    for c in classes:
-        kg_class_counts[c.kindergarten_id] = kg_class_counts.get(c.kindergarten_id, 0) + 1
-        parent_kg = kg_id_map.get(c.kindergarten_id)
-        gov = (parent_kg.governorate if parent_kg else None) or "Unknown"
-        city = (parent_kg.district if parent_kg else None) or "Unknown"
-        area = (parent_kg.area if parent_kg else None) or "Unknown"
-
-        by_governorate.setdefault(
-            gov,
-            {
-                "governorate": gov,
-                "kindergarten_count": 0,
-                "class_count": 0,
-                "children_count": 0,
-                "supervisor_count": 0,
-                "capacity": 0,
-            },
-        )
-        by_governorate[gov]["class_count"] += 1
-        by_governorate[gov]["capacity"] += c.capacity_total or 0
-
-        city_key = (gov, city)
-        by_city.setdefault(
-            city_key,
-            {
-                "governorate": gov,
-                "city": city,
-                "kindergarten_count": 0,
-                "class_count": 0,
-                "children_count": 0,
-                "supervisor_count": 0,
-                "capacity": 0,
-            },
-        )
-        by_city[city_key]["class_count"] += 1
-        by_city[city_key]["capacity"] += c.capacity_total or 0
-
-        area_key = (gov, city, area)
-        by_area.setdefault(
-            area_key,
-            {
-                "governorate": gov,
-                "city": city,
-                "area": area,
-                "kindergarten_count": 0,
-                "class_count": 0,
-                "children_count": 0,
-                "supervisor_count": 0,
-                "capacity": 0,
-            },
-        )
-        by_area[area_key]["class_count"] += 1
-        by_area[area_key]["capacity"] += c.capacity_total or 0
-
+    # Per-kindergarten tallies over rows already fetched. Shared by the
+    # geography rollups and the compliance counters, so they stay eager.
     supervisor_counts_by_kg: dict[int, int] = {}
-    for s in supervisors:
-        if s.kindergarten_id:
-            supervisor_counts_by_kg[s.kindergarten_id] = supervisor_counts_by_kg.get(s.kindergarten_id, 0) + 1
+    for sup_user in supervisors:
+        if sup_user.kindergarten_id:
+            supervisor_counts_by_kg[sup_user.kindergarten_id] = (
+                supervisor_counts_by_kg.get(sup_user.kindergarten_id, 0) + 1
+            )
 
     children_by_kg: dict[int, int] = {}
     for row in official_rows:
         if row.kindergarten_id:
             children_by_kg[row.kindergarten_id] = children_by_kg.get(row.kindergarten_id, 0) + 1
 
-    for row in official_rows:
-        kg_id = row.kindergarten_id
-        kg = kg_id_map.get(kg_id)
-        if not kg:
-            continue
-        gov = kg.governorate or "Unknown"
-        city = kg.district or "Unknown"
-        area = kg.area or "Unknown"
-        by_governorate[gov]["children_count"] += 1
-        by_city[(gov, city)]["children_count"] += 1
-        by_area[(gov, city, area)]["children_count"] += 1
+    def _geography():
+        """Roll kindergartens/children/supervisors up by governorate, city and area.
 
-    for kg in kindergartens:
-        gov = kg.governorate or "Unknown"
-        city = kg.district or "Unknown"
-        area = kg.area or "Unknown"
-        sup = supervisor_counts_by_kg.get(kg.id, 0)
-        by_governorate[gov]["supervisor_count"] += sup
-        by_city[(gov, city)]["supervisor_count"] += sup
-        by_area[(gov, city, area)]["supervisor_count"] += sup
+        Pure Python over rows already fetched, but it walks every row several
+        times; only the geography, risk and overview endpoints read it.
+        """
+        # Geography aggregations
+        by_governorate: dict[str, dict[str, Any]] = {}
+        by_city: dict[tuple[str, str], dict[str, Any]] = {}
+        by_area: dict[tuple[str, str, str], dict[str, Any]] = {}
+        for kg in kindergartens:
+            gov = kg.governorate or "Unknown"
+            city = kg.district or "Unknown"
+            area = kg.area or "Unknown"
+            if gov not in by_governorate:
+                by_governorate[gov] = {
+                    "governorate": gov,
+                    "kindergarten_count": 0,
+                    "class_count": 0,
+                    "children_count": 0,
+                    "supervisor_count": 0,
+                    "capacity": 0,
+                }
+            key = (gov, city)
+            if key not in by_city:
+                by_city[key] = {
+                    "governorate": gov,
+                    "city": city,
+                    "kindergarten_count": 0,
+                    "class_count": 0,
+                    "children_count": 0,
+                    "supervisor_count": 0,
+                    "capacity": 0,
+                }
+            area_key = (gov, city, area)
+            if area_key not in by_area:
+                by_area[area_key] = {
+                    "governorate": gov,
+                    "city": city,
+                    "area": area,
+                    "kindergarten_count": 0,
+                    "class_count": 0,
+                    "children_count": 0,
+                    "supervisor_count": 0,
+                    "capacity": 0,
+                }
 
-    # Data quality and compliance issue counters
-    duplicate_children = (
-        db.query(func.count())
-        .select_from(
-            db.query(
-                models.Child.first_name,
-                models.Child.last_name,
-                models.Child.date_of_birth,
-                func.count(models.Child.id).label("cnt"),
+            by_governorate[gov]["kindergarten_count"] += 1
+            by_city[key]["kindergarten_count"] += 1
+            by_area[area_key]["kindergarten_count"] += 1
+
+        kg_id_map = {k.id: k for k in kindergartens}
+        kg_class_counts: dict[int, int] = {}
+        for c in classes:
+            kg_class_counts[c.kindergarten_id] = kg_class_counts.get(c.kindergarten_id, 0) + 1
+            parent_kg = kg_id_map.get(c.kindergarten_id)
+            gov = (parent_kg.governorate if parent_kg else None) or "Unknown"
+            city = (parent_kg.district if parent_kg else None) or "Unknown"
+            area = (parent_kg.area if parent_kg else None) or "Unknown"
+
+            by_governorate.setdefault(
+                gov,
+                {
+                    "governorate": gov,
+                    "kindergarten_count": 0,
+                    "class_count": 0,
+                    "children_count": 0,
+                    "supervisor_count": 0,
+                    "capacity": 0,
+                },
             )
-            .group_by(models.Child.first_name, models.Child.last_name, models.Child.date_of_birth)
-            .having(func.count(models.Child.id) > 1)
+            by_governorate[gov]["class_count"] += 1
+            by_governorate[gov]["capacity"] += c.capacity_total or 0
+
+            city_key = (gov, city)
+            by_city.setdefault(
+                city_key,
+                {
+                    "governorate": gov,
+                    "city": city,
+                    "kindergarten_count": 0,
+                    "class_count": 0,
+                    "children_count": 0,
+                    "supervisor_count": 0,
+                    "capacity": 0,
+                },
+            )
+            by_city[city_key]["class_count"] += 1
+            by_city[city_key]["capacity"] += c.capacity_total or 0
+
+            area_key = (gov, city, area)
+            by_area.setdefault(
+                area_key,
+                {
+                    "governorate": gov,
+                    "city": city,
+                    "area": area,
+                    "kindergarten_count": 0,
+                    "class_count": 0,
+                    "children_count": 0,
+                    "supervisor_count": 0,
+                    "capacity": 0,
+                },
+            )
+            by_area[area_key]["class_count"] += 1
+            by_area[area_key]["capacity"] += c.capacity_total or 0
+
+        for row in official_rows:
+            kg_id = row.kindergarten_id
+            kg = kg_id_map.get(kg_id)
+            if not kg:
+                continue
+            gov = kg.governorate or "Unknown"
+            city = kg.district or "Unknown"
+            area = kg.area or "Unknown"
+            by_governorate[gov]["children_count"] += 1
+            by_city[(gov, city)]["children_count"] += 1
+            by_area[(gov, city, area)]["children_count"] += 1
+
+        for kg in kindergartens:
+            gov = kg.governorate or "Unknown"
+            city = kg.district or "Unknown"
+            area = kg.area or "Unknown"
+            sup = supervisor_counts_by_kg.get(kg.id, 0)
+            by_governorate[gov]["supervisor_count"] += sup
+            by_city[(gov, city)]["supervisor_count"] += sup
+            by_area[(gov, city, area)]["supervisor_count"] += sup
+
+        return {
+            "by_governorate": list(by_governorate.values()),
+            "by_city": list(by_city.values()),
+            "by_area": list(by_area.values()),
+        }
+
+    # Data quality and compliance issue counters.
+    # Each of these is a standalone round trip, so it is deferred: an endpoint
+    # that never reads a compliance or quality figure never issues the query.
+    def _duplicate_children():
+        return (
+            db.query(func.count())
+            .select_from(
+                db.query(
+                    models.Child.first_name,
+                    models.Child.last_name,
+                    models.Child.date_of_birth,
+                    func.count(models.Child.id).label("cnt"),
+                )
+                .group_by(models.Child.first_name, models.Child.last_name, models.Child.date_of_birth)
+                .having(func.count(models.Child.id) > 1)
+                .subquery()
+            )
+            .scalar()
+            or 0
+        )
+
+    def _children_in_multiple_classes():
+        """Children enrolled in more than one class at once (a violation)."""
+        multi_class_sq = (
+            db.query(models.EnrollmentApplication.child_id)
+            .filter(
+                models.EnrollmentApplication.child_id.in_(list(child_ids)),
+                models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)),
+                models.EnrollmentApplication.class_id.isnot(None),
+            )
+            .group_by(models.EnrollmentApplication.child_id)
+            .having(func.count(func.distinct(models.EnrollmentApplication.class_id)) > 1)
             .subquery()
         )
-        .scalar()
-        or 0
-    )
-
-    # Children enrolled in more than one class simultaneously (compliance violation)
-    _multi_class_sq = (
-        db.query(models.EnrollmentApplication.child_id)
-        .filter(
-            models.EnrollmentApplication.child_id.in_(list(child_ids)),
-            models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)),
-            models.EnrollmentApplication.class_id.isnot(None),
-        )
-        .group_by(models.EnrollmentApplication.child_id)
-        .having(func.count(func.distinct(models.EnrollmentApplication.class_id)) > 1)
-        .subquery()
-    )
-    children_in_multiple_classes = db.query(func.count()).select_from(_multi_class_sq).scalar() or 0
+        return db.query(func.count()).select_from(multi_class_sq).scalar() or 0
 
     classes_without_supervisor = sum(1 for c in classes if class_supervisor_counts.get(c.id, 0) == 0)
     classes_with_children_no_supervisor = sum(
@@ -644,22 +707,27 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
     # deducted at its own severity weight. The previous formula summed the
     # counts and divided by (children + kindergartens + classes), which let a
     # large network dilute an unsupervised class to a rounding error.
-    compliance_violations = {
-        "invalid_age_too_young": age_invalid_reasons["too_young"],
-        "invalid_age_too_old": age_invalid_reasons["too_old"],
-        "future_dob": age_invalid_reasons["future_dob"],
-        "missing_dob": age_invalid_reasons["missing_dob"],
-        "class_with_children_no_supervisor": classes_with_children_no_supervisor,
-        "kindergarten_no_supervisor_with_children": kindergartens_no_supervisor_with_children,
-        "kindergarten_over_capacity": kindergartens_over_capacity,
-        "child_in_multiple_classes": children_in_multiple_classes,
-    }
-    compliance = calculate_compliance_score(compliance_violations)
-    compliance_score = compliance["score"]
-
     active_kg_count = len(kindergartens)
-    if active_kg_count > 0 and kg_ids:
-        kg_with_recent_report = (
+
+    def _compliance_violations():
+        return {
+            "invalid_age_too_young": age_invalid_reasons["too_young"],
+            "invalid_age_too_old": age_invalid_reasons["too_old"],
+            "future_dob": age_invalid_reasons["future_dob"],
+            "missing_dob": age_invalid_reasons["missing_dob"],
+            "class_with_children_no_supervisor": classes_with_children_no_supervisor,
+            "kindergarten_no_supervisor_with_children": kindergartens_no_supervisor_with_children,
+            "kindergarten_over_capacity": kindergartens_over_capacity,
+            "child_in_multiple_classes": metrics["children_in_multiple_classes"],
+        }
+
+    def _compliance():
+        return calculate_compliance_score(metrics["compliance_violations"])
+
+    def _kg_with_recent_report():
+        if active_kg_count <= 0 or not kg_ids:
+            return 0
+        return (
             db.query(func.count(func.distinct(models.DailyReport.kindergarten_id)))
             .filter(
                 models.DailyReport.kindergarten_id.in_(kg_ids),
@@ -668,39 +736,38 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
             .scalar()
             or 0
         )
-    else:
-        kg_with_recent_report = 0
 
-    # ADMIN-SCORING-002: report-filing rate is now only the timeliness
-    # dimension (20%), not the whole score. Completeness is measured over the
-    # four child fields already counted above -- date of birth, gender,
-    # kindergarten assignment and class assignment -- so the dimension costs
-    # no additional queries (mandate 4).
-    fields_per_child = 4
-    total_fields_required = total_children * fields_per_child
-    missing_fields = (
-        age_invalid_reasons["missing_dob"]
-        + gender_counts["unknown"]
-        + children_without_kindergarten
-        + children_without_class
-    )
-    total_fields_filled = max(0, total_fields_required - missing_fields)
+    def _data_quality():
+        """ADMIN-SCORING-002: four weighted dimensions, not a filing rate.
 
-    data_quality = calculate_data_quality_score(
-        total_children=total_children,
-        missing_dob_count=age_invalid_reasons["missing_dob"],
-        missing_gender_count=gender_counts["unknown"],
-        invalid_age_count=age_invalid_reasons["too_young"] + age_invalid_reasons["too_old"],
-        duplicate_count=duplicate_children,
-        total_enrollments=sum(enrollment_status_counts.values()),
-        active_kg_count=active_kg_count,
-        kg_with_recent_report=kg_with_recent_report,
-        total_fields_required=total_fields_required,
-        total_fields_filled=total_fields_filled,
-    )
-    data_quality_score = data_quality["overall_score"]
+        Completeness is measured over the four child fields already counted in
+        the eager pass -- date of birth, gender, kindergarten assignment and
+        class assignment -- so the dimension adds no queries (mandate 4).
+        """
+        fields_per_child = 4
+        total_fields_required = total_children * fields_per_child
+        missing_fields = (
+            age_invalid_reasons["missing_dob"]
+            + gender_counts["unknown"]
+            + children_without_kindergarten
+            + children_without_class
+        )
+        total_fields_filled = max(0, total_fields_required - missing_fields)
 
-    metrics = {
+        return calculate_data_quality_score(
+            total_children=total_children,
+            missing_dob_count=age_invalid_reasons["missing_dob"],
+            missing_gender_count=gender_counts["unknown"],
+            invalid_age_count=age_invalid_reasons["too_young"] + age_invalid_reasons["too_old"],
+            duplicate_count=metrics["duplicate_children"],
+            total_enrollments=sum(enrollment_status_counts.values()),
+            active_kg_count=active_kg_count,
+            kg_with_recent_report=metrics["kg_with_recent_report"],
+            total_fields_required=total_fields_required,
+            total_fields_filled=total_fields_filled,
+        )
+
+    eager = {
         "period": {"from": date_from.isoformat(), "to": date_to.isoformat()},
         "total_children": total_children,
         "total_kindergartens": len(kindergartens),
@@ -721,24 +788,34 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         "children_without_kindergarten": children_without_kindergarten,
         "children_without_class": children_without_class,
         "children_missing_location": children_missing_location,
-        "children_in_multiple_classes": children_in_multiple_classes,
-        "duplicate_children": duplicate_children,
         "classes_without_supervisor": classes_without_supervisor,
         "classes_with_children_no_supervisor": classes_with_children_no_supervisor,
         "kindergartens_no_supervisor_with_children": kindergartens_no_supervisor_with_children,
         "kindergartens_over_capacity": kindergartens_over_capacity,
         "kindergartens_missing_coordinates": kindergartens_missing_coordinates,
         "kindergartens_missing_capacity": kindergartens_missing_capacity,
-        "data_quality_score": data_quality_score,
-        "data_quality": data_quality,
-        "compliance_score": compliance_score,
-        "compliance": compliance,
-        "compliance_violations": compliance_violations,
-        "kg_with_recent_report": kg_with_recent_report,
-        "by_governorate": list(by_governorate.values()),
-        "by_city": list(by_city.values()),
-        "by_area": list(by_area.values()),
     }
+
+    # Deferred sections: each is a standalone query or a multi-pass rollup, and
+    # most endpoints read only a few of them. The mapping memoizes on first
+    # read, so a caller that does want everything pays exactly what the old
+    # eager version cost.
+    deferred = {
+        "duplicate_children": _duplicate_children,
+        "children_in_multiple_classes": _children_in_multiple_classes,
+        "kg_with_recent_report": _kg_with_recent_report,
+        "compliance_violations": _compliance_violations,
+        "compliance": _compliance,
+        "compliance_score": lambda: metrics["compliance"]["score"],
+        "data_quality": _data_quality,
+        "data_quality_score": lambda: metrics["data_quality"]["overall_score"],
+        "by_governorate": lambda: metrics["_geography"]["by_governorate"],
+        "by_city": lambda: metrics["_geography"]["by_city"],
+        "by_area": lambda: metrics["_geography"]["by_area"],
+        "_geography": _geography,
+    }
+
+    metrics = _LazyMetrics(eager, deferred)
     return metrics
 
 
