@@ -262,6 +262,26 @@
                 </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-geo-alt me-1"></i><span>{% if ui_lang == 'en' %}Governorates{% else %}المحافظات{% endif %}</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><h6 class="dropdown-header text-uppercase text-primary font-bold">{% if ui_lang == 'en' %}Jordan Governorates (12){% else %}محافظات المملكة (12){% endif %}</h6></li>
+                        <li><a class="dropdown-item" href="/#kg-search-section" onclick="if(window.selectGovernorate){selectGovernorate('عمان');}">{% if ui_lang == 'en' %}Amman (Capital){% else %}العاصمة عمان{% endif %}</a></li>
+                        <li><a class="dropdown-item" href="/#kg-search-section" onclick="if(window.selectGovernorate){selectGovernorate('إربد');}">{% if ui_lang == 'en' %}Irbid{% else %}إربد{% endif %}</a></li>
+                        <li><a class="dropdown-item" href="/#kg-search-section" onclick="if(window.selectGovernorate){selectGovernorate('الزرقاء');}">{% if ui_lang == 'en' %}Zarqa{% else %}الزرقاء{% endif %}</a></li>
+                        <li><a class="dropdown-item" href="/#kg-search-section" onclick="if(window.selectGovernorate){selectGovernorate('البلقاء');}">{% if ui_lang == 'en' %}Balqa{% else %}البلقاء{% endif %}</a></li>
+                        <li><a class="dropdown-item" href="/#kg-search-section" onclick="if(window.selectGovernorate){selectGovernorate('العقبة');}">{% if ui_lang == 'en' %}Aqaba{% else %}العقبة{% endif %}</a></li>
+                        <li><a class="dropdown-item" href="/#kg-search-section" onclick="if(window.selectGovernorate){selectGovernorate('الكرك');}">{% if ui_lang == 'en' %}Karak{% else %}الكرك{% endif %}</a></li>
+                        <li><a class="dropdown-item" href="/#kg-search-section" onclick="if(window.selectGovernorate){selectGovernorate('المفرق');}">{% if ui_lang == 'en' %}Mafraq{% else %}المفرق{% endif %}</a></li>
+                        <li><a class="dropdown-item" href="/#kg-search-section" onclick="if(window.selectGovernorate){selectGovernorate('جرش');}">{% if ui_lang == 'en' %}Jerash{% else %}جرش{% endif %}</a></li>
+                        <li><a class="dropdown-item" href="/#kg-search-section" onclick="if(window.selectGovernorate){selectGovernorate('عجلون');}">{% if ui_lang == 'en' %}Ajloun{% else %}عجلون{% endif %}</a></li>
+                        <li><a class="dropdown-item" href="/#kg-search-section" onclick="if(window.selectGovernorate){selectGovernorate('مادبا');}">{% if ui_lang == 'en' %}Madaba{% else %}مادبا{% endif %}</a></li>
+                        <li><a class="dropdown-item" href="/#kg-search-section" onclick="if(window.selectGovernorate){selectGovernorate('الطفيلة');}">{% if ui_lang == 'en' %}Tafilah{% else %}الطفيلة{% endif %}</a></li>
+                        <li><a class="dropdown-item" href="/#kg-search-section" onclick="if(window.selectGovernorate){selectGovernorate('معان');}">{% if ui_lang == 'en' %}Ma'an{% else %}معان{% endif %}</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-shield-check me-1"></i><span>{% if ui_lang == 'en' %}Governance &amp; Partners{% else %}الحوكمة والشركاء{% endif %}</span>
                     </a>
                     <ul class="dropdown-menu">

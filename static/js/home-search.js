@@ -203,7 +203,8 @@
     govEl.dispatchEvent(new Event('change'));
 
     // Highlight active quick pill
-    quickPills.forEach(function (pill) {
+    const allPills = document.querySelectorAll('.kg-quick-gov-pill');
+    allPills.forEach(function (pill) {
       const val = pill.getAttribute('data-gov') || '';
       if (val === govName) {
         pill.classList.add('bg-primary', 'text-white', 'border-primary');
@@ -214,8 +215,16 @@
       }
     });
 
+    const searchSection = document.getElementById('kg-search-section') || inputEl;
+    if (searchSection) {
+      searchSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
     search();
   }
+
+  window.selectGovernorate = selectGovernorate;
+
 
   async function loadGovernorates() {
     try {

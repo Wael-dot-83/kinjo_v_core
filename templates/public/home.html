@@ -176,6 +176,83 @@
           </div>
         </div>
 
+        <!-- Governorates Dropdown Menu (List Menu) -->
+        <div class="relative group" id="governorates-dropdown-container">
+          <button
+            type="button"
+            class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 focus:outline-none"
+            aria-expanded="false"
+            aria-haspopup="true"
+            id="governorates-menu-btn"
+          >
+            <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">location_on</span>
+            <span>{% if ui_lang == 'en' %}Governorates{% else %}المحافظات{% endif %}</span>
+            <span class="material-symbols-outlined text-xs transition-transform duration-200 group-hover:rotate-180" aria-hidden="true">expand_more</span>
+          </button>
+          
+          <div class="nav-dropdown-menu absolute top-full start-0 w-80 bg-white text-on-surface rounded-2xl shadow-2xl border border-outline-variant/30 py-3 hidden group-hover:block hover:block z-50 mt-1" role="menu">
+            <div class="px-4 py-2 border-b border-outline-variant/20 mb-2">
+              <p class="text-xs font-bold uppercase tracking-wider text-primary">
+                {% if ui_lang == 'en' %}Browse by Governorate{% else %}تصفح الحضانات حسب المحافظة{% endif %}
+              </p>
+              <p class="text-[11px] text-on-surface-variant mt-0.5">
+                {% if ui_lang == 'en' %}Select a governorate to view accredited nurseries{% else %}اختر المحافظة لعرض الحضانات المعتمدة مباشرة{% endif %}
+              </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-1 px-3">
+              <button type="button" onclick="selectGovernorate('عمان')" class="text-start flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-surface-container-low transition-colors text-xs font-bold text-primary">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+                <span>{% if ui_lang == 'en' %}Amman{% else %}العاصمة عمان{% endif %}</span>
+              </button>
+              <button type="button" onclick="selectGovernorate('إربد')" class="text-start flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-surface-container-low transition-colors text-xs font-bold text-primary">
+                <span class="w-1.5 h-1.5 rounded-full bg-tertiary flex-shrink-0"></span>
+                <span>{% if ui_lang == 'en' %}Irbid{% else %}إربد{% endif %}</span>
+              </button>
+              <button type="button" onclick="selectGovernorate('الزرقاء')" class="text-start flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-surface-container-low transition-colors text-xs font-bold text-primary">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+                <span>{% if ui_lang == 'en' %}Zarqa{% else %}الزرقاء{% endif %}</span>
+              </button>
+              <button type="button" onclick="selectGovernorate('البلقاء')" class="text-start flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-surface-container-low transition-colors text-xs font-bold text-primary">
+                <span class="w-1.5 h-1.5 rounded-full bg-tertiary flex-shrink-0"></span>
+                <span>{% if ui_lang == 'en' %}Balqa{% else %}البلقاء{% endif %}</span>
+              </button>
+              <button type="button" onclick="selectGovernorate('العقبة')" class="text-start flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-surface-container-low transition-colors text-xs font-bold text-primary">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+                <span>{% if ui_lang == 'en' %}Aqaba{% else %}العقبة{% endif %}</span>
+              </button>
+              <button type="button" onclick="selectGovernorate('الكرك')" class="text-start flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-surface-container-low transition-colors text-xs font-bold text-primary">
+                <span class="w-1.5 h-1.5 rounded-full bg-tertiary flex-shrink-0"></span>
+                <span>{% if ui_lang == 'en' %}Karak{% else %}الكرك{% endif %}</span>
+              </button>
+              <button type="button" onclick="selectGovernorate('المفرق')" class="text-start flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-surface-container-low transition-colors text-xs font-bold text-primary">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+                <span>{% if ui_lang == 'en' %}Mafraq{% else %}المفرق{% endif %}</span>
+              </button>
+              <button type="button" onclick="selectGovernorate('جرش')" class="text-start flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-surface-container-low transition-colors text-xs font-bold text-primary">
+                <span class="w-1.5 h-1.5 rounded-full bg-tertiary flex-shrink-0"></span>
+                <span>{% if ui_lang == 'en' %}Jerash{% else %}جرش{% endif %}</span>
+              </button>
+              <button type="button" onclick="selectGovernorate('عجلون')" class="text-start flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-surface-container-low transition-colors text-xs font-bold text-primary">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+                <span>{% if ui_lang == 'en' %}Ajloun{% else %}عجلون{% endif %}</span>
+              </button>
+              <button type="button" onclick="selectGovernorate('مادبا')" class="text-start flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-surface-container-low transition-colors text-xs font-bold text-primary">
+                <span class="w-1.5 h-1.5 rounded-full bg-tertiary flex-shrink-0"></span>
+                <span>{% if ui_lang == 'en' %}Madaba{% else %}مادبا{% endif %}</span>
+              </button>
+              <button type="button" onclick="selectGovernorate('الطفيلة')" class="text-start flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-surface-container-low transition-colors text-xs font-bold text-primary">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+                <span>{% if ui_lang == 'en' %}Tafilah{% else %}الطفيلة{% endif %}</span>
+              </button>
+              <button type="button" onclick="selectGovernorate('معان')" class="text-start flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-surface-container-low transition-colors text-xs font-bold text-primary">
+                <span class="w-1.5 h-1.5 rounded-full bg-tertiary flex-shrink-0"></span>
+                <span>{% if ui_lang == 'en' %}Ma'an{% else %}معان{% endif %}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <a class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg text-sm font-semibold transition-all" href="/about">
           {% if ui_lang == 'en' %}About{% else %}نبذة عنا{% endif %}
         </a>
@@ -221,13 +298,35 @@
     </div>
 
     <!-- Mobile Navigation Drawer -->
-    <div id="mobile-nav-drawer" class="lg:hidden hidden bg-primary border-t border-white/15 px-4 pt-3 pb-6 space-y-2">
+    <div id="mobile-nav-drawer" class="lg:hidden hidden bg-primary border-t border-white/15 px-4 pt-3 pb-6 space-y-3">
       <a class="block text-white font-semibold px-3 py-2 rounded-lg hover:bg-white/10 text-sm" href="/services">
         {% if ui_lang == 'en' %}Services{% else %}الخدمات{% endif %}
       </a>
       
+      <!-- Mobile Governorates List Section -->
+      <div class="py-2.5 px-3 bg-white/5 rounded-xl border border-white/10 space-y-2">
+        <p class="text-xs font-bold text-tertiary uppercase tracking-wider flex items-center gap-1">
+          <span class="material-symbols-outlined text-sm" aria-hidden="true">location_on</span>
+          <span>{% if ui_lang == 'en' %}Governorates of Jordan (12){% else %}محافظات المملكة (12){% endif %}</span>
+        </p>
+        <div class="grid grid-cols-3 gap-1.5 pt-1">
+          <button type="button" onclick="selectGovernorate('عمان')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Amman{% else %}عمان{% endif %}</button>
+          <button type="button" onclick="selectGovernorate('إربد')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Irbid{% else %}إربد{% endif %}</button>
+          <button type="button" onclick="selectGovernorate('الزرقاء')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Zarqa{% else %}الزرقاء{% endif %}</button>
+          <button type="button" onclick="selectGovernorate('البلقاء')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Balqa{% else %}البلقاء{% endif %}</button>
+          <button type="button" onclick="selectGovernorate('العقبة')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Aqaba{% else %}العقبة{% endif %}</button>
+          <button type="button" onclick="selectGovernorate('الكرك')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Karak{% else %}الكرك{% endif %}</button>
+          <button type="button" onclick="selectGovernorate('المفرق')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Mafraq{% else %}المفرق{% endif %}</button>
+          <button type="button" onclick="selectGovernorate('جرش')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Jerash{% else %}جرش{% endif %}</button>
+          <button type="button" onclick="selectGovernorate('عجلون')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Ajloun{% else %}عجلون{% endif %}</button>
+          <button type="button" onclick="selectGovernorate('مادبا')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Madaba{% else %}مادبا{% endif %}</button>
+          <button type="button" onclick="selectGovernorate('الطفيلة')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Tafilah{% else %}الطفيلة{% endif %}</button>
+          <button type="button" onclick="selectGovernorate('معان')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Ma'an{% else %}معان{% endif %}</button>
+        </div>
+      </div>
+
       <!-- Mobile Governance Section -->
-      <div class="py-2 px-3 bg-white/5 rounded-xl border border-white/10 space-y-2">
+      <div class="py-2.5 px-3 bg-white/5 rounded-xl border border-white/10 space-y-2">
         <p class="text-xs font-bold text-tertiary uppercase tracking-wider">
           {% if ui_lang == 'en' %}Governance &amp; Partners{% else %}الحوكمة والشركاء{% endif %}
         </p>
@@ -273,7 +372,7 @@
   <main class="flex-grow" role="main">
 
     <!-- Section 1: Search-First Hero -->
-    <section class="relative bg-surface-container-low overflow-hidden py-10 md:py-16 border-b border-outline-variant/20" aria-label="Search Kindergartens">
+    <section id="kg-search-section" class="relative bg-surface-container-low overflow-hidden py-10 md:py-16 border-b border-outline-variant/20" aria-label="Search Kindergartens">
       <div class="absolute inset-0 z-0">
         <div class="bg-cover bg-center w-full h-full opacity-30" style="background-image: url('/static/img/landing/hero_bg.jpg');"></div>
         <div class="absolute inset-0 bg-gradient-to-b from-surface-container-low via-surface-container-low/95 to-white"></div>
@@ -344,14 +443,26 @@
               <!-- Row 2: Justified Filter Grid -->
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 
-                <!-- Governorate Filter -->
+                <!-- Governorate Filter (List of all 12 Jordanian Governorates) -->
                 <div class="relative">
                   <label for="kg-filter-governorate" class="block text-[11px] font-bold text-primary mb-1 uppercase tracking-wider">
-                    {% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}
+                    {% if ui_lang == 'en' %}Governorate (12){% else %}المحافظة (12){% endif %}
                   </label>
                   <div class="relative">
                     <select id="kg-filter-governorate" class="w-full py-2.5 ps-3 pe-8 rounded-xl border border-outline-variant/60 bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-xs sm:text-sm font-medium shadow-sm appearance-none">
                       <option value="">{% if ui_lang == 'en' %}All Governorates (12){% else %}جميع المحافظات (12){% endif %}</option>
+                      <option value="عمان">{% if ui_lang == 'en' %}Amman (العاصمة){% else %}العاصمة عمان{% endif %}</option>
+                      <option value="إربد">{% if ui_lang == 'en' %}Irbid (إربد){% else %}إربد{% endif %}</option>
+                      <option value="الزرقاء">{% if ui_lang == 'en' %}Zarqa (الزرقاء){% else %}الزرقاء{% endif %}</option>
+                      <option value="البلقاء">{% if ui_lang == 'en' %}Balqa (البلقاء){% else %}البلقاء{% endif %}</option>
+                      <option value="العقبة">{% if ui_lang == 'en' %}Aqaba (العقبة){% else %}العقبة{% endif %}</option>
+                      <option value="الكرك">{% if ui_lang == 'en' %}Karak (الكرك){% else %}الكرك{% endif %}</option>
+                      <option value="المفرق">{% if ui_lang == 'en' %}Mafraq (المفرق){% else %}المفرق{% endif %}</option>
+                      <option value="جرش">{% if ui_lang == 'en' %}Jerash (جرش){% else %}جرش{% endif %}</option>
+                      <option value="عجلون">{% if ui_lang == 'en' %}Ajloun (عجلون){% else %}عجلون{% endif %}</option>
+                      <option value="مادبا">{% if ui_lang == 'en' %}Madaba (مادبا){% else %}مادبا{% endif %}</option>
+                      <option value="الطفيلة">{% if ui_lang == 'en' %}Tafilah (الطفيلة){% else %}الطفيلة{% endif %}</option>
+                      <option value="معان">{% if ui_lang == 'en' %}Ma'an (معان){% else %}معان{% endif %}</option>
                     </select>
                     <div class="absolute inset-y-0 end-0 pe-2.5 flex items-center pointer-events-none text-on-surface-variant">
                       <span class="material-symbols-outlined text-base" aria-hidden="true">expand_more</span>
@@ -394,22 +505,23 @@
 
               </div>
 
-              <!-- Row 3: Quick Governorate Pills & Search Action Button -->
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-outline-variant/20">
+              <!-- Row 3: Quick Governorate List Menu (All 12 Governorates) & Search Action Button -->
+              <div class="flex flex-col gap-3 pt-3 border-t border-outline-variant/20">
                 
-                <!-- Quick Filter Pills -->
+                <!-- 12 Governorates Quick Navigation List -->
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="text-xs text-on-surface-variant font-bold me-1">
-                    {% if ui_lang == 'en' %}Popular:{% else %}الأكثر بحثاً:{% endif %}
+                  <span class="text-xs text-primary font-bold me-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-xs text-tertiary" aria-hidden="true">location_on</span>
+                    <span>{% if ui_lang == 'en' %}Governorates:{% else %}المحافظات:{% endif %}</span>
                   </span>
                   <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="عمان">
                     {% if ui_lang == 'en' %}Amman{% else %}عمان{% endif %}
                   </button>
-                  <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="الزرقاء">
-                    {% if ui_lang == 'en' %}Zarqa{% else %}الزرقاء{% endif %}
-                  </button>
                   <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="إربد">
                     {% if ui_lang == 'en' %}Irbid{% else %}إربد{% endif %}
+                  </button>
+                  <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="الزرقاء">
+                    {% if ui_lang == 'en' %}Zarqa{% else %}الزرقاء{% endif %}
                   </button>
                   <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="البلقاء">
                     {% if ui_lang == 'en' %}Balqa{% else %}البلقاء{% endif %}
@@ -417,18 +529,42 @@
                   <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="العقبة">
                     {% if ui_lang == 'en' %}Aqaba{% else %}العقبة{% endif %}
                   </button>
+                  <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="الكرك">
+                    {% if ui_lang == 'en' %}Karak{% else %}الكرك{% endif %}
+                  </button>
+                  <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="المفرق">
+                    {% if ui_lang == 'en' %}Mafraq{% else %}المفرق{% endif %}
+                  </button>
+                  <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="جرش">
+                    {% if ui_lang == 'en' %}Jerash{% else %}جرش{% endif %}
+                  </button>
+                  <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="عجلون">
+                    {% if ui_lang == 'en' %}Ajloun{% else %}عجلون{% endif %}
+                  </button>
+                  <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="مادبا">
+                    {% if ui_lang == 'en' %}Madaba{% else %}مادبا{% endif %}
+                  </button>
+                  <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="الطفيلة">
+                    {% if ui_lang == 'en' %}Tafilah{% else %}الطفيلة{% endif %}
+                  </button>
+                  <button type="button" class="kg-quick-gov-pill px-2.5 py-1 rounded-full text-xs font-semibold bg-surface border border-outline-variant/40 hover:border-primary hover:text-primary transition-colors" data-gov="معان">
+                    {% if ui_lang == 'en' %}Ma'an{% else %}معان{% endif %}
+                  </button>
                 </div>
 
                 <!-- Submit Button -->
-                <button id="kg-search-btn" type="button" class="inline-flex items-center justify-center gap-2 px-7 py-3 bg-primary text-white font-bold text-sm sm:text-base rounded-xl hover:bg-primary-container transition-all shadow-md active:scale-98 min-h-[46px]">
-                  <span class="material-symbols-outlined text-lg" aria-hidden="true">search</span>
-                  <span>{% if ui_lang == 'en' %}Search Results{% else %}تنفيذ البحث{% endif %}</span>
-                  <span class="kg-btn-spinner hidden material-symbols-outlined text-lg animate-spin" aria-hidden="true">sync</span>
-                </button>
+                <div class="flex justify-end pt-1">
+                  <button id="kg-search-btn" type="button" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 bg-primary text-white font-bold text-sm sm:text-base rounded-xl hover:bg-primary-container transition-all shadow-md active:scale-98 min-h-[46px]">
+                    <span class="material-symbols-outlined text-lg" aria-hidden="true">search</span>
+                    <span>{% if ui_lang == 'en' %}Search Results{% else %}تنفيذ البحث{% endif %}</span>
+                    <span class="kg-btn-spinner hidden material-symbols-outlined text-lg animate-spin" aria-hidden="true">sync</span>
+                  </button>
+                </div>
 
               </div>
 
             </div>
+
 
             <!-- Results Preview Panel -->
             <div id="kg-search-results" class="mt-6 pt-6 border-t border-outline-variant/25 hidden">
