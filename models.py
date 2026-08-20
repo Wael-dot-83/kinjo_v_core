@@ -348,6 +348,10 @@ class Kindergarten(Base):
     __table_args__ = (
         UniqueConstraint("license_number", name="uq_kindergartens_license_number"),
         Index("idx_kindergartens_governorate", "governorate"),
+        # ADMIN-DRIFT (#97): the chain created this as
+        # idx_kindergartens_governorate_city, on a column then named "city"
+        # that was later renamed to "district". The index name never followed.
+        # This name is canonical; the migration renames the existing index.
         Index("idx_kindergartens_governorate_district", "governorate", "district"),
         Index("idx_kindergartens_status", "status"),
         Index("idx_kindergartens_latitude", "latitude"),
@@ -677,6 +681,20 @@ class SupervisorAssignment(Base):
         # — see routers/manager.py. Composite indexes keep those O(log n) (D2).
         Index("ix_supervisor_assignments_class_deleted", "class_id", "deleted_at"),
         Index("ix_supervisor_assignments_supervisor_deleted", "supervisor_id", "deleted_at"),
+        # ADMIN-PERF-001: active-assignment lookups for admin reports.
+        #
+        # The specification wrote this predicate as
+        #   WHERE deleted_at IS NULL AND (end_date IS NULL OR end_date >= CURRENT_DATE)
+        # which PostgreSQL rejects outright: index predicates must be
+        # IMMUTABLE and CURRENT_DATE is STABLE. The date test moves out of
+        # the predicate and end_date becomes a trailing column, so the
+        # planner can still serve it from the index at query time.
+        Index(
+            "ix_supervisor_assignments_active_lookup",
+            "class_id", "supervisor_id", "end_date",
+            postgresql_where=text("deleted_at IS NULL"),
+            sqlite_where=text("deleted_at IS NULL"),
+        ),
         # At most one *active* primary supervisor per class. The retired legacy
         # Class.supervisor_id column used to enforce this via app logic; this
         # partial unique index enforces it at the DB level so a race/bug can't
@@ -778,6 +796,12 @@ class EnrollmentApplication(Base):
         Index("ix_enrollment_decision_by", "decision_by"),
         Index("ix_enrollment_submitted_at", "submitted_at"),
         Index("ix_enrollment_decision_at", "decision_at"),
+        # ADMIN-PERF-001: admin report scope resolves to a set of
+        # kindergarten ids and then filters on status. The specification
+        # ordered this (status, kindergarten_id, class_id); status is a
+        # handful of values and most rows are ACTIVE, so leading with it
+        # prunes almost nothing. kindergarten_id is the selective term.
+        Index("ix_enrollment_kg_status_class", "kindergarten_id", "status", "class_id"),
     )
 
     # Relationships
@@ -890,9 +914,16 @@ class DailyReport(Base):
     __table_args__ = (
         UniqueConstraint("kindergarten_id", "child_id", "date", name="uq_daily_report_kindergarten_child_date"),
         Index("ix_daily_reports_child_date", "child_id", "date"),
-        Index("ix_daily_reports_kg_date_status", "kindergarten_id", "date", "status"),
+        # ADMIN-DRIFT (#97): the migration chain creates the four-column form
+        # (child_id included), which also serves the "report for child X on
+        # date Y" lookup. Superset of the old three-column declaration on the
+        # leading keys, so nothing loses coverage.
+        Index("ix_daily_reports_kg_date_child_status", "kindergarten_id", "date", "child_id", "status"),
         Index("ix_daily_reports_class_date", "class_id", "date"),
         Index("ix_daily_reports_mood", "mood"),
+        # ADMIN-PERF-001: report-recency probes filter kindergarten_id IN (...)
+        # AND date >= X, newest first.
+        Index("ix_daily_reports_kg_date_desc", "kindergarten_id", text("date DESC")),
     )
 
     # Relationships
@@ -966,7 +997,12 @@ class Incident(Base):
     updated_at = Column(UTCDateTime, onupdate=func.now())
 
     __table_args__ = (
-        Index("ix_incidents_kg_occurred_at", "kindergarten_id", "occurred_at"),
+        # ADMIN-DRIFT (#97): the migration chain creates this as
+        # idx_incidents_kg_occurred with occurred_at DESC. models.py used to
+        # declare a second, ASC-ordered index under a different name, so
+        # create_all and Alembic produced different schemas. The DESC form is
+        # canonical -- incident lists are read newest-first.
+        Index("idx_incidents_kg_occurred", "kindergarten_id", text("occurred_at DESC")),
         Index("ix_incidents_kg_severity", "kindergarten_id", "severity_level"),
         # Network-wide analytics filter on occurred_at with no kindergarten bound, so
         # neither composite above applies — their leading column is unconstrained and
