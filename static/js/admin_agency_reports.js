@@ -1150,6 +1150,7 @@
             exportBtn.disabled = false;
             exportBtn.removeAttribute("aria-disabled");
             attachChartDrillDown(chartContainer, payload);
+            registerChartResizeObserver(chartContainer);
           })
           .catch(() => {
             chartContainer.remove();
@@ -1219,16 +1220,21 @@
           modeBarButtonsToRemove: ["lasso2d", "select2d"],
           locale: lang === "ar" ? "ar" : "en",
         };
-        window.Plotly.newPlot(extraContainer, plotData, layout, config).catch(
-          () => {
-            extraContainer.remove();
-            extraSection.appendChild(
-              document.createTextNode(
-                t("تعذر عرض الرسم البياني.", "Unable to render chart."),
-              ),
-            );
-          },
-        );
+        window.Plotly.newPlot(extraContainer, plotData, layout, config)
+          .then(() => {
+            extraContainer.__chartReady = true;
+            registerChartResizeObserver(extraContainer);
+          })
+          .catch(
+            () => {
+              extraContainer.remove();
+              extraSection.appendChild(
+                document.createTextNode(
+                  t("تعذر عرض الرسم البياني.", "Unable to render chart."),
+                ),
+              );
+            },
+          );
       } else {
         extraSection.appendChild(
           document.createTextNode(
@@ -1538,8 +1544,33 @@
       });
   }
 
+  // Register responsive resize handler for Plotly charts
+  function registerChartResizeObserver(container) {
+    if (!container || !window.Plotly || typeof window.Plotly.Plots?.resize !== "function") return;
+    let resizeTimer = null;
+    const handleResize = () => {
+      if (container.__chartReady && container.offsetParent !== null) {
+        try {
+          window.Plotly.Plots.resize(container);
+        } catch (_) {}
+      }
+    };
+    if (window.ResizeObserver) {
+      const ro = new ResizeObserver(() => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(handleResize, 60);
+      });
+      ro.observe(container);
+    }
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(handleResize, 60);
+    });
+  }
+
   // -------- Tabs (ARIA tablist) --------
-  function activateTab(tabId) {
+  function activateTab(tabId, updateHash) {
+    if (updateHash === undefined) updateHash = true;
     const tabs = Array.prototype.slice.call(
       document.querySelectorAll('.agency-tab[role="tab"]'),
     );
@@ -1550,6 +1581,21 @@
       const panel = document.getElementById(tab.getAttribute("aria-controls"));
       if (panel) panel.hidden = !selected;
     });
+    if (updateHash) {
+      const hash = tabId === "tab-custom" ? "#custom" : "#agencies";
+      if (window.location.hash !== hash) {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search + hash);
+      }
+    }
+    // Resize any visible Plotly charts after panel switch
+    if (window.Plotly && typeof window.Plotly.Plots?.resize === "function") {
+      const charts = document.querySelectorAll(".agency-chart-container, [id^='agency-plotly-chart']");
+      charts.forEach((c) => {
+        if (c && c.__chartReady && c.offsetParent !== null) {
+          try { window.Plotly.Plots.resize(c); } catch (_) {}
+        }
+      });
+    }
   }
 
   function initTabs() {
@@ -1576,6 +1622,20 @@
           target.focus();
         }
       });
+    });
+
+    // Handle initial URL hash on page load
+    if (window.location.hash === "#custom") {
+      activateTab("tab-custom", false);
+    }
+
+    // Handle hash change events (e.g. back/forward navigation)
+    window.addEventListener("hashchange", () => {
+      if (window.location.hash === "#custom") {
+        activateTab("tab-custom", false);
+      } else if (window.location.hash === "#agencies" || !window.location.hash) {
+        activateTab("tab-agencies", false);
+      }
     });
   }
 

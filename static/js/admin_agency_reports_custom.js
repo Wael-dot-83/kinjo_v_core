@@ -696,11 +696,12 @@
   }
 
   function exportCsv() {
+    const todayStr = new Date().toISOString().slice(0, 10);
     apiPost("/api/admin/agency-reports/custom/export.csv", collectScope())
       .then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.blob(); })
       .then((blob) => {
         const url = URL.createObjectURL(blob);
-        const a = el("a", { attrs: { href: url, download: "custom_agency_report.csv" } });
+        const a = el("a", { attrs: { href: url, download: "custom_agency_report_" + todayStr + ".csv" } });
         document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
       })
       .catch(() => flash(t("تعذّر تصدير الملف.", "Export failed."), true));
