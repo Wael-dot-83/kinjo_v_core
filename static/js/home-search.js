@@ -146,8 +146,8 @@
       const address = kg.address_line || location || t('Jordan', 'الأردن');
       const distance = typeof kg.distance_km === 'number' ? '<span class="kg-distance-badge"><span class="material-symbols-outlined" aria-hidden="true">near_me</span>' + escapeHtml(formatDistance(kg.distance_km)) + '</span>' : '';
       return '<article class="kinjo-home-search-card" tabindex="0" role="button" data-kg-id="' + escapeHtml(kg.id) + '" aria-label="' + escapeHtml(t('View details for ' + name, 'عرض تفاصيل ' + name)) + '">' +
-        '<div class="kg-card-heading"><div class="kg-card-title-wrap"><h3 class="card-title">' + escapeHtml(name) + '</h3><p class="card-meta"><span class="material-symbols-outlined" aria-hidden="true">location_on</span><span>' + escapeHtml(location || address) + '</span></p></div><div class="kg-card-badges"><span class="kg-license-badge"><span class="material-symbols-outlined" aria-hidden="true">verified</span>' + escapeHtml(t('Active & licensed', 'نشطة ومرخصة')) + '</span>' + distance + '</div></div>' +
-        '<p class="kg-card-address">' + escapeHtml(address) + '</p><div class="kg-card-footer"><span class="kg-card-source"><span class="material-symbols-outlined" aria-hidden="true">account_balance</span>' + escapeHtml(t('Official registry', 'السجل الرسمي')) + '</span><span class="kg-card-details"><span>' + escapeHtml(t('View public details', 'عرض التفاصيل العامة')) + '</span><span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></span></div></article>';
+        '<div class="kg-card-heading"><div class="kg-card-title-wrap"><h3 class="card-title">' + escapeHtml(name) + '</h3><p class="card-meta"><span class="material-symbols-outlined" aria-hidden="true">location_on</span><span>' + escapeHtml(location || address) + '</span></p></div><div class="kg-card-badges"><span class="kg-license-badge"><span class="material-symbols-outlined" aria-hidden="true">location_city</span>' + escapeHtml(t('Active listing', 'سجل نشط')) + '</span>' + distance + '</div></div>' +
+        '<p class="kg-card-address">' + escapeHtml(address) + '</p><div class="kg-card-footer"><span class="kg-card-source"><span class="material-symbols-outlined" aria-hidden="true">account_balance</span>' + escapeHtml(t('Public registry', 'السجل العام')) + '</span><span class="kg-card-details"><span>' + escapeHtml(t('View public details', 'عرض التفاصيل العامة')) + '</span><span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></span></div></article>';
     }).join('');
   }
 
@@ -229,7 +229,18 @@
     if (modalKgCapacityText) modalKgCapacityText.textContent = capacity ? current + ' / ' + capacity + ' (' + occupancy + '%)' : t('Registered capacity available', 'الطاقة الاستيعابية المسجلة متاحة'); if (modalKgCapacityBar) modalKgCapacityBar.style.width = Math.min(100, Math.max(0, occupancy)) + '%';
     const hasCoordinates = Number.isFinite(Number(kg.latitude)) && Number.isFinite(Number(kg.longitude));
     if (modalKgDistance) { const distance = userPosition && hasCoordinates ? haversineDistanceKm(userPosition.lat, userPosition.lng, Number(kg.latitude), Number(kg.longitude)) : null; modalKgDistance.textContent = distance === null ? t('Available after GPS search', 'تظهر بعد تفعيل بحث GPS') : formatDistance(distance); setHidden(modalKgDistance.closest('[data-distance-row]'), distance === null); }
-    if (modalKgMapsWrap && modalKgMapsBtn) { if (hasCoordinates) { modalKgMapsBtn.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(kg.latitude + ',' + kg.longitude); setHidden(modalKgMapsWrap, false); } else setHidden(modalKgMapsWrap, true); }
+    if (modalKgMapsWrap && modalKgMapsBtn) {
+      if (hasCoordinates) {
+        const mapsUrl = new URL('https://www.google.com/maps/search/');
+        mapsUrl.searchParams.set('api', '1');
+        mapsUrl.searchParams.set('query', String(kg.latitude) + ',' + String(kg.longitude));
+        modalKgMapsBtn.href = mapsUrl.toString();
+        modalKgMapsBtn.setAttribute('aria-label', t('Open ' + name + ' location in Google Maps', 'فتح موقع ' + name + ' في خرائط Google'));
+        setHidden(modalKgMapsWrap, false);
+      } else {
+        setHidden(modalKgMapsWrap, true);
+      }
+    }
   }
   function getFocusableModalElements() { return modalPanel ? Array.from(modalPanel.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter(function (element) { return !element.classList.contains('is-disabled'); }) : []; }
   async function openKgDetailsModal(id, trigger) {

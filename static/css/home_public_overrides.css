@@ -8,11 +8,59 @@
 }
 
 body.kinjo-public-home .kinjo-public-header {
-  background-image: linear-gradient(rgba(0, 47, 108, .56), rgba(0, 31, 77, .42)), url('/static/images/kinjo-header-background.jpg') !important;
+  --kinjo-public-green: #1f5e47;
+  position: relative;
+  isolation: isolate;
+  background-color: var(--kinjo-public-green) !important;
+  background-image: none !important;
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-  box-shadow: 0 8px 24px rgba(0, 31, 77, .22) !important;
+  box-shadow: 0 8px 24px rgba(0, 31, 77, .18) !important;
+}
+
+/* Jordan flag watermark. The existing approved header image is reused as a faint texture; no image asset is altered. */
+body.kinjo-public-home .kinjo-public-header::before,
+body.kinjo-public-home .kinjo-public-header::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+body.kinjo-public-home .kinjo-public-header::before {
+  inset: 0;
+  z-index: 0;
+  background-image:
+    linear-gradient(to bottom, rgba(0, 0, 0, .82) 0 33.333%, rgba(255, 255, 255, .94) 33.333% 66.666%, rgba(31, 94, 71, .94) 66.666% 100%),
+    url('/static/images/kinjo-header-background.jpg');
+  background-position: center;
+  background-size: cover;
+  background-blend-mode: normal;
+  opacity: .14;
+}
+
+body.kinjo-public-home .kinjo-public-header::after {
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 18%;
+  z-index: 0;
+  background: rgba(206, 17, 38, .22);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+body.kinjo-public-home .kinjo-public-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+.nav-dropdown-menu[hidden],
+[role="menu"][hidden] {
+  display: none !important;
+}
+
+.kg-quick-gov-pill {
+  min-height: 2.75rem;
+}
 }
 
 .kinjo-public-header nav a:hover,
@@ -265,6 +313,23 @@ body.kinjo-public-home #kg-search-section > div.absolute.inset-0.z-0 > div.kinjo
 .kinjo-details-panel .is-disabled { opacity: .55; pointer-events: none; }
 
 @media (max-width: 640px) {
+  body.kinjo-public-home .kinjo-public-header::before {
+    inset: 50% auto auto 50%;
+    width: 13rem;
+    height: 8rem;
+    transform: translate(-50%, -50%);
+    border-radius: 1rem;
+    opacity: .08;
+  }
+
+  body.kinjo-public-home .kinjo-public-header::after {
+    inset: 50% auto auto calc(50% - 6.5rem);
+    width: 3.5rem;
+    height: 8rem;
+    transform: translateY(-50%);
+    opacity: .14;
+  }
+
   #kg-search-section { min-height: 44rem; align-items: flex-start; padding-top: 3rem; }
   .kinjo-hero-image { background-position: 58% center; }
   .kg-card-heading { flex-direction: column; }

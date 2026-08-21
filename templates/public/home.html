@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
   <title>{% if ui_lang == 'en' %}KinJo — Jordan Kindergarten &amp; Early Childhood Portal{% else %}KinJo — بوابة الحضانات والطفولة المبكرة الأردنية{% endif %}</title>
-  <meta name="description" content="KinJo connects parents, kindergarten teams, and supervisors so enrollment, daily care, attendance, and official reporting stay in one secure, bilingual record.">
+  <meta name="description" content="KinJo helps families find public kindergarten information in Jordan and gives participating providers and supervisors shared digital workflows.">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -91,7 +91,7 @@
 </head>
 <body class="kinjo-public-home bg-surface text-on-surface {% if ui_lang == 'en' %}lang-en{% else %}lang-ar{% endif %} min-h-screen flex flex-col antialiased selection:bg-tertiary/30 selection:text-primary">
 
-  <!-- Global public header: the approved image stays visible beneath a navy veil. -->
+  <!-- Global public header: the approved image remains unchanged beneath the public brand treatment. -->
   <header class="kinjo-public-header sticky top-0 z-50 text-white border-b border-white/15 relative overflow-hidden" role="banner">
     <div class="flex justify-between items-center w-full px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto h-20 relative z-10">
       
@@ -111,92 +111,88 @@
       <!-- Desktop Navigation Links -->
       <nav class="hidden lg:flex items-center gap-1 xl:gap-2" aria-label="Main Navigation">
         
-        <a class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1" href="/services">
-          <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">dashboard_customize</span>
-          <span>{% if ui_lang == 'en' %}Services{% else %}الخدمات{% endif %}</span>
-        </a>
-
-        <!-- Governance Dropdown Menu -->
-        <div class="relative group" id="governance-dropdown-container">
-          <button type="button" class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 focus:outline-none" aria-expanded="false" aria-haspopup="true" id="governance-menu-btn">
-            <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">gavel</span>
-            <span>{% if ui_lang == 'en' %}Governance &amp; Partners{% else %}الحوكمة والشركاء{% endif %}</span>
-            <span class="material-symbols-outlined text-xs transition-transform duration-200 group-hover:rotate-180" aria-hidden="true">expand_more</span>
+        <!-- Services Dropdown Menu -->
+        <div class="relative" id="services-dropdown-container" data-menu="services">
+          <button type="button" class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 focus:outline-none" aria-expanded="false" aria-haspopup="true" aria-controls="services-menu" id="services-menu-btn">
+            <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">dashboard_customize</span>
+            <span>{% if ui_lang == 'en' %}Services{% else %}الخدمات{% endif %}</span>
+            <span class="material-symbols-outlined text-xs transition-transform duration-200" aria-hidden="true">expand_more</span>
           </button>
           
-          <div class="nav-dropdown-menu absolute top-full start-0 w-80 bg-white text-on-surface rounded-2xl shadow-2xl border border-outline-variant/30 py-2.5 hidden group-hover:block hover:block z-50 mt-1" role="menu">
+          <div id="services-menu" class="nav-dropdown-menu absolute top-full start-0 w-80 bg-white text-on-surface rounded-2xl shadow-2xl border border-outline-variant/30 py-2.5 z-50 mt-1" role="menu" hidden>
             <div class="px-4 py-2 border-b border-outline-variant/20 mb-1">
               <p class="text-xs font-bold uppercase tracking-wider text-primary">
-                {% if ui_lang == 'en' %}Institutional Governance{% else %}منظومة الحوكمة والرقابة{% endif %}
+                {% if ui_lang == 'en' %}Services &amp; Governance{% else %}الخدمات والحوكمة{% endif %}
               </p>
               <p class="text-[11px] text-on-surface-variant mt-0.5">
                 {% if ui_lang == 'en' %}National Early Childhood Standards{% else %}المعايير الوطنية لقطاع الطفولة المبكرة{% endif %}
               </p>
             </div>
 
-            <a href="#trusted-partners" class="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-xs sm:text-sm font-semibold text-primary" role="menuitem">
+            <a href="/services" class="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-xs sm:text-sm font-semibold text-primary" role="menuitem">
               <div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary flex-shrink-0">
                 <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">assured_workload</span>
               </div>
               <div>
-                <div class="font-bold">{% if ui_lang == 'en' %}Beneficiary &amp; Partner Entities{% else %}الجهات والمؤسسات المستفيدة{% endif %}</div>
-                <div class="text-[11px] text-on-surface-variant font-normal">{% if ui_lang == 'en' %}NCFA, MoSD, MoPIC &amp; Ministries{% else %}المجلس الوطني، التنمية والوزارات المعنية{% endif %}</div>
+                <div class="font-bold">{% if ui_lang == 'en' %}Service Guide &amp; Cards{% else %}دليل بطاقات الخدمة{% endif %}</div>
+                <div class="text-[11px] text-on-surface-variant font-normal">{% if ui_lang == 'en' %}Public services and access paths{% else %}الخدمات العامة ومسارات الوصول{% endif %}</div>
+              </div>
+            </a>
+
+            <a href="#trusted-partners" class="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-xs sm:text-sm font-semibold text-primary" role="menuitem">
+              <div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary flex-shrink-0">
+                <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">verified_user</span>
+              </div>
+              <div>
+                <div class="font-bold">{% if ui_lang == 'en' %}Governance &amp; Partners{% else %}الحوكمة والشركاء{% endif %}</div>
+                <div class="text-[11px] text-on-surface-variant font-normal">{% if ui_lang == 'en' %}Institutional context and cooperation{% else %}السياق المؤسسي والتعاون المشترك{% endif %}</div>
               </div>
             </a>
 
             <a href="#governance-framework" class="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-xs sm:text-sm font-semibold text-primary" role="menuitem">
               <div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary flex-shrink-0">
-                <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">verified_user</span>
+                <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">fact_check</span>
               </div>
               <div>
-                <div class="font-bold">{% if ui_lang == 'en' %}National Quality Standards{% else %}معايير الاعتماد وضمان الجودة{% endif %}</div>
-                <div class="text-[11px] text-on-surface-variant font-normal">{% if ui_lang == 'en' %}Statutory child-to-staff ratios{% else %}النسب القانونية وشروط السلامة المعتمدة{% endif %}</div>
+                <div class="font-bold">{% if ui_lang == 'en' %}Quality &amp; Governance Framework{% else %}إطار الجودة والحوكمة{% endif %}</div>
+                <div class="text-[11px] text-on-surface-variant font-normal">{% if ui_lang == 'en' %}Standards, oversight, and reporting{% else %}المعايير والرقابة والتقارير{% endif %}</div>
               </div>
             </a>
 
             <a href="/services#supervisors" class="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-xs sm:text-sm font-semibold text-primary" role="menuitem">
               <div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary flex-shrink-0">
-                <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">fact_check</span>
-              </div>
-              <div>
-                <div class="font-bold">{% if ui_lang == 'en' %}Supervisory Inspection Tools{% else %}الرقابة والتفتيش الميداني{% endif %}</div>
-                <div class="text-[11px] text-on-surface-variant font-normal">{% if ui_lang == 'en' %}Audit checklists &amp; reports{% else %}أدوات التدقيق الميداني والتقارير الإشرافية{% endif %}</div>
-              </div>
-            </a>
-
-            <a href="/services" class="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-xs sm:text-sm font-semibold text-primary" role="menuitem">
-              <div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary flex-shrink-0">
                 <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">menu_book</span>
               </div>
               <div>
-                <div class="font-bold">{% if ui_lang == 'en' %}Service Guide &amp; Cards{% else %}دليل بطاقات الخدمة الرسمية{% endif %}</div>
-                <div class="text-[11px] text-on-surface-variant font-normal">{% if ui_lang == 'en' %}Registration procedures &amp; rules{% else %}إجراءات وشروط تسجيل الحضانات والقبول{% endif %}</div>
+                <div class="font-bold">{% if ui_lang == 'en' %}Supervisory Tools{% else %}أدوات الإشراف والرقابة{% endif %}</div>
+                <div class="text-[11px] text-on-surface-variant font-normal">{% if ui_lang == 'en' %}Inspection workflows and reports{% else %}مسارات التفتيش والتقارير{% endif %}</div>
               </div>
             </a>
           </div>
         </div>
 
         <!-- Governorates Dropdown Menu (List Menu) -->
-        <div class="relative group" id="governorates-dropdown-container">
+        <div class="relative" id="governorates-dropdown-container" data-menu="governorates">
           <button
             type="button"
             class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 focus:outline-none"
             aria-expanded="false"
             aria-haspopup="true"
+            aria-controls="governorates-menu"
             id="governorates-menu-btn"
           >
             <span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">location_on</span>
             <span>{% if ui_lang == 'en' %}Governorates{% else %}المحافظات{% endif %}</span>
-            <span class="material-symbols-outlined text-xs transition-transform duration-200 group-hover:rotate-180" aria-hidden="true">expand_more</span>
+            <span class="material-symbols-outlined text-xs transition-transform duration-200" aria-hidden="true">expand_more</span>
           </button>
           
-          <div class="nav-dropdown-menu absolute top-full start-0 w-80 bg-white text-on-surface rounded-2xl shadow-2xl border border-outline-variant/30 py-3 hidden group-hover:block hover:block z-50 mt-1" role="menu">
+          <div id="governorates-menu" class="nav-dropdown-menu absolute top-full start-0 w-80 bg-white text-on-surface rounded-2xl shadow-2xl border border-outline-variant/30 py-3 z-50 mt-1" role="menu" hidden>
             <div class="px-4 py-2 border-b border-outline-variant/20 mb-2">
               <p class="text-xs font-bold uppercase tracking-wider text-primary">
                 {% if ui_lang == 'en' %}Browse by Governorate{% else %}تصفح الحضانات حسب المحافظة{% endif %}
               </p>
               <p class="text-[11px] text-on-surface-variant mt-0.5">
-                {% if ui_lang == 'en' %}Select a governorate to view accredited nurseries{% else %}اختر المحافظة لعرض الحضانات المعتمدة مباشرة{% endif %}
+                {% if ui_lang == 'en' %}Select a governorate to browse available public listings{% else %}اختر المحافظة لاستعراض الحضانات المتاحة للجمهور{% endif %}
               </p>
             </div>
 
@@ -299,17 +295,36 @@
 
     <!-- Mobile Navigation Drawer -->
     <div id="mobile-nav-drawer" class="lg:hidden hidden bg-primary border-t border-white/15 px-4 pt-3 pb-6 space-y-3">
-      <a class="block text-white font-semibold px-3 py-2 rounded-lg hover:bg-white/10 text-sm" href="/services">
-        {% if ui_lang == 'en' %}Services{% else %}الخدمات{% endif %}
-      </a>
-      
+      <!-- Mobile Services Submenu -->
+      <div class="rounded-xl border border-white/10 bg-white/5 overflow-hidden" data-mobile-menu="services">
+        <button type="button" class="w-full flex items-center justify-between text-white font-semibold px-3 py-2.5 rounded-lg hover:bg-white/10 text-sm" data-mobile-menu-trigger="services" aria-expanded="false" aria-controls="mobile-services-menu">
+          <span class="flex items-center gap-2"><span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">dashboard_customize</span>{% if ui_lang == 'en' %}Services{% else %}الخدمات{% endif %}</span>
+          <span class="material-symbols-outlined text-base" aria-hidden="true">expand_more</span>
+        </button>
+        <div id="mobile-services-menu" class="hidden px-3 pb-2" role="menu">
+          <a class="flex items-center gap-2 text-white/90 hover:text-white text-xs py-2" href="/services" role="menuitem">
+            <span class="material-symbols-outlined text-sm text-tertiary" aria-hidden="true">menu_book</span>
+            {% if ui_lang == 'en' %}Service Guide &amp; Cards{% else %}دليل بطاقات الخدمة{% endif %}
+          </a>
+          <a class="flex items-center gap-2 text-white/90 hover:text-white text-xs py-2" href="#trusted-partners" role="menuitem">
+            <span class="material-symbols-outlined text-sm text-tertiary" aria-hidden="true">gavel</span>
+            {% if ui_lang == 'en' %}Governance &amp; Partners{% else %}الحوكمة والشركاء{% endif %}
+          </a>
+          <a class="flex items-center gap-2 text-white/90 hover:text-white text-xs py-2" href="/services#supervisors" role="menuitem">
+            <span class="material-symbols-outlined text-sm text-tertiary" aria-hidden="true">fact_check</span>
+            {% if ui_lang == 'en' %}Supervisory Tools{% else %}أدوات الإشراف والرقابة{% endif %}
+          </a>
+        </div>
+      </div>
+
       <!-- Mobile Governorates List Section -->
-      <div class="py-2.5 px-3 bg-white/5 rounded-xl border border-white/10 space-y-2">
-        <p class="text-xs font-bold text-tertiary uppercase tracking-wider flex items-center gap-1">
-          <span class="material-symbols-outlined text-sm" aria-hidden="true">location_on</span>
-          <span>{% if ui_lang == 'en' %}Governorates of Jordan (12){% else %}محافظات المملكة (12){% endif %}</span>
-        </p>
-        <div class="grid grid-cols-3 gap-1.5 pt-1">
+      <div class="rounded-xl border border-white/10 bg-white/5 overflow-hidden" data-mobile-menu="governorates">
+        <button type="button" class="w-full flex items-center justify-between text-white font-semibold px-3 py-2.5 rounded-lg hover:bg-white/10 text-sm" data-mobile-menu-trigger="governorates" aria-expanded="false" aria-controls="mobile-governorates-menu">
+          <span class="flex items-center gap-2"><span class="material-symbols-outlined text-base text-tertiary" aria-hidden="true">location_on</span>{% if ui_lang == 'en' %}Governorates of Jordan (12){% else %}محافظات المملكة (12){% endif %}</span>
+          <span class="material-symbols-outlined text-base" aria-hidden="true">expand_more</span>
+        </button>
+        <div id="mobile-governorates-menu" class="hidden px-3 pb-2" role="menu">
+          <div class="grid grid-cols-3 gap-1.5 pt-1">
           <button type="button" onclick="selectGovernorate('عمان')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Amman{% else %}عمان{% endif %}</button>
           <button type="button" onclick="selectGovernorate('إربد')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Irbid{% else %}إربد{% endif %}</button>
           <button type="button" onclick="selectGovernorate('الزرقاء')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Zarqa{% else %}الزرقاء{% endif %}</button>
@@ -322,26 +337,8 @@
           <button type="button" onclick="selectGovernorate('مادبا')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Madaba{% else %}مادبا{% endif %}</button>
           <button type="button" onclick="selectGovernorate('الطفيلة')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Tafilah{% else %}الطفيلة{% endif %}</button>
           <button type="button" onclick="selectGovernorate('معان')" class="text-center py-1.5 px-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-medium">{% if ui_lang == 'en' %}Ma'an{% else %}معان{% endif %}</button>
+          </div>
         </div>
-      </div>
-
-      <!-- Mobile Governance Section -->
-      <div class="py-2.5 px-3 bg-white/5 rounded-xl border border-white/10 space-y-2">
-        <p class="text-xs font-bold text-tertiary uppercase tracking-wider">
-          {% if ui_lang == 'en' %}Governance &amp; Partners{% else %}الحوكمة والشركاء{% endif %}
-        </p>
-        <a class="block text-white/90 hover:text-white text-xs py-1" href="#trusted-partners">
-          • {% if ui_lang == 'en' %}Institutional Partners{% else %}الجهات والمؤسسات المستفيدة{% endif %}
-        </a>
-        <a class="block text-white/90 hover:text-white text-xs py-1" href="#governance-framework">
-          • {% if ui_lang == 'en' %}National Standards &amp; QA{% else %}معايير الاعتماد والجودة{% endif %}
-        </a>
-        <a class="block text-white/90 hover:text-white text-xs py-1" href="/services#supervisors">
-          • {% if ui_lang == 'en' %}Supervisory Tools{% else %}الرقابة والتفتيش الإشرافي{% endif %}
-        </a>
-        <a class="block text-white/90 hover:text-white text-xs py-1" href="/services">
-          • {% if ui_lang == 'en' %}Service Cards &amp; Guide{% else %}دليل بطاقات الخدمة{% endif %}
-        </a>
       </div>
 
       <a class="block text-white font-semibold px-3 py-2 rounded-lg hover:bg-white/10 text-sm" href="/about">
@@ -361,7 +358,7 @@
         </a>
         {% if public_registration_enabled %}
         <a class="flex-1 text-center py-2 bg-tertiary text-primary rounded-lg text-xs font-bold" href="/register">
-          {% if ui_lang == 'en' %}Register{% else %}تسجيل جديد{% endif %}
+          {% if ui_lang == 'en' %}Register{% else %}إنشاء حساب جديد{% endif %}
         </a>
         {% endif %}
       </div>
@@ -392,16 +389,16 @@
         <div class="text-center max-w-3xl mx-auto mb-10">
           <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-primary tracking-tight leading-tight mb-4">
             {% if ui_lang == 'en' %}
-            Find &amp; Verify Accredited Kindergartens in Jordan
+            Find Available Kindergartens in Jordan
             {% else %}
-            البحث عن الحضانات ورياض الأطفال المعتمدة في الأردن
+            البحث عن الحضانات ورياض الأطفال المتاحة في الأردن
             {% endif %}
           </h1>
           <p class="text-base sm:text-lg text-on-surface-variant leading-relaxed">
             {% if ui_lang == 'en' %}
-            Explore licensed nurseries across all 12 governorates with official accreditation, statutory child ratios, and standardized daily care standards.
+            Search the public kindergarten registry by name, location, or district, then review the details currently available for each listing.
             {% else %}
-            استكشف الحضانات المرخصة عبر محافظات المملكة الـ 12 وفق معايير الاعتماد الرسمية، والنسب القانونية لكوادر الرعاية، وسجلات المتابعة اليومية المعتمدة.
+            ابحث في السجل العام للحضانات ورياض الأطفال بالاسم أو الموقع أو اللواء، ثم اطّلع على البيانات المتاحة حالياً لكل منشأة.
             {% endif %}
           </p>
         </div>
@@ -416,10 +413,10 @@
               <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
                 <div class="flex items-center gap-2 text-primary font-bold text-sm sm:text-base">
                   <span class="material-symbols-outlined text-tertiary" aria-hidden="true">travel_explore</span>
-                  <span>{% if ui_lang == 'en' %}Direct Kindergarten Search{% else %}محرك البحث الموحد للحضانات{% endif %}</span>
+                  <span>{% if ui_lang == 'en' %}Public Kindergarten Search{% else %}البحث العام عن الحضانات{% endif %}</span>
                 </div>
                 <span class="text-xs text-on-surface-variant font-medium">
-                  {% if ui_lang == 'en' %}Accredited Registry{% else %}السجل الوطني المعتمد{% endif %}
+                  {% if ui_lang == 'en' %}Public Registry{% else %}السجل العام{% endif %}
                 </span>
               </div>
 
@@ -447,11 +444,11 @@
                 <!-- Governorate Filter (List of all 12 Jordanian Governorates) -->
                 <div class="relative">
                   <label for="kg-filter-governorate" class="block text-[11px] font-bold text-primary mb-1 uppercase tracking-wider">
-                    {% if ui_lang == 'en' %}Governorate (12){% else %}المحافظة (12){% endif %}
+                    {% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}
                   </label>
                   <div class="relative">
                     <select id="kg-filter-governorate" class="w-full py-2.5 ps-3 pe-8 rounded-xl border border-outline-variant/60 bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-xs sm:text-sm font-medium shadow-sm appearance-none">
-                      <option value="">{% if ui_lang == 'en' %}All Governorates (12){% else %}جميع المحافظات (12){% endif %}</option>
+                      <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
                       <option value="عمان">{% if ui_lang == 'en' %}Amman (العاصمة){% else %}العاصمة عمان{% endif %}</option>
                       <option value="إربد">{% if ui_lang == 'en' %}Irbid (إربد){% else %}إربد{% endif %}</option>
                       <option value="الزرقاء">{% if ui_lang == 'en' %}Zarqa (الزرقاء){% else %}الزرقاء{% endif %}</option>
@@ -561,6 +558,7 @@
                     <span class="kg-btn-spinner hidden material-symbols-outlined text-lg animate-spin" aria-hidden="true">sync</span>
                   </button>
                 </div>
+                <p id="kg-filter-status" class="kg-search-status" role="status" aria-live="polite"></p>
 
               </div>
 
@@ -591,7 +589,7 @@
             <!-- Loading State -->
             <div id="kg-results-loading" class="hidden kinjo-results-state" role="status" aria-live="polite">
               <span class="material-symbols-outlined animate-spin text-tertiary text-xl" aria-hidden="true">sync</span>
-              <span>{% if ui_lang == 'en' %}Loading verified kindergartens...{% else %}جارٍ تحميل الحضانات المعتمدة...{% endif %}</span>
+              <span>{% if ui_lang == 'en' %}Loading public listings...{% else %}جارٍ تحميل السجلات العامة...{% endif %}</span>
             </div>
 
             <!-- Results Grid -->
@@ -641,19 +639,19 @@
           </div>
 
           <div class="p-3 border-s border-white/15">
-            <div class="text-2xl sm:text-3xl font-extrabold text-tertiary mb-1">100%</div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-tertiary mb-1">12</div>
             <div class="text-xs sm:text-sm font-semibold text-white/90">
-              {% if ui_lang == 'en' %}Accreditation Compliance{% else %}مطابقة لمعايير الاعتماد{% endif %}
+              {% if ui_lang == 'en' %}Governorates Listed{% else %}المحافظات المدرجة{% endif %}
             </div>
-            <div class="text-[11px] text-white/70 mt-0.5">{% if ui_lang == 'en' %}Official licensing matrix{% else %}سجل رسمي معتمد{% endif %}</div>
+            <div class="text-[11px] text-white/70 mt-0.5">{% if ui_lang == 'en' %}Browse by location{% else %}تصفح حسب الموقع{% endif %}</div>
           </div>
 
           <div class="p-3 border-s border-white/15">
-            <div class="text-2xl sm:text-3xl font-extrabold text-tertiary mb-1">24/7</div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-tertiary mb-1">1</div>
             <div class="text-xs sm:text-sm font-semibold text-white/90">
-              {% if ui_lang == 'en' %}Digital Care &amp; Attendance{% else %}متابعة الحضور والرعاية اليومية{% endif %}
+              {% if ui_lang == 'en' %}Public Search{% else %}بحث عام{% endif %}
             </div>
-            <div class="text-[11px] text-white/70 mt-0.5">{% if ui_lang == 'en' %}Instant parent visibility{% else %}سجلات فورية لأولياء الأمور{% endif %}</div>
+            <div class="text-[11px] text-white/70 mt-0.5">{% if ui_lang == 'en' %}No login required{% else %}لا يتطلب تسجيل الدخول{% endif %}</div>
           </div>
 
           <div class="p-3 border-s border-white/15">
@@ -682,9 +680,9 @@
           </h2>
           <p class="text-sm sm:text-base text-on-surface-variant">
             {% if ui_lang == 'en' %}
-            Coordinated under Jordan's national childcare strategy and early childhood digital governance framework.
+            The platform provides a shared public reference point for families, providers, and institutions working in Jordan's early childhood sector.
             {% else %}
-            بالتنسيق مع الجهات المعنية ضمن الاستراتيجية الوطنية للطفولة المبكرة والتحول الرقمي لخدمات الرعاية والحضانات.
+            توفر المنصة مرجعاً عاماً مشتركاً للأسر ومقدمي الخدمة والجهات العاملة في قطاع الطفولة المبكرة في الأردن.
             {% endif %}
           </p>
         </div>
@@ -706,7 +704,7 @@
           <div class="flex flex-col items-center justify-center p-4 rounded-xl border border-outline-variant/30 bg-surface-container-low hover:bg-white hover:shadow-md transition-all w-full text-center group">
             <img alt="MoPIC Logo" class="h-14 w-auto object-contain mb-2 grayscale group-hover:grayscale-0 transition-all" src="/static/img/landing/mopic.png">
             <span class="text-xs font-bold text-primary">MoPIC</span>
-            <span class="text-[10px] text-on-surface-variant leading-tight">{% if ui_lang == 'en' %}Ministry of Planning{% else %}وزارة التخطيط والتعاون الدولي{% endif %}</span>
+            <span class="text-[10px] text-on-surface-variant leading-tight">{% if ui_lang == 'en' %}Ministry of Planning and International Cooperation{% else %}وزارة التخطيط والتعاون الدولي{% endif %}</span>
           </div>
 
           <div class="flex flex-col items-center justify-center p-4 rounded-xl border border-outline-variant/30 bg-surface-container-low hover:bg-white hover:shadow-md transition-all w-full text-center group">
@@ -737,7 +735,7 @@
 
         <div class="mt-8 text-center">
           <span class="inline-block bg-surface-container px-6 py-2 rounded-full border border-outline-variant/40 text-xs font-bold text-primary">
-            {% if ui_lang == 'en' %}Part of Jordan's National Digital Transformation Strategy{% else %}إحدى مبادرات التحول الرقمي الوطني وحوكمة قطاع الطفولة في المملكة الأردنية الهاشمية{% endif %}
+            {% if ui_lang == 'en' %}A shared digital reference for Jordan's early childhood sector{% else %}مرجع رقمي مشترك لقطاع الطفولة المبكرة في الأردن{% endif %}
           </span>
         </div>
 
@@ -754,7 +752,7 @@
             <div class="lg:col-span-7 space-y-4">
               <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold">
                 <span class="material-symbols-outlined text-sm text-tertiary" aria-hidden="true">verified</span>
-                <span>{% if ui_lang == 'en' %}Unified National Childcare Standards{% else %}المنظومة الوطنية المعتمدة لرعاية الطفولة المبكرة{% endif %}</span>
+                <span>{% if ui_lang == 'en' %}Early Childhood Standards Overview{% else %}نظرة عامة على معايير الطفولة المبكرة{% endif %}</span>
               </div>
               <h2 class="text-2xl sm:text-3xl font-extrabold text-primary leading-tight">
                 {% if ui_lang == 'en' %}
@@ -765,9 +763,9 @@
               </h2>
               <p class="text-sm sm:text-base text-on-surface-variant leading-relaxed">
                 {% if ui_lang == 'en' %}
-                KinJo connects parents, certified caregivers, and ministry supervisors within a unified digital ecosystem, ensuring full accreditation compliance, statutory educator ratios, and transparent daily care reports for every child.
+                KinJo gives families and participating providers a shared digital space for public kindergarten information, service workflows, and clearer communication around early childhood care.
                 {% else %}
-                تربط منصة KinJo أولياء الأمور والكوادر التربوية والمشرفين المعتمدين في إطار رقمي متكامل، يضمن الامتثال التام لمعايير الاعتماد القانونية والنسب المعتمدة وسجلات المتابعة اليومية الموثقة.
+                توفر منصة KinJo للأسر ومقدمي الخدمة المشاركين مساحة رقمية مشتركة للمعلومات العامة ومسارات الخدمة والتواصل الواضح حول رعاية الطفولة المبكرة.
                 {% endif %}
               </p>
               
@@ -788,7 +786,7 @@
                   </div>
                   <div>
                     <div class="text-xs font-bold text-primary">{% if ui_lang == 'en' %}Health &amp; Safety{% else %}السلامة والبيئة الصحية{% endif %}</div>
-                    <div class="text-[11px] text-on-surface-variant">{% if ui_lang == 'en' %}Certified facilities{% else %}منشآت مرخصة ومطابقة{% endif %}</div>
+                    <div class="text-[11px] text-on-surface-variant">{% if ui_lang == 'en' %}Facility information{% else %}معلومات المنشأة{% endif %}</div>
                   </div>
                 </div>
               </div>
@@ -813,7 +811,7 @@
                 <div class="absolute bottom-3 start-3 end-3 bg-white/95 backdrop-blur-sm px-3.5 py-2 rounded-xl border border-outline-variant/30 shadow-sm flex items-center justify-between text-xs font-bold text-primary">
                   <span class="flex items-center gap-1.5">
                     <span class="w-2 h-2 rounded-full bg-tertiary"></span>
-                    <span>{% if ui_lang == 'en' %}Accredited Childcare Standards{% else %}معايير الرعاية والتعليم المعتمدة{% endif %}</span>
+                    <span>{% if ui_lang == 'en' %}Childcare information and standards{% else %}معلومات ومعايير رعاية الطفولة{% endif %}</span>
                   </span>
                   <span class="text-[11px] text-tertiary font-bold">KinJo Jordan</span>
                 </div>
@@ -831,13 +829,13 @@
         
         <div class="text-center max-w-3xl mx-auto mb-12">
           <h2 class="text-2xl sm:text-3xl font-extrabold text-primary mb-3">
-            {% if ui_lang == 'en' %}National Early Childhood Governance Framework{% else %}ركائز الحوكمة وضمان الجودة في قطاع الطفولة المبكرة{% endif %}
+            {% if ui_lang == 'en' %}Early Childhood Governance &amp; Quality{% else %}حوكمة وجودة الطفولة المبكرة{% endif %}
           </h2>
           <p class="text-sm sm:text-base text-on-surface-variant">
             {% if ui_lang == 'en' %}
-            Structured mechanisms ensuring high safety, regulatory compliance, and transparency for every registered facility.
+            Practical information and digital workflows that help participating stakeholders coordinate care, oversight, and reporting.
             {% else %}
-            آليات عمل معتمدة تضمن أعلى درجات الأمان والامتثال القانوني والشفافية لكل منشأة مسجلة في المملكة.
+            معلومات ومسارات رقمية تساعد الجهات المشاركة على تنسيق الرعاية والرقابة وإعداد التقارير.
             {% endif %}
           </p>
         </div>
@@ -849,10 +847,10 @@
               <span class="material-symbols-outlined text-2xl text-primary" aria-hidden="true">policy</span>
             </div>
             <h3 class="text-base font-bold text-primary mb-2">
-              {% if ui_lang == 'en' %}Accreditation &amp; Licensing{% else %}الترخيص والاعتماد القانوني{% endif %}
+              {% if ui_lang == 'en' %}Licensing Information{% else %}معلومات الترخيص{% endif %}
             </h3>
             <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
-              {% if ui_lang == 'en' %}Direct verification of facility registration, health compliance certificates, and valid operating licenses.{% else %}التحقق المباشر من التراخيص الرسمية، وشهادات السلامة العامة، وتحديث السجلات القانونية للمنشآت.{% endif %}
+              {% if ui_lang == 'en' %}Public facility records and relevant licensing information where available.{% else %}سجلات المنشآت العامة ومعلومات الترخيص ذات الصلة عند توفرها.{% endif %}
             </p>
           </div>
 
@@ -922,9 +920,9 @@
             </h3>
             <p class="text-xs sm:text-sm text-on-surface-variant mb-6 flex-grow leading-relaxed">
               {% if ui_lang == 'en' %}
-              Direct enrollment, live attendance alerts, daily nutrition &amp; sleep logs, and private bilingual messaging with kindergarten staff.
+              Find public kindergarten information and use protected family services when your account and participating provider support them.
               {% else %}
-              تسجيل إلكتروني مباشر، وإشعارات حضور وانصراف فورية، ومتابعة سجلات التغذية والنوم، وتواصل موثوق مع الكادر التعليمي.
+              اعثر على معلومات الحضانات العامة، واستخدم خدمات الأسرة المحمية عندما يدعمها حسابك ومقدم الخدمة المشارك.
               {% endif %}
             </p>
             <a class="inline-flex items-center gap-2 text-sm font-bold text-primary group-hover:text-tertiary transition-colors" href="/services#parents">
@@ -943,9 +941,9 @@
             </h3>
             <p class="text-xs sm:text-sm text-on-surface-variant mb-6 flex-grow leading-relaxed">
               {% if ui_lang == 'en' %}
-              Field inspection tools, statutory ratio compliance validation, incident audit logs, and standardized official export reports.
+              Digital inspection workflows, structured follow-up records, and reporting tools for participating supervisory teams.
               {% else %}
-              أدوات تفتيش ميدانية رقمية، وتدقيق النسب القانونية، ومتابعة بلاغات الحوادث، وتصدير التقارير الإحصائية الرسمية.
+              مسارات تفتيش رقمية، وسجلات متابعة منظمة، وأدوات تقارير للفرق الإشرافية المشاركة.
               {% endif %}
             </p>
             <a class="inline-flex items-center gap-2 text-sm font-bold text-primary group-hover:text-tertiary transition-colors" href="/services#supervisors">
@@ -964,9 +962,9 @@
             </h3>
             <p class="text-xs sm:text-sm text-on-surface-variant mb-6 flex-grow leading-relaxed">
               {% if ui_lang == 'en' %}
-              Manage admissions pipeline, class scheduling, educator assignments, facility licensing documentation, and compliance in one unified portal.
+              Organize provider workflows, staff information, daily operations, and relevant documentation in one participating portal.
               {% else %}
-              إدارة طلبات القبول والتسجيل، وتنظيم الشعب والصفوف، وتوزيع الكوادر، ومتابعة تجديد التراخيص ومعايير السلامة.
+              نظّم مسارات العمل ومعلومات الكادر والعمليات اليومية والوثائق ذات الصلة ضمن بوابة موحدة للجهات المشاركة.
               {% endif %}
             </p>
             <a class="inline-flex items-center gap-2 text-sm font-bold text-primary group-hover:text-tertiary transition-colors" href="/services#managers">
@@ -991,13 +989,13 @@
               <span>{% if ui_lang == 'en' %}Mobile Accessibility{% else %}تطبيق الهاتف المحمول{% endif %}</span>
             </div>
             <h2 class="text-2xl sm:text-3xl font-extrabold text-primary mb-4">
-              {% if ui_lang == 'en' %}KinJo in Your Pocket{% else %}منصة KinJo في متناول يدك دائماً{% endif %}
+              {% if ui_lang == 'en' %}KinJo in Your Pocket{% else %}KinJo في جيبك{% endif %}
             </h2>
             <p class="text-sm sm:text-base text-on-surface-variant mb-6 leading-relaxed">
               {% if ui_lang == 'en' %}
-              Stay instantly connected with push notifications, daily care reports, and secure communication wherever you are.
+              Participating users can access supported updates, care records, and secure communication from a convenient mobile experience.
               {% else %}
-              ابقَ على اطلاع فوري بإشعارات الحضور والانصراف، وسجلات الرعاية اليومية، والتواصل الآمن مع الحضانة من أي مكان.
+              يمكن للمستخدمين المشاركين الوصول إلى التحديثات والسجلات المدعومة والتواصل الآمن عبر تجربة هاتف مريحة.
               {% endif %}
             </p>
             
@@ -1022,6 +1020,7 @@
                 <span>{% if ui_lang == 'en' %}Request mobile access{% else %}اطلب الوصول إلى التطبيق{% endif %}</span>
               </a>
             </div>
+            <p class="mt-3 text-xs text-on-surface-variant">{% if ui_lang == 'en' %}Mobile access is available to participating users. Google Play and App Store availability depends on the rollout. Contact support to confirm eligibility.{% else %}يتوفر الوصول عبر الهاتف للمستخدمين المشاركين. يعتمد توفر التطبيق على Google Play وApp Store على مراحل الإطلاق. تواصل مع الدعم لتأكيد الأهلية.{% endif %}</p>
           </div>
 
           <div class="flex items-center justify-center">
@@ -1032,7 +1031,7 @@
                   <span class="material-symbols-outlined text-xl" aria-hidden="true">child_care</span>
                 </div>
                 <div class="text-xs font-bold text-primary">{% if ui_lang == 'en' %}Daily Care Update{% else %}تقرير الرعاية اليومي{% endif %}</div>
-                <div class="text-[10px] text-on-surface-variant mt-1">{% if ui_lang == 'en' %}All daily activities verified{% else %}تم توثيق كافة الأنشطة بنجاح{% endif %}</div>
+                <div class="text-[10px] text-on-surface-variant mt-1">{% if ui_lang == 'en' %}Example daily care update{% else %}مثال على تحديث الرعاية اليومية{% endif %}</div>
               </div>
               <div class="text-center py-4">
                 <span class="material-symbols-outlined text-4xl text-primary animate-pulse" aria-hidden="true">verified_user</span>
@@ -1064,9 +1063,9 @@
           </div>
           <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed max-w-md">
             {% if ui_lang == 'en' %}
-            The national integrated platform for early childhood care, kindergarten licensing, statutory compliance, and transparent family-educator collaboration in Jordan.
+            A public digital reference for kindergarten information in Jordan, with shared workflows for participating families, providers, and supervisors.
             {% else %}
-            المنصة الوطنية الموحدة لخدمات الحضانات ورعاية الطفولة المبكرة، والتحقق من التراخيص والامتثال لمعايير الجودة في المملكة الأردنية الهاشمية.
+            مرجع رقمي عام لمعلومات الحضانات ورياض الأطفال في الأردن، مع مسارات عمل مشتركة للأسر ومقدمي الخدمة والمشرفين المشاركين.
             {% endif %}
           </p>
         </div>
@@ -1087,7 +1086,7 @@
         <!-- Column 3: Legal & Support -->
         <div>
           <h3 class="text-xs font-bold uppercase tracking-wider text-primary mb-3">
-            {% if ui_lang == 'en' %}Support &amp; Legal{% else %}الدعم والمحددات القانونية{% endif %}
+            {% if ui_lang == 'en' %}Support &amp; Legal{% else %}الدعم والمعلومات القانونية{% endif %}
           </h3>
           <ul class="space-y-2 text-xs">
             <li><a href="/faq" class="text-on-surface-variant hover:text-primary transition-colors">{% if ui_lang == 'en' %}FAQ{% else %}الأسئلة الشائعة{% endif %}</a></li>
@@ -1101,7 +1100,7 @@
 
       <div class="pt-6 border-t border-outline-variant/20 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-on-surface-variant">
         <div>
-          &copy; {{ current_year | default(2026) }} KinJo — {% if ui_lang == 'en' %}All Rights Reserved.{% else %}جميع الحقوق محفوظة.{% endif %}
+          &copy; {{ current_year | default(2026) }} KinJo — {% if ui_lang == 'en' %}Jordan early childhood information portal.{% else %}بوابة معلومات الطفولة المبكرة في الأردن.{% endif %}
         </div>
         <div class="flex items-center gap-4">
           <a href="/privacy" class="hover:text-primary transition-colors">{% if ui_lang == 'en' %}Privacy{% else %}الخصوصية{% endif %}</a>
@@ -1137,7 +1136,7 @@
       });
     }
 
-    // Mobile menu toggle
+    // Mobile drawer toggle
     const mobileBtn = document.getElementById('mobile-menu-toggle-btn');
     const mobileDrawer = document.getElementById('mobile-nav-drawer');
     if (mobileBtn && mobileDrawer) {
@@ -1153,42 +1152,63 @@
       });
     }
 
-    // Desktop menus are usable with click, keyboard, and Escape as well as hover.
-    ['governance', 'governorates'].forEach(function (name) {
-      const button = document.getElementById(name + '-menu-btn');
-      const container = document.getElementById(name + '-dropdown-container');
-      const menu = container ? container.querySelector('.nav-dropdown-menu') : null;
-      if (!button || !container || !menu) return;
+    // Desktop menus share one click, keyboard, focus, and Escape contract.
+    document.querySelectorAll('[data-menu]').forEach(function (container) {
+      const button = container.querySelector('[aria-haspopup="true"]');
+      const menu = container.querySelector('[role="menu"]');
+      if (!button || !menu) return;
+      menu.querySelectorAll('button').forEach(function (item) { item.setAttribute('role', 'menuitem'); });
 
       function setOpen(open) {
-        menu.classList.toggle('hidden', !open);
+        menu.hidden = !open;
         button.setAttribute('aria-expanded', String(open));
       }
 
-      button.addEventListener('click', function (event) {
-        event.preventDefault();
-        setOpen(menu.classList.contains('hidden'));
-      });
-
+      button.addEventListener('click', function () { setOpen(menu.hidden); });
       button.addEventListener('keydown', function (event) {
         if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           setOpen(true);
-          const firstItem = menu.querySelector('a, button');
+          const firstItem = menu.querySelector('[role="menuitem"]');
           if (firstItem) firstItem.focus();
+        } else if (event.key === 'Escape') {
+          setOpen(false);
         }
-        if (event.key === 'Escape') setOpen(false);
       });
-
+      menu.addEventListener('click', function (event) {
+        if (event.target.closest('[role="menuitem"]')) setOpen(false);
+      });
       container.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
           setOpen(false);
           button.focus();
         }
       });
-
+      container.addEventListener('focusout', function (event) {
+        if (!container.contains(event.relatedTarget)) setOpen(false);
+      });
       document.addEventListener('click', function (event) {
         if (!container.contains(event.target)) setOpen(false);
+      });
+    });
+
+    // Mobile uses the same submenu semantics without competing hover styles.
+    document.querySelectorAll('[data-mobile-menu]').forEach(function (container) {
+      const button = container.querySelector('[data-mobile-menu-trigger]');
+      const menu = container.querySelector('[role="menu"]');
+      if (!button || !menu) return;
+      menu.querySelectorAll('button').forEach(function (item) { item.setAttribute('role', 'menuitem'); });
+
+      function setOpen(open) {
+        menu.hidden = !open;
+        menu.classList.toggle('hidden', !open);
+        button.setAttribute('aria-expanded', String(open));
+      }
+
+      setOpen(false);
+      button.addEventListener('click', function () { setOpen(menu.hidden); });
+      menu.addEventListener('click', function (event) {
+        if (event.target.closest('[role="menuitem"]')) setOpen(false);
       });
     });
   </script>
@@ -1202,12 +1222,12 @@
         <div class="flex-1 min-w-0">
           <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-2">
             <span class="material-symbols-outlined text-xs text-tertiary" aria-hidden="true">verified</span>
-            <span>{% if ui_lang == 'en' %}Officially Accredited Nursery{% else %}حضانة معتمدة ومرخصة رسمياً{% endif %}</span>
+            <span>{% if ui_lang == 'en' %}Public Kindergarten Listing{% else %}سجل حضانة متاح للعامة{% endif %}</span>
           </div>
           <h3 id="modal-kg-name" class="text-xl sm:text-2xl font-extrabold text-primary truncate leading-tight"></h3>
           <p id="modal-kg-name-en" class="text-sm text-on-surface-variant mt-1" lang="en"></p>
           <p id="modal-kg-location" class="text-xs sm:text-sm text-on-surface-variant flex items-center gap-1 mt-1"></p>
-          <p id="modal-kg-description" class="sr-only">{% if ui_lang == 'en' %}Public details for an active, licensed nursery{% else %}تفاصيل حضانة نشطة ومرخصة متاحة للعامة{% endif %}</p>
+          <p id="modal-kg-description" class="sr-only">{% if ui_lang == 'en' %}Public details for an active kindergarten listing{% else %}تفاصيل سجل حضانة نشط متاحة للعامة{% endif %}</p>
         </div>
         <button type="button" id="modal-close-btn" class="w-10 h-10 rounded-full bg-surface hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors focus:outline-none" aria-label="Close modal">
           <span class="material-symbols-outlined text-xl" aria-hidden="true">close</span>
@@ -1232,7 +1252,7 @@
           </div>
 
           <div class="p-3.5 bg-surface-container-low rounded-2xl border border-outline-variant/20">
-            <span class="text-xs font-bold text-on-surface-variant block mb-1">{% if ui_lang == 'en' %}Accreditation Status{% else %}حالة الاعتماد الرسمي{% endif %}</span>
+            <span class="text-xs font-bold text-on-surface-variant block mb-1">{% if ui_lang == 'en' %}Listing Status{% else %}حالة السجل{% endif %}</span>
             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold">
               <span class="w-2 h-2 rounded-full bg-tertiary"></span>
               <span>{% if ui_lang == 'en' %}Active &amp; Licensed{% else %}نشطة ومطابقة للمعايير الوطنية{% endif %}</span>
@@ -1274,8 +1294,8 @@
           <span class="text-xs font-bold text-on-surface-variant block mb-1">{% if ui_lang == 'en' %}Detailed Address{% else %}العنوان التفصيلي{% endif %}</span>
           <p id="modal-kg-address" class="text-sm font-medium text-primary leading-relaxed mb-3"></p>
           <div id="modal-kg-maps-wrap" class="hidden">
-            <a id="modal-kg-maps-btn" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-container transition-all shadow-sm">
-              <span class="material-symbols-outlined text-sm" aria-hidden="true">map</span>
+            <a id="modal-kg-maps-btn" href="#" target="_blank" rel="noopener noreferrer" aria-label="Open kindergarten location in Google Maps" class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-container transition-all shadow-sm">
+              <span class="material-symbols-outlined text-sm" aria-hidden="true">location_on</span>
               <span>{% if ui_lang == 'en' %}Open Location in Google Maps{% else %}فتح الموقع في خرائط Google{% endif %}</span>
             </a>
           </div>
@@ -1295,7 +1315,7 @@
         <!-- Free Public Notice -->
         <div class="p-3 bg-surface rounded-xl border border-outline-variant/20 text-xs text-on-surface-variant flex items-center gap-2">
           <span class="material-symbols-outlined text-tertiary text-base" aria-hidden="true">info</span>
-          <span>{% if ui_lang == 'en' %}Public registry details are verified in real time from official databases without registration required.{% else %}بيانات السجل الوطني متاحة مجاناً لكافة المواطنين وأولياء الأمور دون الحاجة لأي تسجيل دخول.{% endif %}</span>
+          <span>{% if ui_lang == 'en' %}Public registry details are available without registration. Protected actions may require an account.{% else %}بيانات السجل العام متاحة دون تسجيل الدخول، وقد تتطلب الإجراءات المحمية إنشاء حساب.{% endif %}</span>
         </div>
 
       </div>
@@ -1313,50 +1333,6 @@
 
     </div>
   </div>
-
-  {% if public_registration_enabled and not current_user %}
-  <!-- Legacy login prompt retained for compatibility; public search opens details directly. -->
-  <div id="login-prompt-modal" class="fixed inset-0 z-50 overflow-y-auto modal-backdrop-blur hidden flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="login-dialog-title">
-    <div class="relative login-dialog-container max-w-lg w-full transform transition-all">
-      
-      <!-- Close Button (X icon with #9E9E9E) -->
-      <button type="button" id="login-modal-close-btn" class="absolute top-4 end-4 w-9 h-9 rounded-full flex items-center justify-center text-[#9E9E9E] hover:text-[#4F4F4F] hover:bg-black/5 transition-colors focus:outline-none" aria-label="Close login prompt">
-        <span class="material-symbols-outlined text-2xl">close</span>
-      </button>
-
-      <!-- Legacy prompt styling follows the navy brand; public details no longer require login. -->
-      <h3 id="login-dialog-title" class="login-dialog-title flex items-center gap-2 mb-2 pe-8">
-        <span class="material-symbols-outlined text-2xl text-primary" aria-hidden="true">lock</span>
-        <span>{% if ui_lang == 'en' %}Please Log In{% else %}يرجى تسجيل الدخول{% endif %}</span>
-      </h3>
-
-      <!-- Body Text (variant="body1", Color: #4F4F4F) -->
-      <p class="login-dialog-body mt-3 mb-6">
-        {% if ui_lang == 'en' %}
-        To view full kindergarten details and contact info, please log in or create a new parent account.
-        {% else %}
-        لعرض التفاصيل الكاملة للحضانة ومعلومات التواصل، يرجى تسجيل الدخول إلى حسابك أو إنشاء حساب جديد كولي أمر.
-        {% endif %}
-      </p>
-
-      <!-- Call to Action (CTA) Buttons -->
-      <div class="flex flex-col sm:flex-row gap-3 items-stretch">
-        <!-- Primary Button (تسجيل الدخول - Login) -->
-        <a id="login-modal-primary-btn" href="/login" class="login-dialog-btn-primary flex-1 py-3 px-6 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm text-center">
-          <span>{% if ui_lang == 'en' %}Log In{% else %}تسجيل الدخول{% endif %}</span>
-          <span class="material-symbols-outlined text-base rtl:rotate-180" aria-hidden="true">login</span>
-        </a>
-
-        <!-- Secondary Button (إنشاء حساب - Sign Up) -->
-        <a id="login-modal-signup-btn" href="/register" class="login-dialog-btn-secondary flex-1 py-3 px-6 rounded-lg text-sm flex items-center justify-center gap-2 text-center">
-          <span>{% if ui_lang == 'en' %}Sign Up{% else %}إنشاء حساب جديد{% endif %}</span>
-          <span class="material-symbols-outlined text-base" aria-hidden="true">person_add</span>
-        </a>
-      </div>
-
-    </div>
-  </div>
-  {% endif %}
 
   <script>
     window.__CURRENT_USER__ = {{ 'true' if current_user else 'false' }};
