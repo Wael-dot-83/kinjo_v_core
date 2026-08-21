@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --kinjo-navy: #002f6c;
   --kinjo-navy-deep: #001f4d;
   --kinjo-gold: #c5a059;
@@ -343,4 +343,49 @@ body.kinjo-public-home #kg-search-section > div.absolute.inset-0.z-0 > div.kinjo
   .kg-card-details { transition: none; }
   .kinjo-home-search-card:hover,
   .kinjo-home-search-card:focus-visible { transform: none; }
+}
+
+
+/* Pin button for direct Google Maps link in search results */
+.kg-card-pin-btn {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: 1px solid rgba(197, 160, 89, .34);
+  background: #fff;
+  color: var(--kinjo-navy);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
+  box-shadow: 0 2px 8px rgba(0, 47, 108, .08);
+}
+.kg-card-pin-btn:hover {
+  background: var(--kinjo-gold);
+  border-color: var(--kinjo-gold);
+  color: #fff;
+  transform: scale(1.05);
+}
+.kg-card-pin-btn:focus-visible {
+  outline: 2px solid var(--kinjo-gold);
+  outline-offset: 2px;
+}
+.kg-card-pin-btn .material-symbols-outlined {
+  font-size: 1.25rem;
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Ensure pin button is accessible in card footer */
+.kg-card-footer {
+  gap: .75rem;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .kg-card-pin-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
 }

@@ -445,6 +445,7 @@ def _public_kindergarten_projection(item: dict) -> dict:
         "id", "name_ar", "name_en", "governorate", "district", "area",
         "address_line", "contact_phone", "contact_email", "status",
         "total_capacity", "current_child_count",
+        "latitude", "longitude",
     }
     return {key: value for key, value in item.items() if key in allowed}
 
@@ -1172,4 +1173,5 @@ def assign_manager_to_kg(
                 detail="This kindergarten already has an active manager.",
             )
         raise
+
 
