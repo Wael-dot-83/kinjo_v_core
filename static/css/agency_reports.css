@@ -130,11 +130,13 @@ details[open] .agency-help-summary::before{transform:rotate(90deg)}
 
 /* Tabs */
 .agency-tabs{display:flex;gap:4px;border-bottom:2px solid var(--kinjo-color-border);margin-bottom:24px}
-.agency-tab{appearance:none;background:transparent;border:none;border-bottom:1px solid transparent;margin-bottom:-2px;padding:12px 18px;font-size:1rem;font-weight:700;color: var(--kinjo-color-text-muted);cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:44px;border-radius:8px 8px 0 0}
+.agency-tab{appearance:none;background:transparent;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;padding:12px 18px;font-size:1rem;font-weight:700;color: var(--kinjo-color-text-muted);cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:44px;border-radius:8px 8px 0 0;transition:color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease}
 .agency-tab:hover{color:var(--kinjo-action);background:#f8fafc}
 .agency-tab[aria-selected="true"]{color:#1d4ed8;border-bottom-color:#1d4ed8}
 .agency-tab:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
 .agency-tabpanel{outline:none}
+.agency-tabpanel:not([hidden]){animation:agencyTabFadeIn 0.22s ease-in-out}
+@keyframes agencyTabFadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
 
 /* KPI grid */
 .agency-kpi-grid{list-style:none;margin:0 0 24px;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
