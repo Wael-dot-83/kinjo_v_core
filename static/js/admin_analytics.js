@@ -4339,14 +4339,66 @@ document.addEventListener('exportData', async function(e) {
     }
 });
 
-// Persist active tab across page reloads
+// Persist active tab across page reloads and sync with URL hash
 (function() {
-  var saved = sessionStorage.getItem('analyticsActiveTab');
-  if (saved) {
-    var el = document.querySelector('[data-bs-target="' + saved + '"]');
-    if (el) { bootstrap.Tab.getOrCreateInstance(el).show(); }
+  function resizeAllCharts() {
+    if (typeof trendChartInstance !== 'undefined' && trendChartInstance && typeof trendChartInstance.resize === 'function') trendChartInstance.resize();
+    if (typeof governanceChart !== 'undefined' && governanceChart && typeof governanceChart.resize === 'function') governanceChart.resize();
+    if (typeof funnelChartInstance !== 'undefined' && funnelChartInstance && typeof funnelChartInstance.resize === 'function') funnelChartInstance.resize();
+    if (typeof sourceChartInstance !== 'undefined' && sourceChartInstance && typeof sourceChartInstance.resize === 'function') sourceChartInstance.resize();
+    if (window.Chart && window.Chart.instances) {
+      Object.values(window.Chart.instances).forEach(function(inst) {
+        if (inst && typeof inst.resize === 'function') inst.resize();
+      });
+    }
   }
+
+  const tabHashMap = {
+    '#overview': '#tabOverview',
+    '#operations': '#tabOperations',
+    '#registrations': '#tabOperations',
+    '#geographic': '#tabGeographic',
+    '#regions': '#tabGeographic',
+    '#governance': '#tabGovernance',
+    '#ai': '#tabAI',
+    '#predictions': '#tabAI'
+  };
+
+  function activateTabFromHashOrStorage() {
+    const hash = window.location.hash ? window.location.hash.toLowerCase() : '';
+    let target = tabHashMap[hash] || (hash ? (hash.startsWith('#tab') ? hash : '#tab' + hash.slice(1).charAt(0).toUpperCase() + hash.slice(2)) : '');
+    if (!target || !document.querySelector('[data-bs-target="' + target + '"]')) {
+      target = sessionStorage.getItem('analyticsActiveTab');
+    }
+    if (target) {
+      const el = document.querySelector('[data-bs-target="' + target + '"]');
+      if (el && window.bootstrap && window.bootstrap.Tab) {
+        window.bootstrap.Tab.getOrCreateInstance(el).show();
+      }
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', activateTabFromHashOrStorage);
+  } else {
+    activateTabFromHashOrStorage();
+  }
+  window.addEventListener('hashchange', activateTabFromHashOrStorage);
+
   document.getElementById('analyticsTabsNav')?.addEventListener('shown.bs.tab', function(e) {
-    sessionStorage.setItem('analyticsActiveTab', e.target.getAttribute('data-bs-target'));
+    const target = e.target.getAttribute('data-bs-target');
+    if (target) {
+      sessionStorage.setItem('analyticsActiveTab', target);
+      const cleanHash = target.replace('#tab', '').toLowerCase();
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', '#' + cleanHash);
+      }
+    }
+    setTimeout(resizeAllCharts, 150);
+  });
+
+  window.addEventListener('resize', function() {
+    clearTimeout(window._analyticsResizeTimer);
+    window._analyticsResizeTimer = setTimeout(resizeAllCharts, 200);
   });
 })();
