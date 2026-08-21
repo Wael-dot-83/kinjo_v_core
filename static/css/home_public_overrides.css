@@ -1,6 +1,6 @@
 ﻿:root {
   --kinjo-navy: var(--kinjo-brand);
-  --kinjo-navy-deep: var(--kinjo-primary-dark);
+  --kinjo-navy-deep: var(--kinjo-brand);
   --kinjo-gold: var(--kinjo-color-success);
   --kinjo-indigo: var(--kinjo-color-indigo);
   --kinjo-surface: var(--kinjo-color-public-surface);
