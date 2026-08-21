@@ -68,7 +68,7 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
-  function formatDistance(km) { return Number(km).toFixed(1) + ' ' + t('km', 'ÙƒÙ…'); }
+  function formatDistance(km) { return Number(km).toFixed(1) + ' ' + t('km', 'كم'); }
   function haversineDistanceKm(lat1, lon1, lat2, lon2) {
     const radians = function (value) { return value * Math.PI / 180; };
     const dLat = radians(lat2 - lat1);
@@ -118,7 +118,7 @@
     if (distEl) distEl.value = '';
     userPosition = null;
     if (geoBtn) geoBtn.classList.remove('kg-geo-active');
-    if (geoBtnText) geoBtnText.textContent = t('Find nurseries near me (GPS)', 'Ø£Ù‚Ø±Ø¨ Ø­Ø¶Ø§Ù†Ø© Ù„Ù…ÙˆÙ‚Ø¹ÙŠ (GPS)');
+    if (geoBtnText) geoBtnText.textContent = t('Find nurseries near me (GPS)', 'أقرب حضانة لموقعي (GPS)');
     setGeoStatus('');
     setDistrictOptions('');
     updateClearButton();
@@ -171,7 +171,7 @@ async function search(force) {
     } catch (error) {
       if (error.name === 'AbortError') return;
       hideLoading(); hideStates(); setHidden(errorState, false);
-      if (resultsContextEl) resultsContextEl.textContent = t('Your filters are saved. Try the search again when the connection is back.', 'ØªÙ… Ø­ÙØ¸ Ø®ÙŠØ§Ø±Ø§Øª Ø§Ù„Ø¨Ø­Ø«. Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰ Ø¹Ù†Ø¯ Ø¹ÙˆØ¯Ø© Ø§Ù„Ø§ØªØµØ§Ù„.');
+      if (resultsContextEl) resultsContextEl.textContent = t('Your filters are saved. Try the search again when the connection is back.', 'تم حفظ خيارات البحث. حاول مرة أخرى عند عودة الاتصال.');
       console.error('Home search failed:', error);
     }
   }
@@ -184,26 +184,26 @@ async function search(force) {
     geoStatus.textContent = message; geoStatus.classList.toggle('kg-search-status-error', Boolean(isError)); setHidden(geoStatus, !message);
   }
   function handleGeolocation() {
-    if (!navigator.geolocation) { setGeoStatus(t('Location is not supported by this browser. You can search by neighborhood or area instead.', 'Ø§Ù„Ù…ØªØµÙØ­ Ù„Ø§ ÙŠØ¯Ø¹Ù… ØªØ­Ø¯ÙŠØ¯ Ø§Ù„Ù…ÙˆÙ‚Ø¹. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„Ø¨Ø­Ø« Ø¨Ø§Ø³Ù… Ø§Ù„Ø­ÙŠ Ø£Ùˆ Ø§Ù„Ù…Ù†Ø·Ù‚Ø©.'), true); return; }
+    if (!navigator.geolocation) { setGeoStatus(t('Location is not supported by this browser. You can search by neighborhood or area instead.', 'المتصفح لا يدعم تحديد الموقع. يمكنك البحث باسم الحي أو المنطقة بدلاً من ذلك.'), true); return; }
     if (geoBtn) { geoBtn.disabled = true; geoBtn.setAttribute('aria-busy', 'true'); }
-    setHidden(geoSpinner, false); setGeoStatus(t('Requesting your locationâ€¦', 'Ø¬Ø§Ø±Ù Ø·Ù„Ø¨ Ù…ÙˆÙ‚Ø¹Ùƒâ€¦')); if (geoBtnText) geoBtnText.textContent = t('Locatingâ€¦', 'Ø¬Ø§Ø±Ù ØªØ­Ø¯ÙŠØ¯ Ø§Ù„Ù…ÙˆÙ‚Ø¹â€¦');
+    setHidden(geoSpinner, false); setGeoStatus(t('Requesting your location…', 'جارٍ طلب موقعك…')); if (geoBtnText) geoBtnText.textContent = t('Locating…', 'جارٍ تحديد الموقع…');
     navigator.geolocation.getCurrentPosition(function (position) {
       userPosition = { lat: position.coords.latitude, lng: position.coords.longitude }; setHidden(geoSpinner, true);
       if (geoBtn) { geoBtn.disabled = false; geoBtn.removeAttribute('aria-busy'); geoBtn.classList.add('kg-geo-active'); }
-      if (geoBtnText) geoBtnText.textContent = t('Near me (GPS active)', 'Ø§Ù„Ø£Ù‚Ø±Ø¨ Ø¥Ù„Ù‰ Ù…ÙˆÙ‚Ø¹ÙŠ (GPS Ù…ÙØ¹Ù‘Ù„)');
-      setGeoStatus(t('Results are sorted from nearest to farthest.', 'ØªÙ… ØªØ±ØªÙŠØ¨ Ø§Ù„Ù†ØªØ§Ø¦Ø¬ Ù…Ù† Ø§Ù„Ø£Ù‚Ø±Ø¨ Ø¥Ù„Ù‰ Ø§Ù„Ø£Ø¨Ø¹Ø¯.')); search(true);
+      if (geoBtnText) geoBtnText.textContent = t('Near me (GPS active)', 'الأقرب إلى موقعي (GPS مفعّل)');
+      setGeoStatus(t('Results are sorted from nearest to farthest.', 'تم ترتيب النتائج من الأقرب إلى الأبعد.')); search(true);
     }, function (error) {
       userPosition = null; setHidden(geoSpinner, true);
       if (geoBtn) { geoBtn.disabled = false; geoBtn.removeAttribute('aria-busy'); geoBtn.classList.remove('kg-geo-active'); }
-      if (geoBtnText) geoBtnText.textContent = t('Find nurseries near me (GPS)', 'Ø£Ù‚Ø±Ø¨ Ø­Ø¶Ø§Ù†Ø© Ù„Ù…ÙˆÙ‚Ø¹ÙŠ (GPS)');
-      const message = error.code === 1 ? t('Location permission was denied. You can search by neighborhood or area instead.', 'ØªÙ… Ø±ÙØ¶ Ø¥Ø°Ù† Ø§Ù„ÙˆØµÙˆÙ„ Ø¥Ù„Ù‰ Ø§Ù„Ù…ÙˆÙ‚Ø¹. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„Ø¨Ø­Ø« Ø¨Ø§Ø³Ù… Ø§Ù„Ø­ÙŠ Ø£Ùˆ Ø§Ù„Ù…Ù†Ø·Ù‚Ø©.') : error.code === 2 ? t('Your location is unavailable. Try a manual neighborhood or area search.', 'ØªØ¹Ø°Ø± ØªØ­Ø¯ÙŠØ¯ Ù…ÙˆÙ‚Ø¹Ùƒ. Ø¬Ø±Ù‘Ø¨ Ø§Ù„Ø¨Ø­Ø« Ø§Ù„ÙŠØ¯ÙˆÙŠ Ø¨Ø§Ø³Ù… Ø§Ù„Ø­ÙŠ Ø£Ùˆ Ø§Ù„Ù…Ù†Ø·Ù‚Ø©.') : error.code === 3 ? t('Location request timed out. Try again or search manually by area.', 'Ø§Ù†ØªÙ‡Øª Ù…Ù‡Ù„Ø© ØªØ­Ø¯ÙŠØ¯ Ø§Ù„Ù…ÙˆÙ‚Ø¹. Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰ Ø£Ùˆ Ø§Ø¨Ø­Ø« ÙŠØ¯ÙˆÙŠØ§Ù‹ Ø¨Ø§Ø³Ù… Ø§Ù„Ù…Ù†Ø·Ù‚Ø©.') : t('We could not retrieve your location. You can search manually by neighborhood or area.', 'ØªØ¹Ø°Ø± Ø§Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ù…ÙˆÙ‚Ø¹Ùƒ. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„Ø¨Ø­Ø« ÙŠØ¯ÙˆÙŠØ§Ù‹ Ø¨Ø§Ø³Ù… Ø§Ù„Ø­ÙŠ Ø£Ùˆ Ø§Ù„Ù…Ù†Ø·Ù‚Ø©.');
+      if (geoBtnText) geoBtnText.textContent = t('Find nurseries near me (GPS)', 'أقرب حضانة لموقعي (GPS)');
+      const message = error.code === 1 ? t('Location permission was denied. You can search by neighborhood or area instead.', 'تم رفض إذن الوصول إلى الموقع. يمكنك البحث باسم الحي أو المنطقة بدلاً من ذلك.') : error.code === 2 ? t('Your location is unavailable. Try a manual neighborhood or area search.', 'تعذر تحديد موقعك. جرّب البحث اليدوي باسم الحي أو المنطقة.') : error.code === 3 ? t('Location request timed out. Try again or search manually by area.', 'انتهت مهلة تحديد الموقع. حاول مرة أخرى أو ابحث يدوياً باسم المنطقة.') : t('We could not retrieve your location. You can search manually by neighborhood or area.', 'تعذر الحصول على موقعك. يمكنك البحث يدوياً باسم الحي أو المنطقة.');
       setGeoStatus(message, true);
     }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
   }
 
   function setDistrictOptions(governorate) {
     if (!distEl) return;
-    distEl.innerHTML = '<option value="">' + escapeHtml(governorate ? t('All districts / areas', 'ÙƒÙ„ Ø§Ù„Ø£Ù„ÙˆÙŠØ© / Ø§Ù„Ù…Ù†Ø§Ø·Ù‚') : t('Select a governorate first to view districts', 'Ø§Ø®ØªØ± Ø§Ù„Ù…Ø­Ø§ÙØ¸Ø© Ø£ÙˆÙ„Ø§Ù‹ Ù„Ø¹Ø±Ø¶ Ø§Ù„Ø£Ù„ÙˆÙŠØ©')) + '</option>';
+    distEl.innerHTML = '<option value="">' + escapeHtml(governorate ? t('All districts / areas', 'كل الألوية / المناطق') : t('Select a governorate first to view districts', 'اختر المحافظة أولاً لعرض الألوية')) + '</option>';
     distEl.disabled = !governorate; if (!governorate) return;
     const selected = cachedGovernorates.find(function (item) { return item.name_ar === governorate || item.name_en === governorate || item.id === governorate || item.key === governorate; });
     (selected && selected.cities ? selected.cities : []).forEach(function (city) { const option = document.createElement('option'); option.value = city; option.textContent = city; distEl.appendChild(option); });
@@ -221,27 +221,27 @@ async function search(force) {
   window.selectGovernorate = selectGovernorate;
 
   function fillModal(kg) {
-    const name = isEnglish() && kg.name_en ? kg.name_en : (kg.name_ar || kg.name_en || t('Nursery', 'Ø­Ø¶Ø§Ù†Ø©'));
-    const location = [kg.area, kg.district, kg.governorate].filter(Boolean).join('ØŒ '); const phone = kg.contact_phone || ''; const email = kg.contact_email || '';
-    const address = kg.address_line || location || t('Address not available', 'Ø§Ù„Ø¹Ù†ÙˆØ§Ù† ØºÙŠØ± Ù…ØªÙˆÙØ±'); const capacity = Number(kg.total_capacity || 0); const current = Number(kg.current_child_count || 0);
+    const name = isEnglish() && kg.name_en ? kg.name_en : (kg.name_ar || kg.name_en || t('Nursery', 'حضانة'));
+    const location = [kg.area, kg.district, kg.governorate].filter(Boolean).join('، '); const phone = kg.contact_phone || ''; const email = kg.contact_email || '';
+    const address = kg.address_line || location || t('Address not available', 'العنوان غير متوفر'); const capacity = Number(kg.total_capacity || 0); const current = Number(kg.current_child_count || 0);
     const occupancy = typeof kg.occupancy_pct === 'number' ? kg.occupancy_pct : (capacity ? Math.round(current / capacity * 100) : 0);
     if (modalKgName) modalKgName.textContent = name; if (modalKgNameEn) modalKgNameEn.textContent = kg.name_en && !isEnglish() ? kg.name_en : '';
-    if (modalKgLocation) modalKgLocation.textContent = location; if (modalKgGovDist) modalKgGovDist.textContent = [kg.governorate, kg.district].filter(Boolean).join(' â€” ') || t('Not specified', 'ØºÙŠØ± Ù…Ø­Ø¯Ø¯');
-    if (modalKgArea) modalKgArea.textContent = kg.area || t('Not specified', 'ØºÙŠØ± Ù…Ø­Ø¯Ø¯'); if (modalKgAddress) modalKgAddress.textContent = address;
-    if (modalKgPhoneText) modalKgPhoneText.textContent = phone || t('Not available', 'ØºÙŠØ± Ù…ØªÙˆÙØ±'); if (modalKgPhone) { modalKgPhone.href = phone ? 'tel:' + phone.replace(/\s+/g, '') : '#'; modalKgPhone.classList.toggle('is-disabled', !phone); }
+    if (modalKgLocation) modalKgLocation.textContent = location; if (modalKgGovDist) modalKgGovDist.textContent = [kg.governorate, kg.district].filter(Boolean).join(' — ') || t('Not specified', 'غير محدد');
+    if (modalKgArea) modalKgArea.textContent = kg.area || t('Not specified', 'غير محدد'); if (modalKgAddress) modalKgAddress.textContent = address;
+    if (modalKgPhoneText) modalKgPhoneText.textContent = phone || t('Not available', 'غير متوفر'); if (modalKgPhone) { modalKgPhone.href = phone ? 'tel:' + phone.replace(/\s+/g, '') : '#'; modalKgPhone.classList.toggle('is-disabled', !phone); }
     if (modalKgCallBtn) { modalKgCallBtn.href = phone ? 'tel:' + phone.replace(/\s+/g, '') : '#'; modalKgCallBtn.classList.toggle('is-disabled', !phone); }
-    if (modalKgEmail) modalKgEmail.textContent = email || t('Not available', 'ØºÙŠØ± Ù…ØªÙˆÙØ±'); if (modalKgEmailLink) { modalKgEmailLink.href = email ? 'mailto:' + email : '#'; modalKgEmailLink.classList.toggle('is-disabled', !email); }
-    if (modalKgHours) modalKgHours.textContent = [kg.working_hours_start, kg.working_hours_end].filter(Boolean).join(' â€” ') || t('Not specified', 'ØºÙŠØ± Ù…Ø­Ø¯Ø¯Ø©'); if (modalKgDays) modalKgDays.textContent = kg.working_days || t('Not specified', 'ØºÙŠØ± Ù…Ø­Ø¯Ø¯Ø©');
-    if (modalKgCapacityText) modalKgCapacityText.textContent = capacity ? current + ' / ' + capacity + ' (' + occupancy + '%)' : t('Registered capacity available', 'Ø§Ù„Ø·Ø§Ù‚Ø© Ø§Ù„Ø§Ø³ØªÙŠØ¹Ø§Ø¨ÙŠØ© Ø§Ù„Ù…Ø³Ø¬Ù„Ø© Ù…ØªØ§Ø­Ø©'); if (modalKgCapacityBar) modalKgCapacityBar.style.width = Math.min(100, Math.max(0, occupancy)) + '%';
+    if (modalKgEmail) modalKgEmail.textContent = email || t('Not available', 'غير متوفر'); if (modalKgEmailLink) { modalKgEmailLink.href = email ? 'mailto:' + email : '#'; modalKgEmailLink.classList.toggle('is-disabled', !email); }
+    if (modalKgHours) modalKgHours.textContent = [kg.working_hours_start, kg.working_hours_end].filter(Boolean).join(' — ') || t('Not specified', 'غير محددة'); if (modalKgDays) modalKgDays.textContent = kg.working_days || t('Not specified', 'غير محددة');
+    if (modalKgCapacityText) modalKgCapacityText.textContent = capacity ? current + ' / ' + capacity + ' (' + occupancy + '%)' : t('Registered capacity available', 'الطاقة الاستيعابية المسجلة متاحة'); if (modalKgCapacityBar) modalKgCapacityBar.style.width = Math.min(100, Math.max(0, occupancy)) + '%';
     const hasCoordinates = Number.isFinite(Number(kg.latitude)) && Number.isFinite(Number(kg.longitude));
-    if (modalKgDistance) { const distance = userPosition && hasCoordinates ? haversineDistanceKm(userPosition.lat, userPosition.lng, Number(kg.latitude), Number(kg.longitude)) : null; modalKgDistance.textContent = distance === null ? t('Available after GPS search', 'ØªØ¸Ù‡Ø± Ø¨Ø¹Ø¯ ØªÙØ¹ÙŠÙ„ Ø¨Ø­Ø« GPS') : formatDistance(distance); setHidden(modalKgDistance.closest('[data-distance-row]'), distance === null); }
+    if (modalKgDistance) { const distance = userPosition && hasCoordinates ? haversineDistanceKm(userPosition.lat, userPosition.lng, Number(kg.latitude), Number(kg.longitude)) : null; modalKgDistance.textContent = distance === null ? t('Available after GPS search', 'تظهر بعد تفعيل بحث GPS') : formatDistance(distance); setHidden(modalKgDistance.closest('[data-distance-row]'), distance === null); }
     if (modalKgMapsWrap && modalKgMapsBtn) {
       if (hasCoordinates) {
         const mapsUrl = new URL('https://www.google.com/maps/search/');
         mapsUrl.searchParams.set('api', '1');
         mapsUrl.searchParams.set('query', String(kg.latitude) + ',' + String(kg.longitude));
         modalKgMapsBtn.href = mapsUrl.toString();
-        modalKgMapsBtn.setAttribute('aria-label', t('Open ' + name + ' location in Google Maps', 'ÙØªØ­ Ù…ÙˆÙ‚Ø¹ ' + name + ' ÙÙŠ Ø®Ø±Ø§Ø¦Ø· Google'));
+        modalKgMapsBtn.setAttribute('aria-label', t('Open ' + name + ' location in Google Maps', 'فتح موقع ' + name + ' في خرائط Google'));
         setHidden(modalKgMapsWrap, false);
       } else {
         setHidden(modalKgMapsWrap, true);
@@ -255,9 +255,9 @@ async function search(force) {
     modalEl.classList.remove('hidden');
     document.body.classList.add('overflow-hidden');
     if (modalPanel) { modalPanel.setAttribute('aria-busy', 'true'); modalPanel.focus(); }
-    if (modalKgName) modalKgName.textContent = t('Loading kindergarten detailsâ€¦', 'Ø¬Ø§Ø±Ù ØªØ­Ù…ÙŠÙ„ ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø­Ø¶Ø§Ù†Ø©â€¦');
+    if (modalKgName) modalKgName.textContent = t('Loading kindergarten details…', 'جارٍ تحميل تفاصيل الحضانة…');
     if (modalKgNameEn) modalKgNameEn.textContent = '';
-    setModalStatus(t('Loading public detailsâ€¦', 'Ø¬Ø§Ø±Ù ØªØ­Ù…ÙŠÙ„ Ø§Ù„ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø¹Ø§Ù…Ø©â€¦'));
+    setModalStatus(t('Loading public details…', 'جارٍ تحميل التفاصيل العامة…'));
     try {
       const response = await fetch(SINGLE_KG_API + '/' + encodeURIComponent(id), { headers: { Accept: 'application/json' } });
       if (!response.ok) throw new Error('HTTP ' + response.status);
@@ -266,7 +266,7 @@ async function search(force) {
       fillModal(kg); setModalStatus('');
     } catch (error) {
       console.error('Failed fetching public nursery details:', error);
-      setModalStatus(t('We could not load this kindergarten. Close the dialog and try again.', 'ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ù‡Ø°Ù‡ Ø§Ù„Ø­Ø¶Ø§Ù†Ø©. Ø£ØºÙ„Ù‚ Ø§Ù„Ù†Ø§ÙØ°Ø© ÙˆØ­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.'), true);
+      setModalStatus(t('We could not load this kindergarten. Close the dialog and try again.', 'تعذر تحميل بيانات هذه الحضانة. أغلق النافذة وحاول مرة أخرى.'), true);
     } finally {
       if (modalPanel) modalPanel.setAttribute('aria-busy', 'false');
     }
@@ -277,7 +277,7 @@ async function search(force) {
   async function loadGovernorates() {
     try { const response = await fetch(LOCATIONS_API, { headers: { Accept: 'application/json' } }); if (!response.ok) return; const payload = await response.json(); cachedGovernorates = payload && payload.governorates ? payload.governorates : []; if (!govEl || !cachedGovernorates.length) return;
       const params = new URLSearchParams(window.location.search); const current = params.get('governorate') || '';
-      govEl.innerHTML = '<option value="">' + escapeHtml(t('All governorates (12)', 'ÙƒÙ„ Ø§Ù„Ù…Ø­Ø§ÙØ¸Ø§Øª (12)')) + '</option>';
+      govEl.innerHTML = '<option value="">' + escapeHtml(t('All governorates (12)', 'كل المحافظات (12)')) + '</option>';
       cachedGovernorates.forEach(function (item) { const option = document.createElement('option'); option.value = item.name_ar || item.name_en || item.id; option.textContent = isEnglish() && item.name_en ? item.name_en : (item.name_ar || item.name_en); govEl.appendChild(option); });
       if (current) govEl.value = current; setDistrictOptions(govEl.value); if (distEl && params.get('district')) distEl.value = params.get('district');
     } catch (error) { console.warn('Failed to load governorates:', error); }
@@ -327,5 +327,4 @@ async function search(force) {
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
-
 

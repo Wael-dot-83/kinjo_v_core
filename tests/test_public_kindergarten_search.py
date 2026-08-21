@@ -92,7 +92,7 @@ def test_public_search_projection_excludes_sensitive_fields(client, test_db):
     allowed = {
         "id", "name_ar", "name_en", "governorate", "district", "area",
         "address_line", "contact_phone", "contact_email", "status",
-        "total_capacity", "current_child_count",
+        "total_capacity", "current_child_count", "latitude", "longitude",
     }
     assert set(item.keys()).issubset(allowed)
     assert "manager_name" not in item
