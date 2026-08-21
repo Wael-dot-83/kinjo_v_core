@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="/static/css/home_premium.css?v=2">
   <link rel="stylesheet" href="/static/css/design-tokens.css?v=1">
   <link rel="stylesheet" href="/static/css/home_modern.css?v=1">
-  <link rel="stylesheet" href="/static/css/home_public_overrides.css?v=3">
+  <link rel="stylesheet" href="/static/css/home_public_overrides.css?v=4">
 
   <style>
     .material-symbols-outlined {
@@ -1159,36 +1159,65 @@
       if (!button || !menu) return;
       menu.querySelectorAll('button').forEach(function (item) { item.setAttribute('role', 'menuitem'); });
 
-      function setOpen(open) {
+      let hoverOpen = false;
+      let clickOpen = false;
+      function syncOpenState() {
+        const open = hoverOpen || clickOpen;
         menu.hidden = !open;
         button.setAttribute('aria-expanded', String(open));
       }
+      function closeMenu() {
+        hoverOpen = false;
+        clickOpen = false;
+        syncOpenState();
+      }
 
-      button.addEventListener('click', function () { setOpen(menu.hidden); });
+      syncOpenState();
+      button.addEventListener('click', function () {
+        // A pointer enters the button before click fires; keep that click from
+        // immediately reversing the hover-opened state.
+        clickOpen = true;
+        syncOpenState();
+      });
+      menu.addEventListener('focusin', function () {
+        clickOpen = true;
+        syncOpenState();
+      });
+      if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        container.addEventListener('mouseenter', function () {
+          hoverOpen = true;
+          syncOpenState();
+        });
+        container.addEventListener('mouseleave', function () {
+          hoverOpen = false;
+          syncOpenState();
+        });
+      }
       button.addEventListener('keydown', function (event) {
         if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
-          setOpen(true);
+          clickOpen = true;
+          syncOpenState();
           const firstItem = menu.querySelector('[role="menuitem"]');
           if (firstItem) firstItem.focus();
         } else if (event.key === 'Escape') {
-          setOpen(false);
+          closeMenu();
         }
       });
       menu.addEventListener('click', function (event) {
-        if (event.target.closest('[role="menuitem"]')) setOpen(false);
+        if (event.target.closest('[role="menuitem"]')) closeMenu();
       });
       container.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
-          setOpen(false);
+          closeMenu();
           button.focus();
         }
       });
       container.addEventListener('focusout', function (event) {
-        if (!container.contains(event.relatedTarget)) setOpen(false);
+        if (!container.contains(event.relatedTarget)) closeMenu();
       });
       document.addEventListener('click', function (event) {
-        if (!container.contains(event.target)) setOpen(false);
+        if (!container.contains(event.target)) closeMenu();
       });
     });
 

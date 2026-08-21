@@ -12,7 +12,8 @@ body.kinjo-public-home .kinjo-public-header {
   position: relative;
   isolation: isolate;
   background-color: var(--kinjo-public-green) !important;
-  background-image: linear-gradient(rgba(31, 94, 71, .26), rgba(31, 94, 71, .26)), url('/static/images/kinjo-header-background.jpg') !important;
+  /* Keep the approved header artwork as the actual background layer. */
+  background-image: url('/static/images/kinjo-header-background.jpg') !important;
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
