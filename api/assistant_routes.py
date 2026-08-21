@@ -511,7 +511,7 @@ INTENT_KNOWLEDGE_BASE = [
     {
         "intent": "parent_attendance_absence",
         "target_role": "parent",
-        "keywords_ar": ["ابلاغ غياب", "ابلاغ تأخير", "تسجيل غياب", "استلام الطفل", "المخولين بالاستلام", "شخص مستلم", "سجل الحضور", "اوقات الدوام"],
+        "keywords_ar": ["ابلاغ غياب", "ابلاغ تأخير", "تسجيل غياب", "غياب طفلي", "استلام الطفل", "المخولين بالاستلام", "مخول بالاستلام", "شخص مستلم", "شخص مخول", "سجل الحضور", "اوقات الدوام"],
         "keywords_en": ["report absence", "report delay", "log absence", "child pickup", "authorized pickup", "attendance history", "operating hours"],
         "reply_ar": (
             "⏰ **إدارة الحضور والغياب والمخولين بالاستلام:**\n\n"
@@ -796,7 +796,7 @@ INTENT_KNOWLEDGE_BASE = [
     {
         "intent": "child_age_policy",
         "target_role": "general",
-        "keywords_ar": ["العمر المقبول", "سن القبول", "عمر الطفل", "شروط العمر", "kg2", "المستوى الثاني", "اقل عمر", "اكبر عمر", "سياسة الاعمار", "سن الروضة"],
+        "keywords_ar": ["الأعمار المقبولة", "الاعمار المقبولة", "العمر المقبول", "سن القبول", "عمر الطفل", "شروط سن القبول", "شروط العمر", "kg2", "المستوى الثاني", "اقل عمر", "اكبر عمر", "سياسة الاعمار", "سن الروضة"],
         "keywords_en": ["accepted age", "age criteria", "age policy", "minimum age", "maximum age", "kg2 eligibility", "age brackets", "child age limits"],
         "reply_ar": (
             "🎂 **سياسة ومعايير قبول الأعمار المعتمدة في الأردن:**\n\n"
@@ -836,6 +836,37 @@ INTENT_KNOWLEDGE_BASE = [
         ],
         "suggested_ar": ["من يملك حق الاطلاع على سجلات طفلي؟", "كيف أطلب حذف حسابي؟", "كيف أغير كلمة المرور؟"],
         "suggested_en": ["Who can view my child's data?", "How to request account deletion?", "How to reset my password?"]
+    },
+    {
+        "intent": "user_guide_help_center",
+        "target_role": "general",
+        "keywords_ar": ["دليل الاستخدام", "مركز المساعدة", "دليل المستخدم", "شرح ميزات المنصة", "كيف استخدم المنصة", "دليل الوظائف للمستخدمين", "دليل المنصة الشامل"],
+        "keywords_en": ["user guide", "help center", "platform documentation", "how to use the platform", "features directory", "user manual"],
+        "reply_ar": (
+            "📖 **دليل الاستخدام ومركز المساعدة الشامل لمنصة KinJo (`/help`):**\n\n"
+            "تضم المنصة توثيقاً تشغيلياً دقيقاً ومفصلاً لكافة الميزات والوظائف حسب الدور الوظيفي:\n\n"
+            "1. **مدير النظام (ADMIN):** لوحة المؤشرات الوطنية، مستكشف الرسوم البيانية وجدولة التصدير، إدارة الصلاحيات والاستيراد الجماعي، وسجلات التدقيق وحوادث السلامة.\n"
+            "2. **مدير الحضانة (MANAGER):** إدارة قبول الطلاب، توزيع الشُعب والفصول، تطبيق النسب القانونية للمربيات، تجديد الترخيص، والفوترة ومطالبات دعم 'رعاية'.\n"
+            "3. **المشرف التربوي والمدقق (SUPERVISOR):** الزيارات التفتيشية الميدانية (40 معيار جودة)، إعداد واعتماد التقارير اليومية، وتوثيق الحوادث.\n"
+            "4. **ولي الأمر (PARENT):** تقديم طلبات التسجيل الإلكترونية، متابعة التقارير المباشرة، جدول المطاعيم، إبلاغ الغياب، وإدارة المخولين بالاستلام.\n"
+            "5. **الجمهور والزوار (GENERAL):** البحث عن الحضانات المرخصة في المحافظات الـ 12، سياسة الأعمار القانونية (70 يوماً حتى KG2)، وبوابة الأمان والخصوصية."
+        ),
+        "reply_en": (
+            "📖 **KinJo Comprehensive User Guide & Help Center (`/help`):**\n\n"
+            "The platform provides comprehensive, surgical operational documentation for every user role:\n\n"
+            "1. **System Administrator (ADMIN):** Executive KPIs, Interactive Charts Explorer & scheduled exports, User Directory & RBAC, Audit Trails, and Safety Intelligence.\n"
+            "2. **Kindergarten Manager (MANAGER):** Admissions pipeline, section allocations, statutory staff ratios, licensing renewal checklists, and Ri'aya subsidy billing.\n"
+            "3. **Educational Supervisor (SUPERVISOR):** 40-point quality assurance rubric, daily care report authoring & sign-off, and field emergency logging.\n"
+            "4. **Parent & Guardian (PARENT):** Digital 3-step registration, live care reports, MOH vaccination tracking, absence reporting, and authorized pickups.\n"
+            "5. **General Public (GENERAL):** 12-governorate GIS kindergarten search, statutory child age policies (70 days to KG2), and data privacy."
+        ),
+        "actions": [
+            {"label_ar": "دليل الاستخدام ومركز المساعدة", "label_en": "User Guide & Help Center", "url": "/help", "icon": "bi-book-half"},
+            {"label_ar": "الأسئلة الشائعة", "label_en": "FAQ Center", "url": "/faq", "icon": "bi-question-circle-fill"},
+            {"label_ar": "دليل الخدمات الشامل", "label_en": "Services Guide", "url": "/services", "icon": "bi-grid-fill"}
+        ],
+        "suggested_ar": ["أين أجد دليل المشرفين التربويين؟", "أين أجد دليل أولياء الأمور؟", "ما هي النسب القانونية للمربيات؟"],
+        "suggested_en": ["Where is the supervisor guide?", "Where is the parent guide?", "What are legal staff ratios?"]
     },
     {
         "intent": "support_and_contact",
@@ -906,8 +937,10 @@ def _match_intent(query: str, lang: str, role: Optional[str] = None, is_admin: b
             else:
                 kw_tokens = set(normalized_kw.split())
                 common = query_tokens.intersection(kw_tokens)
-                if common:
-                    kw_score += len(common) * 2
+                if len(kw_tokens) > 1 and len(common) >= 2:
+                    kw_score += len(common) * 3
+                elif len(kw_tokens) == 1 and common:
+                    kw_score += 3
 
         # Only apply role alignment boost if there is genuine keyword relevance
         if kw_score > 0:
@@ -1015,6 +1048,10 @@ GROUNDING_REGISTRY: Dict[str, List[Dict[str, str]]] = {
     "security_and_privacy": [
         {"name": "Jordan Personal Data Protection Law", "citation": "Law No. 24/2023, Arts. 4-11"},
         {"name": "National Cybersecurity Center (NCSC)", "citation": "Essential Cybersecurity Controls (ECC)"}
+    ],
+    "user_guide_help_center": [
+        {"name": "KinJo National Platform Documentation", "citation": "Operational Architecture & User Guide v2.4"},
+        {"name": "MoSD Early Childhood Regulatory Standard", "citation": "Jordan Quality Framework 2026"}
     ],
     "support_and_contact": [
         {"name": "KinJo Customer Care & Technical Operations Standard", "citation": "Helpdesk SLA Protocol"}

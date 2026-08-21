@@ -1,0 +1,828 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}{% if ui_lang == 'en' %}User Guide &amp; Help Center{% else %}دليل الاستخدام ومركز المساعدة الشامل{% endif %} — KinJo{% endblock %}
+
+{% block meta_description %}
+<meta name="description" content="{% if ui_lang == 'en' %}Comprehensive user guide and feature directory for all KinJo platform roles: Administrators, Kindergarten Managers, Educational Supervisors, and Parents.{% else %}الدليل الإرشادي الشامل لكافة ميزات ووظائف منصة KinJo لمسؤولي النظام، مدراء الحضانات، المشرفين التربويين، وأولياء الأمور.{% endif %}" />
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .help-guide-header {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%);
+    border-radius: 1rem;
+    padding: 2.5rem 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+  .role-nav-pill {
+    padding: 0.65rem 1.25rem;
+    border-radius: 50rem;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+    border: 1px solid transparent;
+  }
+  .role-nav-pill.active {
+    background: var(--bs-primary);
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  }
+  .role-nav-pill:hover:not(.active) {
+    background: var(--admin-bg-subtle, #f1f5f9);
+  }
+  .guide-card {
+    border-radius: 0.85rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+    background: #fff;
+  }
+  .guide-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  }
+  .guide-badge {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.5rem;
+  }
+  .feature-step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--bs-primary);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.85rem;
+    margin-inline-end: 0.5rem;
+  }
+  .glossary-card {
+    border-inline-start: 4px solid var(--bs-primary);
+  }
+  .ai-ask-chip {
+    background: #eef2ff;
+    color: #4338ca;
+    border: 1px solid #c7d2fe;
+    border-radius: 50rem;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    display: inline-block;
+    margin: 0.2rem;
+  }
+  .ai-ask-chip:hover {
+    background: #e0e7ff;
+    border-color: #a5b4fc;
+  }
+</style>
+{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+    title="User Guide & Help Center" if ui_lang == 'en' else "دليل الاستخدام ومركز المساعدة الشامل",
+    icon="bi-book-half",
+    breadcrumbs=[
+        {"label": "Home" if ui_lang == 'en' else "الرئيسية", "url": "/"},
+        {"label": "Help & Guide" if ui_lang == 'en' else "دليل الاستخدام", "url": None}
+    ]
+) }}
+{% endblock %}
+
+{% block content %}
+<div class="container py-2">
+
+  <!-- Header & Live Filter -->
+  <div class="help-guide-header text-center">
+    <span class="badge bg-primary-subtle text-primary mb-2 px-3 py-2 rounded-pill font-semibold">
+      <i class="bi bi-patch-check-fill me-1"></i>
+      {% if ui_lang == 'en' %}Official Documentation &amp; User Reference{% else %}المرجع والتوثيق الرسمي لمنظومة KinJo الوطنية{% endif %}
+    </span>
+    <h1 class="h3 font-bold text-dark mt-2 mb-2">
+      {% if ui_lang == 'en' %}Platform Functions, Workflows &amp; Feature Directory{% else %}الدليل التشغيلي المفصل لكافة الميزات والوظائف والصلاحيات{% endif %}
+    </h1>
+    <p class="text-muted max-w-2xl mx-auto mb-4">
+      {% if ui_lang == 'en' %}
+      Detailed guidance for every role on the platform: Administrators, Kindergarten Managers, Educational Supervisors, and Parents.
+      {% else %}
+      شرح تفصيلي ودقيق لكافة الإجراءات، المؤشرات، القوانين المعتمدة، وسير العمل حسب كل دور وظيفي.
+      {% endif %}
+    </p>
+
+    <!-- Search Input -->
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-6">
+        <div class="input-group input-group-lg shadow-sm">
+          <span class="input-group-text bg-white border-end-0 text-muted">
+            <i class="bi bi-search"></i>
+          </span>
+          <input type="search" id="guideLiveSearch" class="form-control border-start-0 ps-0"
+                 placeholder="{% if ui_lang == 'en' %}Search any feature, role, metric, or rule…{% else %}ابحث عن أي ميزة، دور، مؤشر، أو إجراء…{% endif %}"
+                 aria-label="Search User Guide">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Role Navigation Tabs -->
+  <div class="d-flex flex-wrap justify-content-center gap-2 mb-4" id="rolePillNav">
+    <button class="btn role-nav-pill active" data-target-role="all">
+      <i class="bi bi-grid-fill me-1"></i>
+      {% if ui_lang == 'en' %}All Features &amp; Roles{% else %}كافة الأدوار والميزات{% endif %}
+    </button>
+    <button class="btn role-nav-pill" data-target-role="admin">
+      <i class="bi bi-shield-lock-fill me-1"></i>
+      {% if ui_lang == 'en' %}System Administrators (Admin){% else %}مدير النظام (Admin){% endif %}
+    </button>
+    <button class="btn role-nav-pill" data-target-role="manager">
+      <i class="bi bi-building-gear me-1"></i>
+      {% if ui_lang == 'en' %}Nursery Managers (Manager){% else %}مدير الحضانة (Manager){% endif %}
+    </button>
+    <button class="btn role-nav-pill" data-target-role="supervisor">
+      <i class="bi bi-clipboard2-check-fill me-1"></i>
+      {% if ui_lang == 'en' %}Supervisors &amp; QA (Supervisor){% else %}المشرف التربوي (Supervisor){% endif %}
+    </button>
+    <button class="btn role-nav-pill" data-target-role="parent">
+      <i class="bi bi-people-fill me-1"></i>
+      {% if ui_lang == 'en' %}Parents &amp; Guardians (Parent){% else %}أولياء الأمور (Parent){% endif %}
+    </button>
+    <button class="btn role-nav-pill" data-target-role="glossary">
+      <i class="bi bi-book-half me-1"></i>
+      {% if ui_lang == 'en' %}Terminology Glossary{% else %}دليل المصطلحات المعتمدة{% endif %}
+    </button>
+  </div>
+
+  <!-- Content Sections Container -->
+  <div id="guideSectionsContainer">
+
+    <!-- ================================================================= -->
+    <!-- SECTION 1: SYSTEM ADMINISTRATORS (ADMIN) -->
+    <!-- ================================================================= -->
+    <div class="role-guide-block mb-5" data-role="admin">
+      <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+        <div class="p-2 bg-primary text-white rounded-3">
+          <i class="bi bi-shield-shaded fs-4"></i>
+        </div>
+        <div>
+          <h2 class="h4 font-bold mb-0">{% if ui_lang == 'en' %}1. System Administrator Guide (ADMIN){% else %}1. دليل مدير النظام (ADMIN){% endif %}</h2>
+          <small class="text-muted">{% if ui_lang == 'en' %}Platform governance, national analytics, RBAC user directory, audit trails, and safety intelligence.{% else %}الحوكمة الوطنية، التحليلات المتقدمة، إدارة المستخدمين والصلاحيات، سجلات التدقيق، ومنظومة السلامة.{% endif %}</small>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <!-- Card 1: Executive Analytics & KPI Overview -->
+        <div class="col-lg-6 guide-item-card" data-keywords="kpi dashboard analytics capacity occupancy governorates مؤشرات أداء إشغال سعة تحليلات">
+          <div class="card guide-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h5 font-bold text-primary">
+                <i class="bi bi-speedometer2 me-1"></i>
+                {% if ui_lang == 'en' %}Executive Analytics &amp; National KPIs{% else %}لوحة المؤشرات والتحليلات التنفيذية الوطنية{% endif %}
+              </h3>
+              <span class="badge bg-primary-subtle text-primary guide-badge">/admin/dashboard</span>
+            </div>
+            <p class="text-secondary small mb-3">
+              {% if ui_lang == 'en' %}
+              Aggregates national childcare capacity, actual enrolled children, certified educators, and capacity utilization rate across Jordan's 12 governorates with real-time statutory compliance indices.
+              {% else %}
+              تجميع وتحليل الطاقة الاستيعابية المرخصة وطنياً، وأعداد الأطفال الفعليين، والكادر التعليمي المعتمد، ونسب الإشغال ومؤشرات الامتثال القانوني عبر كافة محافظات المملكة الـ 12.
+              {% endif %}
+            </p>
+            <h6 class="font-semibold small text-dark mb-2">{% if ui_lang == 'en' %}Core Capabilities &amp; Metrics:{% else %}الوظائف والمؤشرات الرئيسية:{% endif %}</h6>
+            <ul class="small text-muted ps-3 mb-3">
+              <li><strong>{% if ui_lang == 'en' %}Occupancy Rate:{% else %}نسبة الإشغال:{% endif %}</strong> (Active Enrolled / Total Licensed Capacity) × 100%.</li>
+              <li><strong>{% if ui_lang == 'en' %}Staff-to-Child Compliance Index:{% else %}مؤشر الامتثال للمربيات:{% endif %}</strong> Real-time compliance with MoSD statutory ratios.</li>
+              <li><strong>{% if ui_lang == 'en' %}Regional Heatmap:{% else %}الخريطة الحرارية:{% endif %}</strong> Visual density analytics identifying underserved districts.</li>
+            </ul>
+            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+              <a href="/admin/dashboard" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-box-arrow-up-right me-1"></i>{% if ui_lang == 'en' %}Open Dashboard{% else %}فتح لوحة المؤشرات{% endif %}
+              </a>
+              <span class="ai-ask-chip" onclick="askAiQuestion('ما هي مؤشرات الأداء الحالية ولوحة التحكم؟')">
+                <i class="bi bi-robot me-1"></i>{% if ui_lang == 'en' %}Ask AI{% else %}اسأل المساعد{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Advanced Analytics Charts Explorer -->
+        <div class="col-lg-6 guide-item-card" data-keywords="charts explorer chartjs export csv json scheduled visualizations رسوم بيانية مستكشف مخططات تصدير">
+          <div class="card guide-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h5 font-bold text-primary">
+                <i class="bi bi-pie-chart-fill me-1"></i>
+                {% if ui_lang == 'en' %}Advanced Charts Explorer &amp; Visual Analytics{% else %}مستكشف الرسوم البيانية والتحليلات المتقدمة{% endif %}
+              </h3>
+              <span class="badge bg-primary-subtle text-primary guide-badge">/admin/analytics/charts</span>
+            </div>
+            <p class="text-secondary small mb-3">
+              {% if ui_lang == 'en' %}
+              Interactive multi-dimensional data explorer powered by Chart.js. Supports Bar, Line, Radar, Doughnut, and Heatmaps with quick date presets (7d, 30d, 90d, academic year) and automated scheduled exports.
+              {% else %}
+              مستكشف تفاعلي متعدد الأبعاد مدعوم بمكتبة Chart.js. يدعم الرسوم البيانية العمودية والخطية والرادارية والدائرية مع فلاتر التاريخ وجدولة التصدير الآلي (CSV/JSON/PNG) إلى البريد الإلكتروني دورياً.
+              {% endif %}
+            </p>
+            <h6 class="font-semibold small text-dark mb-2">{% if ui_lang == 'en' %}Interactive Features:{% else %}الميزات التفاعلية:{% endif %}</h6>
+            <ul class="small text-muted ps-3 mb-3">
+              <li><strong>{% if ui_lang == 'en' %}Visualization Switching:{% else %}تبديل نوع الرسم:{% endif %}</strong> Bar, Line, Doughnut, PolarArea, Radar with animated transitions.</li>
+              <li><strong>{% if ui_lang == 'en' %}Scheduled Automated Delivery:{% else %}جدولة التصدير الدوري:{% endif %}</strong> Setup daily, weekly, or monthly report broadcasts.</li>
+            </ul>
+            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+              <a href="/admin/analytics/charts" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-box-arrow-up-right me-1"></i>{% if ui_lang == 'en' %}Open Charts Explorer{% else %}فتح مستكشف الرسوم{% endif %}
+              </a>
+              <span class="ai-ask-chip" onclick="askAiQuestion('كيف أستخدم مستكشف الرسوم البيانية وجدولة التصدير؟')">
+                <i class="bi bi-robot me-1"></i>{% if ui_lang == 'en' %}Ask AI{% else %}اسأل المساعد{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: User Directory & RBAC -->
+        <div class="col-lg-6 guide-item-card" data-keywords="users directory rbac roles import excel csv mfa impersonation مستخدمين صلاحيات استيراد دخول مقيد">
+          <div class="card guide-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h5 font-bold text-primary">
+                <i class="bi bi-people-fill me-1"></i>
+                {% if ui_lang == 'en' %}User Directory, RBAC &amp; Controlled Access{% else %}دليل المستخدمين والصلاحيات والدخول المقيّد{% endif %}
+              </h3>
+              <span class="badge bg-primary-subtle text-primary guide-badge">/admin/users</span>
+            </div>
+            <p class="text-secondary small mb-3">
+              {% if ui_lang == 'en' %}
+              Role-Based Access Control (RBAC) governing Admins, Managers, Supervisors, and Parents. Supports bulk Excel/CSV onboarding, MFA enforcement, and cryptographically logged temporary support impersonation.
+              {% else %}
+              هيكلية الصلاحيات المعتمدة للأدوار الأربعة (Admin, Manager, Supervisor, Parent) مع استيراد الحسابات جماعياً عبر Excel/CSV، وإدارة التحقق بخطوتين (MFA)، والدخول المقيد بصفة مستخدم للدعم الفني مع توثيق غير قابل للتعديل.
+              {% endif %}
+            </p>
+            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+              <a href="/admin/users" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-box-arrow-up-right me-1"></i>{% if ui_lang == 'en' %}Manage Users{% else %}إدارة المستخدمين{% endif %}
+              </a>
+              <span class="ai-ask-chip" onclick="askAiQuestion('كيف أدير دليل المستخدمين وصلاحيات الأدمن؟')">
+                <i class="bi bi-robot me-1"></i>{% if ui_lang == 'en' %}Ask AI{% else %}اسأل المساعد{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4: Security Audit Logs & Governance -->
+        <div class="col-lg-6 guide-item-card" data-keywords="audit logs security compliance mosd moe governance سجلات تدقيق أمان حوكمة وزارة التنمية">
+          <div class="card guide-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h5 font-bold text-primary">
+                <i class="bi bi-shield-check me-1"></i>
+                {% if ui_lang == 'en' %}Security Audit Logs &amp; Agency Reports{% else %}سجلات التدقيق الأمني والتقارير الحكومية{% endif %}
+              </h3>
+              <span class="badge bg-primary-subtle text-primary guide-badge">/admin/audit-logs</span>
+            </div>
+            <p class="text-secondary small mb-3">
+              {% if ui_lang == 'en' %}
+              Immutable tamper-evident security logs documenting authentication attempts, privilege modifications, and mutations. Direct export of certified governance compliance dossiers for MoSD &amp; MoE.
+              {% else %}
+              سجل تدقيق أمني مشفر يوثق عمليات الدخول، تعديل الصلاحيات، وحركات البيانات مع إمكانية الفلترة حسب الـ IP والمستخدم. وتصدير حزم الامتثال الرسمية لوزارة التنمية الاجتماعية ووزارة التربية والتعليم.
+              {% endif %}
+            </p>
+            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+              <a href="/admin/audit-logs" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-box-arrow-up-right me-1"></i>{% if ui_lang == 'en' %}View Audit Trail{% else %}سجلات التدقيق{% endif %}
+              </a>
+              <span class="ai-ask-chip" onclick="askAiQuestion('كيف أراجع سجلات التدقيق وتقارير الوزارة؟')">
+                <i class="bi bi-robot me-1"></i>{% if ui_lang == 'en' %}Ask AI{% else %}اسأل المساعد{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- SECTION 2: NURSERY MANAGERS (MANAGER) -->
+    <!-- ================================================================= -->
+    <div class="role-guide-block mb-5" data-role="manager">
+      <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+        <div class="p-2 bg-success text-white rounded-3">
+          <i class="bi bi-building-gear fs-4"></i>
+        </div>
+        <div>
+          <h2 class="h4 font-bold mb-0">{% if ui_lang == 'en' %}2. Nursery Manager Guide (MANAGER){% else %}2. دليل مدير الحضانة (MANAGER){% endif %}</h2>
+          <small class="text-muted">{% if ui_lang == 'en' %}Classroom operations, admissions workflow, statutory staffing ratios, licensing compliance, and financial billing.{% else %}العمليات اليومية، مسار قبول الطلاب، النسب القانونية للمربيات، تجديد الترخيص، والفوترة ومطالبات رعاية.{% endif %}</small>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <!-- Card 1: Admissions Pipeline & Sections -->
+        <div class="col-lg-6 guide-item-card" data-keywords="admissions pipeline waitlist classrooms sections manager قبول تسجيل شعب فصول قائمة انتظار">
+          <div class="card guide-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h5 font-bold text-success">
+                <i class="bi bi-kanban-fill me-1"></i>
+                {% if ui_lang == 'en' %}Admissions Pipeline &amp; Section Allocations{% else %}مسار قبول الطلاب وتوزيع الشُعب والفصول{% endif %}
+              </h3>
+              <span class="badge bg-success-subtle text-success guide-badge">/dashboard</span>
+            </div>
+            <p class="text-secondary small mb-3">
+              {% if ui_lang == 'en' %}
+              Manage enrollment applications from Web, Mobile, and Office channels. Review mandatory documents, validate age criteria against classroom limits, prioritize waitlists, and issue formal acceptance letters.
+              {% else %}
+              إدارة طلبات الالتحاق الواردة عبر القنوات المتعددة، وتدقيق الوثائق الرسمية، ومطابقة السن مع سعة الشُعبة، وإدارة أولويات قوائم الانتظار وإصدار كتب القبول الرسمية.
+              {% endif %}
+            </p>
+            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+              <a href="/dashboard" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-box-arrow-up-right me-1"></i>{% if ui_lang == 'en' %}Open Manager Hub{% else %}لوحة العمليات{% endif %}
+              </a>
+              <span class="ai-ask-chip" onclick="askAiQuestion('كيف أعتمد طلب تسجيل طفل جديد وأعين الشعبة؟')">
+                <i class="bi bi-robot me-1"></i>{% if ui_lang == 'en' %}Ask AI{% else %}اسأل المساعد{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Staff Ratios & Space Standards -->
+        <div class="col-lg-6 guide-item-card" data-keywords="staff ratios legal standards mosd 1:6 1:8 1:10 space 2sqm نسب المربيات المعايير القانونية مساحة">
+          <div class="card guide-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h5 font-bold text-success">
+                <i class="bi bi-award-fill me-1"></i>
+                {% if ui_lang == 'en' %}Statutory Educator Ratios &amp; Facility Standards{% else %}النسب القانونية للمربيات ومعايير المساحة{% endif %}
+              </h3>
+              <span class="badge bg-success-subtle text-success guide-badge">MoSD Regulations</span>
+            </div>
+            <p class="text-secondary small mb-3">
+              {% if ui_lang == 'en' %}
+              Enforces Ministry of Social Development statutory caregiver-to-child ratios:
+              <br>• <strong>Infants (&lt; 1 yr):</strong> 1:6 (1 caregiver per 6 infants)
+              <br>• <strong>Toddlers (1 - 2 yrs):</strong> 1:8 (1 caregiver per 8 children)
+              <br>• <strong>Preschool (2 - 4 yrs):</strong> 1:10 (1 teacher per 10 children)
+              <br>• <strong>Facility Space:</strong> Minimum net indoor space of 2.0 sq.m per child.
+              {% else %}
+              تطبيق المعايير الإلزامية الصادرة عن وزارة التنمية الاجتماعية:
+              <br>• <strong>قسم الرضع (أقل من سنة):</strong> مربية مؤهلة لكل 6 أطفال (1:6).
+              <br>• <strong>قسم الفطام (1 - 2 سنة):</strong> مربية مؤهلة لكل 8 أطفال (1:8).
+              <br>• <strong>الطفولة المبكرة (2 - 4 سنوات):</strong> معلمة مؤهلة لكل 10 أطفال (1:10).
+              <br>• <strong>المساحة الصافية:</strong> 2.0 متر مربع كحد أدنى لكل طفل في القاعات المغلقة.
+              {% endif %}
+            </p>
+            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+              <a href="/services#managers" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-info-circle me-1"></i>{% if ui_lang == 'en' %}Compliance Guide{% else %}دليل الامتثال{% endif %}
+              </a>
+              <span class="ai-ask-chip" onclick="askAiQuestion('ما هي النسب القانونية المعتمدة للمربيات للأطفال؟')">
+                <i class="bi bi-robot me-1"></i>{% if ui_lang == 'en' %}Ask AI{% else %}اسأل المساعد{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Financial Billing & Ri'aya Subsidies -->
+        <div class="col-lg-6 guide-item-card" data-keywords="billing invoicing tuition riaya social security daman فواتير أقساط برنامج رعاية الضمان الاجتماعي">
+          <div class="card guide-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h5 font-bold text-success">
+                <i class="bi bi-cash-stack me-1"></i>
+                {% if ui_lang == 'en' %}Financial Billing &amp; Ri'aya Claims{% else %}الفوترة وتحصيلات برنامج رعاية (الضمان الاجتماعي){% endif %}
+              </h3>
+              <span class="badge bg-success-subtle text-success guide-badge">Financial Hub</span>
+            </div>
+            <p class="text-secondary small mb-3">
+              {% if ui_lang == 'en' %}
+              Automated generation of monthly tuition invoices, digital payment receipts, and certified attendance dossiers required for filing working mothers' childcare claims with the Social Security Corporation (برنامج رعاية).
+              {% else %}
+              إصدار فواتير الأقساط الشهرية آلياً وسندات القبض الإلكترونية، وتصدير حزم كشوفات الحضور المعتمدة لتقديم مطالبات دعم الأمهات العاملات لمؤسسة الضمان الاجتماعي (برنامج رعاية).
+              {% endif %}
+            </p>
+            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+              <a href="/dashboard" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-box-arrow-up-right me-1"></i>{% if ui_lang == 'en' %}Invoicing Ledgers{% else %}سجل الفواتير{% endif %}
+              </a>
+              <span class="ai-ask-chip" onclick="askAiQuestion('كيف أصدر كشف حضور لمطالبات برنامج رعاية؟')">
+                <i class="bi bi-robot me-1"></i>{% if ui_lang == 'en' %}Ask AI{% else %}اسأل المساعد{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4: Licensing Renewal & Safety Clearance -->
+        <div class="col-lg-6 guide-item-card" data-keywords="licensing renewal civil defense health certificates ترخيص دفاع مدني شهادات صحية تفتيش">
+          <div class="card guide-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h5 font-bold text-success">
+                <i class="bi bi-file-earmark-check-fill me-1"></i>
+                {% if ui_lang == 'en' %}Licensing Renewal &amp; Safety Clearances{% else %}تجديد التراخيص وتصاريح الدفاع المدني{% endif %}
+              </h3>
+              <span class="badge bg-success-subtle text-success guide-badge">Licensing</span>
+            </div>
+            <p class="text-secondary small mb-3">
+              {% if ui_lang == 'en' %}
+              Readiness checklists for annual license renewals: Civil Defense fire safety clearances, mandatory 6-month staff health certificates, and facility safety inspection preparation.
+              {% else %}
+              قوائم التحقق لتجديد التراخيص السنوية: تصاريح السلامة من الدفاع المدني، الشهادات الصحية السارية للكادر (تجدد كل 6 أشهر)، والجاهزية لزيارات التفتيش الميدانية.
+              {% endif %}
+            </p>
+            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+              <a href="/services#managers" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-shield-check me-1"></i>{% if ui_lang == 'en' %}Licensing Checklist{% else %}متطلبات الترخيص{% endif %}
+              </a>
+              <span class="ai-ask-chip" onclick="askAiQuestion('ما هي شروط وإجراءات تجديد ترخيص الحضانة؟')">
+                <i class="bi bi-robot me-1"></i>{% if ui_lang == 'en' %}Ask AI{% else %}اسأل المساعد{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- SECTION 3: EDUCATIONAL SUPERVISORS (SUPERVISOR) -->
+    <!-- ================================================================= -->
+    <div class="role-guide-block mb-5" data-role="supervisor">
+      <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+        <div class="p-2 bg-warning text-dark rounded-3">
+          <i class="bi bi-clipboard-check-fill fs-4"></i>
+        </div>
+        <div>
+          <h2 class="h4 font-bold mb-0">{% if ui_lang == 'en' %}3. Educational Supervisor &amp; QA Auditor Guide (SUPERVISOR){% else %}3. دليل المشرف التربوي والمدقق الميداني (SUPERVISOR){% endif %}</h2>
+          <small class="text-muted">{% if ui_lang == 'en' %}On-site quality audits, 40-point rubric, daily care reports approval, incident field logging, and developmental tracking.{% else %}التفتيش الميداني، قائمة الـ 40 معيار جودة، اعتماد التقارير اليومية، وتوثيق الحوادث الميدانية.{% endif %}</small>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <!-- Card 1: QA Inspection Rubric -->
+        <div class="col-lg-6 guide-item-card" data-keywords="supervision qa audit inspection 40-point rubric violations إشراف تفتيش جودة رقابة مخالفات">
+          <div class="card guide-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h5 font-bold text-dark">
+                <i class="bi bi-card-checklist me-1 text-warning"></i>
+                {% if ui_lang == 'en' %}40-Point Quality Assurance Rubric &amp; Audits{% else %}قائمة الـ 40 معيار جودة والرقابة الميدانية{% endif %}
+              </h3>
+              <span class="badge bg-warning-subtle text-dark guide-badge">/services#supervisors</span>
+            </div>
+            <p class="text-secondary small mb-3">
+              {% if ui_lang == 'en' %}
+              Conduct on-site audits reconciling physical headcounts against live digital rosters. Evaluate hygiene, ventilation, curriculum appropriateness, first-aid readiness, and instantly log corrective actions or violations for MoSD directorates.
+              {% else %}
+              تنفيذ الزيارات التفتيشية ومطابقة الحضور الفعلي للأطفال مع السجلات الرقمية. تقييم النظافة والتهوية والوسائل التعليمية وجاهزية الإسعافات، وتوثيق المخالفات والتوصيات رقمياً لمديرية التنمية المختصة.
+              {% endif %}
+            </p>
+            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+              <a href="/services#supervisors" class="btn btn-sm btn-outline-dark">
+                <i class="bi bi-box-arrow-up-right me-1"></i>{% if ui_lang == 'en' %}Supervisor Portal{% else %}بوابة المشرفين{% endif %}
+              </a>
+              <span class="ai-ask-chip" onclick="askAiQuestion('كيف أدقق سجل الحضور والنسب القانونية في زيارة تفتيشية؟')">
+                <i class="bi bi-robot me-1"></i>{% if ui_lang == 'en' %}Ask AI{% else %}اسأل المساعد{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Daily Care Report Authoring -->
+        <div class="col-lg-6 guide-item-card" data-keywords="daily reports meals naps mood activities teacher notes تقارير يومية وجبات قيلولة مزاج ملاحظات">
+          <div class="card guide-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h5 font-bold text-dark">
+                <i class="bi bi-journal-text me-1 text-warning"></i>
+                {% if ui_lang == 'en' %}Daily Care Report Authoring &amp; Review{% else %}إعداد واعتماد التقارير اليومية للأطفال{% endif %}
+              </h3>
+              <span class="badge bg-warning-subtle text-dark guide-badge">Daily Reports</span>
+            </div>
+            <p class="text-secondary small mb-3">
+              {% if ui_lang == 'en' %}
+              Log arrival/departure times, breakfast/lunch/snack intake, nap intervals, canonical mood states (Happy, Calm, Energetic, Tired, Fussy, Sad), and developmental observations before submitting for manager review.
+              {% else %}
+              تدوين أوقات الوصول والمغادرة، وجبات الإفطار والغداء والسناك، فترات القيلولة، الحالة المزاجية من الحالات الست المعتمدة، والملاحظات النمائية قبل رفع التقرير لمدير الحضانة للاعتماد والنشر.
+              {% endif %}
+            </p>
+            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+              <a href="/dashboard" class="btn btn-sm btn-outline-dark">
+                <i class="bi bi-box-arrow-up-right me-1"></i>{% if ui_lang == 'en' %}Reports Hub{% else %}إدارة التقارير{% endif %}
+              </a>
+              <span class="ai-ask-chip" onclick="askAiQuestion('كيف أعد وأرسل التقرير اليومي للصف؟')">
+                <i class="bi bi-robot me-1"></i>{% if ui_lang == 'en' %}Ask AI{% else %}اسأل المساعد{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Field Incident Logging -->
+        <div class="col-lg-6 guide-item-card" data-keywords="incident reporting emergency injury p1 p2 p3 first aid بلاغ حادث إصابة طوارئ إسعاف أولياء الأمور">
+          <div class="card guide-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h5 font-bold text-dark">
+                <i class="bi bi-heart-pulse-fill me-1 text-danger"></i>
+                {% if ui_lang == 'en' %}Field Incident Logging &amp; Emergency SLAs{% else %}توثيق حوادث السلامة وسرعة الاستجابة الطارئة{% endif %}
+              </h3>
+              <span class="badge bg-danger-subtle text-danger guide-badge">Emergency</span>
+            </div>
+            <p class="text-secondary small mb-3">
+              {% if ui_lang == 'en' %}
+              Immediate first-aid logging and tagging of severity tiers: P1 Critical (hospital transfer - 1hr SLA), P2 Moderate (clinic review - 4hr SLA), P3 Minor (observation/scrapes - logged daily) with instant guardian notifications.
+              {% else %}
+              توثيق الإسعافات الأولية وتصنيف درجات الخطورة: P1 طارئ حرج (نقل طبي - استجابة خلال 60 دقيقة)، P2 متوسط (عيادة - خلال 4 ساعات)، P3 طفيف (ملاحظة - توثيق يومي) مع إشعار ولي الأمر فوراً.
+              {% endif %}
+            </p>
+            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+              <a href="/dashboard" class="btn btn-sm btn-outline-dark">
+                <i class="bi bi-shield-exclamation me-1"></i>{% if ui_lang == 'en' %}Incident Log{% else %}سجل الحوادث{% endif %}
+              </a>
+              <span class="ai-ask-chip" onclick="askAiQuestion('كيف أوثق بلاغ حادث أو إصابة طفل في الصف؟')">
+                <i class="bi bi-robot me-1"></i>{% if ui_lang == 'en' %}Ask AI{% else %}اسأل المساعد{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- SECTION 4: PARENTS & GUARDIANS (PARENT) -->
+    <!-- ================================================================= -->
+    <div class="role-guide-block mb-5" data-role="parent">
+      <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+        <div class="p-2 bg-info text-white rounded-3">
+          <i class="bi bi-people-fill fs-4"></i>
+        </div>
+        <div>
+          <h2 class="h4 font-bold mb-0">{% if ui_lang == 'en' %}4. Parent &amp; Guardian Guide (PARENT){% else %}4. دليل أولياء الأمور (PARENT){% endif %}</h2>
+          <small class="text-muted">{% if ui_lang == 'en' %}Digital enrollment, daily care reports, vaccination ledger, tuition &amp; Ri'aya subsidies, absence logging, and messaging.{% else %}التسجيل الإلكتروني، التقارير اليومية، جدول المطاعيم، الفواتير ودعم رعاية، إبلاغ الغياب، والتواصل.{% endif %}</small>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <!-- Card 1: Child Enrollment -->
+        <div class="col-lg-6 guide-item-card" data-keywords="enrollment admission application birth certificate national id تسجيل قبول تقديم شهادة ميلاد رقم وطني">
+          <div class="card guide-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h5 font-bold text-info">
+                <i class="bi bi-person-plus-fill me-1"></i>
+                {% if ui_lang == 'en' %}Digital Enrollment &amp; Required Documents{% else %}التسجيل الإلكتروني والوثائق الرسمية المطلوبة{% endif %}
+              </h3>
+              <span class="badge bg-info-subtle text-info guide-badge">/enrollment/apply</span>
+            </div>
+            <p class="text-secondary small mb-3">
+              {% if ui_lang == 'en' %}
+              Submit a 3-step digital application attaching: Certified birth certificate with National ID, Family Book, MOH Immunization Record, Medical Health Check, and recent photos.
+              {% else %}
+              تقديم طلب تسجيل إلكتروني بخطوات ميسرة مع إرفاق: شهادة ميلاد مصدقة بالرقم الوطني، دفتر العائلة، بطاقة التطعيمات المعتمدة من وزارة الصحة، فحص طبي عام، وصور شخصية.
+              {% endif %}
+            </p>
+            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+              <a href="/enrollment/apply" class="btn btn-sm btn-outline-info">
+                <i class="bi bi-box-arrow-up-right me-1"></i>{% if ui_lang == 'en' %}Start Application{% else %}بدء التسجيل{% endif %}
+              </a>
+              <span class="ai-ask-chip" onclick="askAiQuestion('ما هي الأوراق المطلوبة لتسجيل طفلي في الحضانة؟')">
+                <i class="bi bi-robot me-1"></i>{% if ui_lang == 'en' %}Ask AI{% else %}اسأل المساعد{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Live Daily Reports -->
+        <div class="col-lg-6 guide-item-card" data-keywords="daily reports real-time meals sleep nap mood teacher notes تقارير يومية وجبات نوم قيلولة مزاج المعلمة">
+          <div class="card guide-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h5 font-bold text-info">
+                <i class="bi bi-journal-check me-1"></i>
+                {% if ui_lang == 'en' %}Live Daily Care &amp; Activity Reports{% else %}متابعة التقارير اليومية المباشرة لطفلك{% endif %}
+              </h3>
+              <span class="badge bg-info-subtle text-info guide-badge">/parent/dashboard</span>
+            </div>
+            <p class="text-secondary small mb-3">
+              {% if ui_lang == 'en' %}
+              View verified check-in/out timestamps, breakfast/lunch/snack intake portions, nap start/end times, mood indicators, and teacher notes published directly by your child's educator.
+              {% else %}
+              الاطلاع اللحظي على وقت الوصول والانصراف، تفاصيل الوجبات والكميات المتناولة، فترات القيلولة، الحالة المزاجية، وملاحظات المعلمة التربوية المباشرة.
+              {% endif %}
+            </p>
+            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+              <a href="/parent/dashboard" class="btn btn-sm btn-outline-info">
+                <i class="bi bi-box-arrow-up-right me-1"></i>{% if ui_lang == 'en' %}Parent Portal{% else %}بوابة ولي الأمر{% endif %}
+              </a>
+              <span class="ai-ask-chip" onclick="askAiQuestion('أين أجد التقارير اليومية لطفلي وكيف أتابعها؟')">
+                <i class="bi bi-robot me-1"></i>{% if ui_lang == 'en' %}Ask AI{% else %}اسأل المساعد{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Immunization & Medical Profile -->
+        <div class="col-lg-6 guide-item-card" data-keywords="vaccines immunization health moh allergy fever مطاعيم تطعيمات صحة الطفل حساسية حرارة">
+          <div class="card guide-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h5 font-bold text-info">
+                <i class="bi bi-shield-plus me-1"></i>
+                {% if ui_lang == 'en' %}Jordan National Immunization &amp; Health Profile{% else %}البرنامج الوطني للتطعيم والملف الصحي{% endif %}
+              </h3>
+              <span class="badge bg-info-subtle text-info guide-badge">MOH Guidelines</span>
+            </div>
+            <p class="text-secondary small mb-3">
+              {% if ui_lang == 'en' %}
+              Track mandatory vaccines (BCG, Hexavalent, Pneumococcal, Rota, Measles, MMR), log food/drug allergies with color alerts, and submit signed medication administration forms.
+              {% else %}
+              متابعة جدول المطاعيم الإلزامية الصادرة عن وزارة الصحة، وتوثيق أي حساسية غذائية أو دوائية مع وضع شارات تنبيهية، وتعبئة نماذج إعطاء الأدوية المعتمدة.
+              {% endif %}
+            </p>
+            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+              <a href="/parent/children" class="btn btn-sm btn-outline-info">
+                <i class="bi bi-box-arrow-up-right me-1"></i>{% if ui_lang == 'en' %}Update Health Info{% else %}تحديث الملف الصحي{% endif %}
+              </a>
+              <span class="ai-ask-chip" onclick="askAiQuestion('ما هو جدول التطعيمات الإلزامي في الأردن؟')">
+                <i class="bi bi-robot me-1"></i>{% if ui_lang == 'en' %}Ask AI{% else %}اسأل المساعد{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4: Absence & Authorized Pickups -->
+        <div class="col-lg-6 guide-item-card" data-keywords="absence delay pickup authorized contacts national id غياب تأخير مستلم مخول بالاستلام هوية">
+          <div class="card guide-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h3 class="h5 font-bold text-info">
+                <i class="bi bi-person-check-fill me-1"></i>
+                {% if ui_lang == 'en' %}Absence Reporting &amp; Authorized Pickups{% else %}الإبلاغ عن الغياب وإدارة المخولين بالاستلام{% endif %}
+              </h3>
+              <span class="badge bg-info-subtle text-info guide-badge">Security</span>
+            </div>
+            <p class="text-secondary small mb-3">
+              {% if ui_lang == 'en' %}
+              Notify nursery staff of planned absence or tardiness in advance. Register and maintain authorized pickup contacts (grandparents, guardians, drivers) with verified National IDs and photos.
+              {% else %}
+              إرسال إشعار مسبق للغياب أو التأخير لتنسيق الوجبات والشُعبة. وإضافة بيانات وصور هويات الأشخاص المعتمدين لاستلام الطفل مع التحقق الأمني الإلزامي.
+              {% endif %}
+            </p>
+            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+              <a href="/parent/children" class="btn btn-sm btn-outline-info">
+                <i class="bi bi-box-arrow-up-right me-1"></i>{% if ui_lang == 'en' %}Manage Pickups{% else %}إدارة المخولين{% endif %}
+              </a>
+              <span class="ai-ask-chip" onclick="askAiQuestion('كيف أبلغ عن غياب طفلي أو أضيف شخصاً مخولاً بالاستلام؟')">
+                <i class="bi bi-robot me-1"></i>{% if ui_lang == 'en' %}Ask AI{% else %}اسأل المساعد{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- SECTION 5: TERMINOLOGY GLOSSARY (معجم المصطلحات) -->
+    <!-- ================================================================= -->
+    <div class="role-guide-block mb-5" data-role="glossary">
+      <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+        <div class="p-2 bg-secondary text-white rounded-3">
+          <i class="bi bi-book-half fs-4"></i>
+        </div>
+        <div>
+          <h2 class="h4 font-bold mb-0">{% if ui_lang == 'en' %}5. Standardized Terminology &amp; Regulatory Glossary{% else %}5. معجم المصطلحات المعتمدة والتشريعات الوطنية{% endif %}</h2>
+          <small class="text-muted">{% if ui_lang == 'en' %}Official definitions, statutory terms, and regulatory authorities governing childcare in Jordan.{% else %}التعريفات المعيارية والمصطلحات الرسمية المنظمة لقطاع الطفولة المبكرة والحضانات في المملكة.{% endif %}</small>
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="card glossary-card p-3 h-100 bg-white">
+            <h6 class="font-bold text-dark mb-1">
+              {% if ui_lang == 'en' %}Kindergarten / Nursery (الحضانة / الحضانات){% else %}الحضانة (مفرد) / الحضانات (جمع){% endif %}
+            </h6>
+            <p class="small text-muted mb-0">
+              {% if ui_lang == 'en' %}
+              The official standardized platform term for all licensed early childhood care institutions in Jordan under MoSD authority.
+              {% else %}
+              المصطلح المعياري المعتمد في المنصة والجهات الرسمية لكافة المؤسسات المرخصة لرعاية الطفولة المبكرة تحت إشراف وزارة التنمية الاجتماعية.
+              {% endif %}
+            </p>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card glossary-card p-3 h-100 bg-white">
+            <h6 class="font-bold text-dark mb-1">
+              {% if ui_lang == 'en' %}Kindergarten Level 2 (المستوى الثاني KG2){% else %}المستوى الثاني KG2{% endif %}
+            </h6>
+            <p class="small text-muted mb-0">
+              {% if ui_lang == 'en' %}
+              Statutory age group (4 years 8 months to 5 years 8 months) governed by the Ministry of Education (MoE) kindergarten regulations.
+              {% else %}
+              المرحلة التعليمية للأطفال من عمر 4 سنوات و8 أشهر حتى 5 سنوات و8 أشهر الخاضعة لمعايير وأنظمة وزارة التربية والتعليم.
+              {% endif %}
+            </p>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card glossary-card p-3 h-100 bg-white">
+            <h6 class="font-bold text-dark mb-1">
+              {% if ui_lang == 'en' %}Statutory Staff Ratio (النسبة القانونية للمربيات){% else %}النسبة القانونية للمربيات للأطفال{% endif %}
+            </h6>
+            <p class="small text-muted mb-0">
+              {% if ui_lang == 'en' %}
+              Mandatory care ratios: 1:6 for infants under 1 year; 1:8 for toddlers (1-2 years); 1:10 for preschool children (2-4 years).
+              {% else %}
+              النسب الإلزامية للمربيات: 1:6 للرضع (أقل من سنة)؛ 1:8 للأطفال (1-2 سنة)؛ 1:10 للطفولة المبكرة (2-4 سنوات).
+              {% endif %}
+            </p>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card glossary-card p-3 h-100 bg-white">
+            <h6 class="font-bold text-dark mb-1">
+              {% if ui_lang == 'en' %}Ri'aya Childcare Subsidy (برنامج رعاية){% else %}برنامج دعم الحضانات "رعاية"{% endif %}
+            </h6>
+            <p class="small text-muted mb-0">
+              {% if ui_lang == 'en' %}
+              Social Security Corporation (SSC) program providing financial support covering nursery fees for eligible working mothers.
+              {% else %}
+              برنامج صادر عن المؤسسة العامة للضمان الاجتماعي للمساهمة في تغطية رسوم الحضانة للأمهات العاملات المستفيدات من تأمين الأمومة.
+              {% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div> <!-- End guideSectionsContainer -->
+
+</div>
+
+<script>
+  // Live filter by search term and role pills
+  document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('guideLiveSearch');
+    const rolePills = document.querySelectorAll('.role-nav-pill');
+    const roleBlocks = document.querySelectorAll('.role-guide-block');
+    const itemCards = document.querySelectorAll('.guide-item-card');
+
+    let activeRole = 'all';
+
+    function filterGuide() {
+      const q = (searchInput.value || '').trim().toLowerCase();
+
+      roleBlocks.forEach(block => {
+        const blockRole = block.getAttribute('data-role');
+        const roleMatches = (activeRole === 'all' || activeRole === blockRole);
+
+        if (!roleMatches) {
+          block.style.display = 'none';
+          return;
+        }
+
+        let visibleCardsInBlock = 0;
+        const cards = block.querySelectorAll('.guide-item-card');
+        
+        if (cards.length === 0) {
+          // Glossary or other non-card blocks
+          const text = block.textContent.toLowerCase();
+          block.style.display = (!q || text.includes(q)) ? 'block' : 'none';
+          return;
+        }
+
+        cards.forEach(card => {
+          const kw = (card.getAttribute('data-keywords') || '').toLowerCase();
+          const content = card.textContent.toLowerCase();
+          const cardMatches = !q || kw.includes(q) || content.includes(q);
+
+          card.parentElement.style.display = cardMatches ? '' : 'none';
+          if (cardMatches) visibleCardsInBlock++;
+        });
+
+        block.style.display = (visibleCardsInBlock > 0 || !q) ? 'block' : 'none';
+      });
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener('input', filterGuide);
+    }
+
+    rolePills.forEach(pill => {
+      pill.addEventListener('click', function () {
+        rolePills.forEach(p => p.classList.remove('active'));
+        this.classList.add('active');
+        activeRole = this.getAttribute('data-target-role');
+        filterGuide();
+      });
+    });
+  });
+
+  // Ask AI Assistant helper
+  function askAiQuestion(question) {
+    if (window.openAssistantChat) {
+      window.openAssistantChat(question);
+    } else {
+      // Trigger global chatbot trigger button if present
+      const chatTrigger = document.querySelector('[data-assistant-toggle="true"]') || document.getElementById('assistantTriggerBtn');
+      if (chatTrigger) {
+        chatTrigger.click();
+        setTimeout(() => {
+          const input = document.getElementById('assistantChatInput') || document.querySelector('#assistantDrawer input');
+          if (input) {
+            input.value = question;
+            const submitBtn = document.getElementById('assistantSendBtn') || document.querySelector('#assistantDrawer form button[type="submit"]');
+            if (submitBtn) submitBtn.click();
+          }
+        }, 300);
+      }
+    }
+  }
+</script>
+{% endblock %}

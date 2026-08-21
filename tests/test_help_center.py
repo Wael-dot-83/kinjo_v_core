@@ -70,6 +70,17 @@ class TestHelpCenter:
         page = self.client.get("/admin/dashboard").text
         assert '/admin/help' in page
 
+    def test_public_help_page_renders(self):
+        res = self.client.get("/help")
+        assert res.status_code == 200
+        page = res.text
+        assert "User Guide" in page or "دليل الاستخدام" in page
+        assert "ADMIN" in page or "مدير النظام" in page
+        assert "MANAGER" in page or "مدير الحضانة" in page
+        assert "SUPERVISOR" in page or "المشرف" in page
+        assert "PARENT" in page or "أولياء الأمور" in page
+
+
 
 def test_legacy_kindergarten_term_absent_from_ui_sources():
     """The term رياض الأطفال was replaced platform-wide by الحضانات.
