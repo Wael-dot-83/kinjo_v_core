@@ -87,7 +87,7 @@
   --type-display: 700 2rem/1.25 var(--font-ar);
   --type-heading: 600 1.125rem/1.4 var(--font-ar);
   --type-label: 500 0.8125rem/1.5 var(--font-ar);
-  --type-body: 400 0.875rem/1.6 var(--font-ar);
+  --type-body: 400 0.875rem/1.8 var(--font-ar);
   --type-mono: 600 1.5rem/1 "Tabular Nums", var(--font-ar);
 }
 

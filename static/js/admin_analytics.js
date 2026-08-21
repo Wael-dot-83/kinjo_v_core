@@ -270,6 +270,54 @@ function safeTranslate(key) {
   return key;
 }
 
+// Update trend chart description for accessibility
+function updateTrendChartDescription() {
+  const descriptionEl = document.getElementById('trendChartDescription');
+  if (!descriptionEl) return;
+
+  const lang = document.documentElement.lang || 'ar';
+  const isEnglish = lang.startsWith('en');
+
+  // Get the current trend data
+  const trendData = window.__trendData || {};
+  const currentMetric = document.getElementById('incidentsTrend')?.checked ? 'incidents' : 'attendance';
+  const dataSeries = trendData[currentMetric] || [];
+
+  if (dataSeries.length === 0) {
+    descriptionEl.textContent = isEnglish
+      ? 'No trend data available for the selected period.'
+      : 'لا توجد بيانات اتجاه متاحة للفترة المحددة.';
+    return;
+  }
+
+  // Find min and max values and their dates
+  let minVal = Infinity, maxVal = -Infinity;
+  let minDate = '', maxDate = '';
+  dataSeries.forEach(point => {
+    if (point.value < minVal) {
+      minVal = point.value;
+      minDate = point.date;
+    }
+    if (point.value > maxVal) {
+      maxVal = point.value;
+      maxDate = point.date;
+    }
+  });
+
+  const formatDate = (dateStr) => {
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateStr).toLocaleDateString(isEnglish ? 'en-US' : 'ar-JO', options);
+  };
+
+  const metricLabel = isEnglish
+    ? (currentMetric === 'attendance' ? 'Attendance Rate' : 'Incident Rate')
+    : (currentMetric === 'attendance' ? 'معدل الحضور' : 'عدد الحوادث');
+
+  descriptionEl.textContent = isEnglish
+    ? `Trend chart showing ${metricLabel} over time. Minimum value: ${minVal.toFixed(1)}% on ${formatDate(minDate)}. Maximum value: ${maxVal.toFixed(1)}% on ${formatDate(maxDate)}.`
+    : `مخطط الاتجاه showing ${metricLabel} over time. أدنى قيمة: ${minVal.toFixed(1)}% في ${formatDate(minDate)}. أقصى قيمة: ${maxVal.toFixed(1)}% في ${formatDate(maxDate)}.`;
+}
+
 function adminAnalyticsLocale() {
   return adminAnalyticsText("ar-JO", "en-US");
 }
@@ -1049,12 +1097,14 @@ function updateTrendChart(type) {
   const chartData = buildTrendChartData(type);
   trendChartInstance.data = chartData.data;
   trendChartInstance.options = chartData.options;
-  trendChartInstance.update("active");
-  // Keep annotations aligned when the displayed metric changes.
-  if (chartAnnotations && chartAnnotations.length) {
-    renderTrendChartWithAnnotations();
-  }
-}
+trendChartInstance.update("active");
+   // Keep annotations aligned when the displayed metric changes.
+   if (chartAnnotations && chartAnnotations.length) {
+     renderTrendChartWithAnnotations();
+   }
+   // Update trend chart description for accessibility
+   updateTrendChartDescription();
+ }
 
 function buildTrendChartData(type) {
   const dataSeries = window.__trendData?.[type] || [];
@@ -4398,7 +4448,41 @@ document.addEventListener('exportData', async function(e) {
   });
 
   window.addEventListener('resize', function() {
-    clearTimeout(window._analyticsResizeTimer);
-    window._analyticsResizeTimer = setTimeout(resizeAllCharts, 200);
-  });
+clearTimeout(window._analyticsResizeTimer);
+     window._analyticsResizeTimer = setTimeout(resizeAllCharts, 200);
+   }
+
+   // Update trend chart description for accessibility
+   function setupTrendChartAccessibility() {
+     const canvas = document.getElementById('trendChart');
+     if (canvas && !canvas.hasAttribute('aria-describedby')) {
+       canvas.setAttribute('aria-describedby', 'trendChartDescription');
+     }
+
+     // Check if the description div already exists
+     let descriptionDiv = document.getElementById('trendChartDescription');
+     if (!descriptionDiv) {
+       // Create the div
+       descriptionDiv = document.createElement('div');
+       descriptionDiv.className = 'visually-hidden';
+       descriptionDiv.id = 'trendChartDescription';
+       descriptionDiv.innerHTML = '<!-- Trend chart description will be inserted here by JavaScript -->';
+
+       // Find the error overlay div
+       const errorOverlay = document.getElementById('trendChartError');
+       if (errorOverlay && errorOverlay.parentNode) {
+         // Insert after the error overlay
+         errorOverlay.parentNode.insertBefore(descriptionDiv, errorOverlay.nextSibling);
+       } else {
+         // Fallback: insert as the last child of the az-chart-wrap div
+         const chartWrap = document.querySelector('.az-chart-wrap');
+         if (chartWrap) {
+           chartWrap.appendChild(descriptionDiv);
+         }
+       }
+     }
+   }
+   // Call the function to set up accessibility
+   setupTrendChartAccessibility();
+ });
 })();
