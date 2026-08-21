@@ -1779,6 +1779,30 @@ async def manager_kpi_page(request: Request, current_user: User = Depends(get_cu
     )
 
 
+@router.get("/manager/children", response_class=HTMLResponse)
+async def manager_children_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Direct manager children page alias."""
+    if not _role_is(current_user, "MANAGER"):
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="manager/children.html",
+        context={"current_user": current_user},
+    )
+
+
+@router.get("/manager/daily-reports", response_class=HTMLResponse)
+async def manager_daily_reports_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Direct manager daily reports review page alias."""
+    if not _role_is(current_user, "MANAGER"):
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="manager/daily_reports_review.html",
+        context={"current_user": current_user},
+    )
+
+
 @router.get("/supervisor/kpi", response_class=HTMLResponse)
 async def supervisor_kpi_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Supervisor personal KPI dashboard"""
