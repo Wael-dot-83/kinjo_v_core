@@ -12,14 +12,14 @@ body.kinjo-public-home .kinjo-public-header {
   position: relative;
   isolation: isolate;
   background-color: var(--kinjo-public-green) !important;
-  background-image: none !important;
+  background-image: linear-gradient(rgba(31, 94, 71, .26), rgba(31, 94, 71, .26)), url('/static/images/kinjo-header-background.jpg') !important;
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
   box-shadow: 0 8px 24px rgba(0, 31, 77, .18) !important;
 }
 
-/* Jordan flag watermark. The existing approved header image is reused as a faint texture; no image asset is altered. */
+/* Jordan flag watermark over the existing approved header image; no image asset is altered. */
 body.kinjo-public-home .kinjo-public-header::before,
 body.kinjo-public-home .kinjo-public-header::after {
   content: "";
@@ -30,13 +30,8 @@ body.kinjo-public-home .kinjo-public-header::after {
 body.kinjo-public-home .kinjo-public-header::before {
   inset: 0;
   z-index: 0;
-  background-image:
-    linear-gradient(to bottom, rgba(0, 0, 0, .82) 0 33.333%, rgba(255, 255, 255, .94) 33.333% 66.666%, rgba(31, 94, 71, .94) 66.666% 100%),
-    url('/static/images/kinjo-header-background.jpg');
-  background-position: center;
-  background-size: cover;
-  background-blend-mode: normal;
-  opacity: .14;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, .82) 0 33.333%, rgba(255, 255, 255, .94) 33.333% 66.666%, rgba(31, 94, 71, .94) 66.666% 100%);
+  opacity: .1;
 }
 
 body.kinjo-public-home .kinjo-public-header::after {
@@ -319,7 +314,7 @@ body.kinjo-public-home #kg-search-section > div.absolute.inset-0.z-0 > div.kinjo
     height: 8rem;
     transform: translate(-50%, -50%);
     border-radius: 1rem;
-    opacity: .08;
+    opacity: .07;
   }
 
   body.kinjo-public-home .kinjo-public-header::after {
