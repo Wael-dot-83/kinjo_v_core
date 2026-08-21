@@ -20,7 +20,7 @@
   --kinjo-color-primary: var(--kinjo-action);
   --kinjo-color-primary-hover: var(--kinjo-action-hover);
   --kinjo-color-secondary: #475569;
-  --kinjo-color-success: #10b981;
+  --kinjo-color-success: #c5a059;
   --kinjo-color-warning: #f59e0b; /* Adjusted for better contrast on light backgrounds */
   --kinjo-color-danger: #ef4444;
   /* --kinjo-color-danger is tuned as a FILL (badges, borders, icon chips). As
@@ -44,20 +44,20 @@
   --kinjo-color-warning-text: #92620a;      /* 5.28:1 on white; fill amber 2.15:1 */
   --kinjo-color-danger-action: #c81e1e;      /* 5.74:1 with white, for destructive buttons */
   --kinjo-color-danger-text-strong: #b91c1c;/* 6.47:1 on white, for status words */
-  --kinjo-color-success-text-on-tint: #036347;  /* 5.81:1 on the success tint */
+  --kinjo-color-success-text-on-tint: #002f6c;  /* navy on the gold-tinted success surface */
   --kinjo-color-warning-text-on-tint: #7d5408;  /* 5.53:1 on the amber tint */
   /* The tint/white variants above go the wrong way on a dark ground: the
      dark amber measured 1.55:1 on the supervisor banner's navy. 6.5:1 there. */
   --kinjo-color-warning-on-dark: #fbbf24;
   /* The deep end of the supervisor banner's sweep. Dark enough that both
      white (7.6:1) and the on-dark amber (4.6:1) stay legible over it. */
-  --kinjo-color-teal-deep: #115e59;
+  --kinjo-color-teal-deep: #164f8a;
   --kinjo-color-neutral-text: #4b5563;      /* 7.56:1 on white */
   /* Status TINTS -- the surfaces the *-text-on-tint foregrounds are measured
      against. These already existed as literals inside .k-badge-* rules; naming
      them means a status chip anywhere can use the same pair instead of
      inventing a new one. */
-  --kinjo-color-success-tint: #EAF2FF;
+  --kinjo-color-success-tint: #fff7e6;
   --kinjo-color-danger-tint: #fee2e2;
   /* The auth pages sit on a warm cream ground, where the blue link token
      fights the orange identity. This is the same burnt orange, dark enough to
@@ -104,8 +104,8 @@
      managed 1.23:1 on white. #064E32 measures 9.80:1 on a white card and 9.31:1
      on the page canvas behind it. */
   --kinjo-color-border: #002F6C;
-  --kinjo-color-border-hover: #043A25;
-  --kinjo-color-border-subtle: #DCEAE3;
+  --kinjo-color-border-hover: #164f8a;
+  --kinjo-color-border-subtle: #d8e4f2;
   --kinjo-color-ring: rgba(37, 99, 235, 0.3);
   --agency-chart-surface: #ffffff;
   --agency-chart-border: var(--kinjo-color-border);
@@ -129,10 +129,10 @@
      structure and top-menu.css the nav's; neither hardcodes a colour, and
      nothing overrides these with !important. */
   --admin-header-bg: #002F6C;
-  --admin-header-border: #043A25;
+  --admin-header-border: #164f8a;
   --admin-header-ink: #ffffff;          /* 9.80:1 */
-  --admin-header-ink-muted: #A7CBB8;    /* 5.54:1 — the user's role line */
-  --admin-header-ink-soft: #DCEBE3;     /* 7.95:1 — control icons */
+  --admin-header-ink-muted: #bfdbfe;    /* readable indigo-muted role line */
+  --admin-header-ink-soft: #e0ecff;     /* readable control icons */
   --admin-header-hover: rgba(255, 255, 255, 0.12);
   --admin-header-divider: rgba(255, 255, 255, 0.22);
   --admin-header-avatar-bg: #D4AF37;    /* the logo badge's gold, reused */
@@ -282,7 +282,7 @@
    without a per-component rule, which is the same strategy dark-mode.css uses. */
 @media (prefers-contrast: more) {
   :root {
-    --kinjo-color-border: #043a25;
+    --kinjo-color-border: #002f6c;
   --kinjo-color-border-subtle: #D8E4F2;
     --kinjo-color-text-muted: #40505A;
     --kinjo-focus-ring-width: 3px;
