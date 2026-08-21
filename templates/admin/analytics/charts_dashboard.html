@@ -7,6 +7,10 @@ block extra_head %}
   integrity="sha384-cCVCZkAjYNxaYKbM8lsArLznDF/SvMFr1jcZrvOpSTCa0W40ZAdLzHCEulnUa5i7"
   crossorigin="anonymous"
 ></script>
+<script
+  defer
+  src="/static/js/plotly-locale-ar.js?v=1.0"
+></script>
 <style>
   .ce-layout {
     display: flex;
@@ -1873,7 +1877,8 @@ block extra_head %}
     if (filterState.governorate) params.set('governorate', filterState.governorate);
     if (filterState.kindergarten_id) params.set('kindergarten_id', filterState.kindergarten_id);
     try {
-      var resp = await fetch('/api/admin/charts/data?' + params, {
+      var fetchFn = window.fetchWithAuth || fetch;
+      var resp = await fetchFn('/api/admin/charts/data?' + params, {
         headers: { 'Accept': 'application/json' }
       });
       if (!resp.ok) return null;
@@ -2075,7 +2080,8 @@ block extra_head %}
     var list = document.getElementById('schedList');
     list.innerHTML = '<span class="text-muted small">' + tEn('Loading…', 'جارٍ التحميل…') + '</span>';
     try {
-      var resp = await fetch(SCHED_API, { headers: { 'Accept': 'application/json' } });
+      var fetchFn = window.fetchWithAuth || fetch;
+      var resp = await fetchFn(SCHED_API, { headers: { 'Accept': 'application/json' } });
       if (!resp.ok) throw new Error('http ' + resp.status);
       var body = await resp.json();
       var rows = body.schedules || [];
@@ -2289,7 +2295,8 @@ block extra_head %}
     clearTask();
 
     try {
-      var resp = await fetch('/api/admin/charts/data?' + params, {
+      var fetchFn = window.fetchWithAuth || fetch;
+      var resp = await fetchFn('/api/admin/charts/data?' + params, {
         headers: { 'Accept': 'application/json' }
       });
       if (!resp.ok) {
@@ -2650,9 +2657,11 @@ block extra_head %}
         modeBarButtonsToRemove: ['sendDataToCloud'],
         displaylogo: false,
         scrollZoom: true,
-        doubleClick: 'reset'
+        doubleClick: 'reset',
+        locale: LANG === 'ar' ? 'ar' : 'en'
       };
       Plotly.newPlot(out, traces, layout, plotlyConfig);
+      registerChartResizeObserver(out);
       updateLastUpdated();
       _currentFigDiv = out;
 
@@ -2668,6 +2677,24 @@ block extra_head %}
     }
 
     renderTable(data);
+  }
+
+  // ── Chart Resize Observer ────────────────────────────────────────────────
+  let _chartResizeObserver = null;
+  function registerChartResizeObserver(container) {
+    if (!container || typeof Plotly === 'undefined') return;
+    if (_chartResizeObserver) {
+      _chartResizeObserver.disconnect();
+      _chartResizeObserver = null;
+    }
+    if (window.ResizeObserver) {
+      _chartResizeObserver = new ResizeObserver(function() {
+        if (container && container.offsetParent !== null && typeof Plotly !== 'undefined' && container.data) {
+          Plotly.Plots.resize(container);
+        }
+      });
+      _chartResizeObserver.observe(container);
+    }
   }
 
   // ── Drilldown ────────────────────────────────────────────────────────────
@@ -3070,7 +3097,8 @@ block extra_head %}
 
   async function pollTask(taskId) {
     try {
-      var resp = await fetch('/api/admin/charts/task/' + taskId, { headers: { 'Accept': 'application/json' } });
+      var fetchFn = window.fetchWithAuth || fetch;
+      var resp = await fetchFn('/api/admin/charts/task/' + taskId, { headers: { 'Accept': 'application/json' } });
       var data = await resp.json();
       document.getElementById('taskProgressBar').style.width = data.progress + '%';
       document.getElementById('taskProgressBar').setAttribute('aria-valuenow', data.progress);
@@ -3132,11 +3160,12 @@ block extra_head %}
       // server processes 1 aggregation query at a time instead of 5 in
       // parallel. Each KPI card populates as its data arrives.
       _kpiCache = {};
+      var fetchFn = window.fetchWithAuth || fetch;
       for (var i = 0; i < sources.length; i++) {
         var src = sources[i];
         var ids = kpiIds[src];
         try {
-          var resp = await fetch('/api/admin/charts/data?source=' + encodeURIComponent(src) +
+          var resp = await fetchFn('/api/admin/charts/data?source=' + encodeURIComponent(src) +
             '&date_from=' + dateFrom + '&date_to=' + dateTo + '&chart_type=bar', {
             headers: { 'X-CSRF-Token': getCsrfToken() },
             signal: _kpiAbort.signal
@@ -3206,6 +3235,11 @@ block extra_head %}
     if (label) label.textContent = isCollapsed
       ? tEn('Show Filters', 'إظهار الفلاتر')
       : tEn('Hide Filters', 'إخفاء الفلاتر');
+    if (_currentFigDiv && typeof Plotly !== 'undefined') {
+      setTimeout(function() {
+        Plotly.Plots.resize(_currentFigDiv);
+      }, 200);
+    }
   }
 
   // ── Quick Range Selector ─────────────────────────────────────────────────
@@ -3314,6 +3348,13 @@ block extra_head %}
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
         renderChart();
+      }
+    });
+
+    // Responsive resize handler
+    window.addEventListener('resize', function() {
+      if (_currentFigDiv && typeof Plotly !== 'undefined' && _currentFigDiv.offsetParent !== null) {
+        Plotly.Plots.resize(_currentFigDiv);
       }
     });
 
