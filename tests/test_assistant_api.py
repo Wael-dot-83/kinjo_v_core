@@ -368,3 +368,16 @@ def test_assistant_raaf_redacted_response_on_admin_guardrail(client):
     data = response.json()
     assert data["intent"] == "admin_security_restricted"
     assert data["audit_trail"]["redactions_applied"] is True
+
+
+def test_assistant_chat_user_guide_help_center(client):
+    """Verify user guide and help center intent in Arabic and English."""
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "أين أجد دليل الاستخدام ومركز المساعدة الشامل للمنصة؟", "lang": "ar"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent"] == "user_guide_help_center"
+    assert any("/help" in a["url"] for a in data["actions"])
+

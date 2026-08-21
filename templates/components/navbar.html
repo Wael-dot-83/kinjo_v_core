@@ -109,6 +109,11 @@
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="parentSupportMenu">
                         <li>
+                            <a class="dropdown-item" href="/help">
+                                <i class="bi bi-book me-2"></i><span data-i18n="nav.help">{% if ui_lang == 'en' %}User Guide &amp; Help Center{% else %}دليل الاستخدام الشامل{% endif %}</span>
+                            </a>
+                        </li>
+                        <li>
                             <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#helpExpressModal">
                                 <i class="bi bi-question-circle me-2"></i><span data-i18n="nav.help">{% if ui_lang == 'en' %}Quick guide{% else %}الدليل السريع{% endif %}</span>
                             </a>
@@ -299,6 +304,11 @@
                 <li class="nav-item">
                     <a class="nav-link" href="/contact">
                         <span>{% if ui_lang == 'en' %}Contact{% else %}اتصل بنا{% endif %}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/help">
+                        <i class="bi bi-book me-1"></i><span>{% if ui_lang == 'en' %}Help &amp; Guide{% else %}دليل الاستخدام{% endif %}</span>
                     </a>
                 </li>
                 <li class="nav-item">

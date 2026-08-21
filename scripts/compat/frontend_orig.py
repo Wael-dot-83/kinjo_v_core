@@ -219,6 +219,11 @@ async def service_guide_page(request: Request):
     )
 
 
+@router.get("/help", response_class=HTMLResponse)
+async def help_page(request: Request, current_user: Optional[models.User] = Depends(get_current_user_optional)):
+    return templates.TemplateResponse(request=request, name="public/help.html", context={"current_user": current_user})
+
+
 @router.get("/faq", response_class=HTMLResponse)
 async def faq_page(request: Request):
     return templates.TemplateResponse(request=request, name="public/faq.html", context={"current_user": None})
@@ -269,6 +274,7 @@ async def robots_txt():
         "Allow: /$",
         "Allow: /about",
         "Allow: /services",
+        "Allow: /help",
         "Allow: /faq",
         "Allow: /contact",
         "Allow: /sitemap",
@@ -296,7 +302,7 @@ async def robots_txt():
 @router.get("/sitemap.xml", include_in_schema=False)
 async def sitemap_xml(request: Request):
     public_paths = [
-        "/", "/about", "/services", "/faq", "/contact", "/sitemap",
+        "/", "/about", "/services", "/help", "/faq", "/contact", "/sitemap",
         "/privacy", "/terms", "/disclaimer", "/copyright",
         "/login",
     ]
