@@ -66,7 +66,7 @@
   function escapeHtml(value) {
     return String(value == null ? '' : value)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
   function formatDistance(km) { return Number(km).toFixed(1) + ' ' + t('km', 'ÙƒÙ…'); }
   function haversineDistanceKm(lat1, lon1, lat2, lon2) {

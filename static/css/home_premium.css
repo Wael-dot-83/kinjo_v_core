@@ -81,7 +81,7 @@
 .kinjo-home-lead {
   max-width: 58ch;
   margin-bottom: 1.75rem;
-  color: #475569;
+  color: var(--kinjo-color-text-secondary);
   font-size: clamp(1rem, 1.4vw, 1.15rem);
   line-height: 1.75;
 }
@@ -153,7 +153,7 @@
 
 .kinjo-home-stats dd {
   margin: 0;
-  color: #475569;
+  color: var(--kinjo-color-text-secondary);
   font-size: 0.84rem;
   line-height: 1.5;
 }
@@ -546,7 +546,7 @@
 }
 
 .kinjo-home-audience .kinjo-home-user-card {
-  background: #FFFFFF !important;
+  background: var(--kinjo-color-bg-surface) !important;
 }
 
 /* ── Call To Action Band ─────────────────────────────────────────────────── */
@@ -729,7 +729,7 @@
   background: linear-gradient(155deg, #F8FAFC 0%, #EFF6FF 50%, #F6F8FC 100%) !important;
   border-top: 4px solid transparent !important;
   border-image: linear-gradient(90deg, #002F6C, #93C5FD, #C5A059) 1 !important;
-  color: #475569 !important;
+  color: var(--kinjo-color-text-secondary) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }
 
@@ -787,8 +787,8 @@
   gap: 0.5rem;
   padding: 0.6rem 1.2rem;
   border-radius: 0.75rem;
-  background: #0F172A;
-  color: #FFFFFF;
+  background: var(--kinjo-color-text-primary);
+  color: var(--kinjo-color-text-inverse);
   font-weight: 700;
   font-size: 0.9rem;
   text-decoration: none;
@@ -826,12 +826,12 @@
 
 .kinjo-home-app-feature-text {
   font-size: 0.95rem;
-  color: #475569;
+  color: var(--kinjo-color-text-secondary);
   line-height: 1.6;
 }
 
 .kinjo-home-app-mockup {
-  background: linear-gradient(180deg, #F8FAFC 0%, #EFF6FF 100%);
+  background: linear-gradient(180deg, var(--kinjo-color-neutral-surface) 0%, var(--kinjo-color-info-tint) 100%);
   border: 1px solid rgba(226, 232, 240, 0.8);
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
 }

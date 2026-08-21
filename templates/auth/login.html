@@ -779,15 +779,15 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     }
     .auth-lang-btn:hover,
     .auth-lang-btn:focus-visible {
-      background: #1e293b;
-      color: #a8d4c4;
-      border-color: #2f7d62;
+      background: var(--kinjo-color-text-primary);
+      color: var(--admin-header-ink-muted);
+      border-color: var(--kinjo-color-border-hover);
     }
     .auth-mobile-logo-text-name {
-      color: #f1f5f9;
+      color: var(--kinjo-color-text-inverse);
     }
     .auth-mobile-logo-text-sub {
-      color: #64748b;
+      color: var(--kinjo-color-text-muted);
     }
   }
 </style>
@@ -807,7 +807,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
       <div class="auth-brand-logo-wrap">{{ kinjo_logo(size='navbar') }}</div>
       <h2 class="auth-brand-title">{% if ui_lang == 'en' %}KinJo Platform{% else %}منصة KinJo{% endif %}</h2>
       <p class="auth-brand-tagline">
-        {% if ui_lang == 'en' %} The complete kindergarten management platform for administrators, directors, supervisors, and parents. {% else %} المنصة الوطنية الموحدة لإدارة ومتابعة الحضانات ورياض الأطفال في الأردن. {% endif %}
+        {% if ui_lang == 'en' %} The complete early childhood management platform for administrators, directors, supervisors, and parents. {% else %} المنصة الوطنية الموحدة لإدارة ومتابعة الحضانات ومراكز الطفولة المبكرة في الأردن. {% endif %}
       </p>
       <ul class="auth-brand-features">
         <li>
@@ -877,7 +877,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
           {%
           if
           session_expired
-          %}style="color: #d97706;"
+          %}style="color: var(--kinjo-color-warning-text);"
           {%
           endif
           %}
@@ -935,7 +935,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
         role="alert"
         aria-live="assertive"
         aria-atomic="true"
-        style="border-inline-start: 4px solid #dc2626"
+        style="border-inline-start: 4px solid var(--kinjo-color-danger-text)"
       >
         <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
         <span id="loginErrorMessage"></span>
@@ -1045,7 +1045,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
           <p
             id="capsLockWarning"
             class="af-hint"
-            style="display: none; color: #b45309"
+            style="display: none; color: var(--kinjo-color-warning-text)"
           >
             <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Caps Lock is on{% else %}مفتاح Caps Lock
@@ -1469,7 +1469,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
       const authHeading = document.getElementById("authHeading");
       if (authHeading) {
         authHeading.innerHTML = tr("انتهت الجلسة", "Session Expired");
-        authHeading.style.color = "#d97706";
+        authHeading.style.color = "var(--kinjo-color-warning-text)";
       }
 
       const authSubheading = document.getElementById("authSubheading");

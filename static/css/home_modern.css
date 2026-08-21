@@ -4,15 +4,15 @@
    Tailwind, Bootstrap, and legacy marketing overrides. */
 
 :root {
-  --home-ink: var(--kinjo-color-text-primary, #0f172a);
-  --home-muted: var(--kinjo-color-text-secondary, #475569);
-  --home-paper: var(--kinjo-color-bg-body, #faf9f6);
-  --home-surface: var(--kinjo-color-bg-surface, #ffffff);
-  --home-brand: var(--kinjo-brand, #002f6c);
-  --home-action: var(--kinjo-action, #1e40af);
-  --home-action-dark: var(--kinjo-action-hover, #1e3a8a);
-  --home-gold: #c5a059;
-  --home-line: var(--kinjo-color-border-subtle, #d8e4f2);
+  --home-ink: var(--kinjo-color-text-primary);
+  --home-muted: var(--kinjo-color-text-secondary);
+  --home-paper: var(--kinjo-color-bg-body);
+  --home-surface: var(--kinjo-color-bg-surface);
+  --home-brand: var(--kinjo-brand);
+  --home-action: var(--kinjo-action);
+  --home-action-dark: var(--kinjo-action-hover);
+  --home-gold: var(--kinjo-color-success);
+  --home-line: var(--kinjo-color-border-subtle);
   --home-radius: 1.25rem;
 }
 
@@ -81,7 +81,7 @@ body.kinjo-public-home #kg-search-section {
   isolation: isolate;
   min-height: 39rem;
   padding-block: clamp(4.5rem, 9vw, 7rem) clamp(3.5rem, 7vw, 5.5rem) !important;
-  background-color: #002f6c !important;
+  background-color: var(--kinjo-brand) !important;
 }
 
 body.kinjo-public-home #kg-search-section::before {
@@ -138,7 +138,7 @@ body.kinjo-public-home #kg-search-section h1 {
 }
 
 body.kinjo-public-home #kg-search-section > div.relative > div.text-center.max-w-3xl h1 {
-  color: #ffffff !important;
+  color: var(--kinjo-color-text-inverse) !important;
   text-shadow: 0 2px 18px rgba(0, 31, 77, .34);
 }
 
@@ -178,7 +178,7 @@ body.kinjo-public-home #kg-search-section .glass-card {
 body.kinjo-public-home #kg-search-section input,
 body.kinjo-public-home #kg-search-section select {
   min-height: 2.875rem;
-  border-color: #b8cbe4 !important;
+  border-color: var(--kinjo-color-public-border) !important;
   color: var(--home-ink) !important;
   box-shadow: none !important;
 }
@@ -204,13 +204,13 @@ body.kinjo-public-home #kg-search-btn:hover {
 body.kinjo-public-home .kg-quick-gov-pill {
   min-height: 2.25rem;
   padding-inline: .8rem !important;
-  border-color: #c8d8ee !important;
+  border-color: var(--kinjo-color-border-subtle) !important;
   color: var(--home-brand) !important;
 }
 
 body.kinjo-public-home .kg-quick-gov-pill:hover,
 body.kinjo-public-home .kg-quick-gov-pill.bg-primary {
-  color: #fff !important;
+  color: var(--kinjo-color-text-inverse) !important;
   background: var(--home-brand) !important;
   border-color: var(--home-brand) !important;
 }
@@ -231,7 +231,7 @@ body.kinjo-public-home main > section[aria-label="Key Portal Highlights"] {
 }
 
 body.kinjo-public-home main > section[aria-label="Key Portal Highlights"] .text-tertiary {
-  color: #f1cd82 !important;
+  color: var(--kinjo-color-gold-soft) !important;
 }
 
 body.kinjo-public-home main > section[aria-label="Trusted Institutional Partners"],
@@ -241,7 +241,7 @@ body.kinjo-public-home main > section[aria-label="Role Portals"] {
 
 body.kinjo-public-home main > section[aria-label="Governance & Quality Standards"],
 body.kinjo-public-home main > section[aria-label="KinJo Mobile App"] {
-  background: #f6f8fc !important;
+  background: var(--kinjo-color-public-surface) !important;
 }
 
 body.kinjo-public-home main > section:not([aria-label="Search Kindergartens"]):not([aria-label="Key Portal Highlights"]) {
@@ -269,7 +269,7 @@ body.kinjo-public-home main > section[aria-label="Governance & Quality Standards
 }
 
 body.kinjo-public-home main > section[aria-label="KinJo Mobile App"] .w-64 {
-  border-color: #002f6c !important;
+  border-color: var(--kinjo-brand) !important;
   box-shadow: 0 24px 48px rgba(0, 31, 77, .18) !important;
 }
 
@@ -285,11 +285,11 @@ body.kinjo-public-home footer :where(h4, p, div, a) {
 
 body.kinjo-public-home footer h3,
 body.kinjo-public-home footer .text-primary {
-  color: #f1cd82 !important;
+  color: var(--kinjo-color-gold-soft) !important;
 }
 
 body.kinjo-public-home footer a:hover {
-  color: #fff !important;
+  color: var(--kinjo-color-text-inverse) !important;
 }
 
 @media (min-width: 900px) {

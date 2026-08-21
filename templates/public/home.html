@@ -17,9 +17,9 @@
   <!-- Chatbot CSS -->
   <link rel="stylesheet" href="/static/css/chatbot.css?v=558c206e2e26">
   <link rel="stylesheet" href="/static/css/home_premium.css?v=2">
-  <link rel="stylesheet" href="/static/css/design-tokens.css?v=1ab512c29d3f">
-  <link rel="stylesheet" href="/static/css/home_modern.css?v=741d1b6f39f6">
-  <link rel="stylesheet" href="/static/css/home_public_overrides.css?v=4b8daa062e4d">
+  <link rel="stylesheet" href="/static/css/design-tokens.css?v=3e072906fea8">
+  <link rel="stylesheet" href="/static/css/home_modern.css?v=3df4c7ff418b">
+  <link rel="stylesheet" href="/static/css/home_public_overrides.css?v=d919568132dd">
 
   <style>
     .material-symbols-outlined {
@@ -106,7 +106,7 @@
             {% if ui_lang == 'en' %}KinJo National Portal{% else %}بوابة KinJo الوطنية{% endif %}
           </span>
           <span class="text-xs text-white/80 font-medium">
-            {% if ui_lang == 'en' %}Jordan Kindergarten Platform{% else %}المنصة الموحدة للحضانات ورياض الأطفال{% endif %}
+            {% if ui_lang == 'en' %}Jordan Early Childhood Platform{% else %}المنصة الموحدة للحضانات والطفولة المبكرة{% endif %}
           </span>
         </div>
       </a>
@@ -278,8 +278,8 @@
           <span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
         </a>
         {% else %}
-        <a class="hidden sm:inline-flex items-center px-3.5 py-2 text-white font-semibold text-sm hover:bg-white/10 transition-colors rounded-lg min-h-[40px]" href="/login" aria-label="Sign In">
-          {% if ui_lang == 'en' %}Sign In{% else %}تسجيل الدخول{% endif %}
+        <a class="hidden sm:inline-flex items-center px-3.5 py-2 text-white font-semibold text-sm hover:bg-white/10 transition-colors rounded-lg min-h-[40px]" href="/login" aria-label="Sign in">
+          {% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}
         </a>
         {% if public_registration_enabled %}
         <a class="inline-flex items-center px-4 py-2 bg-tertiary text-primary font-bold text-sm rounded-lg hover:bg-tertiary/90 transition-all shadow-sm min-h-[40px]" href="/register" aria-label="Register">
@@ -384,7 +384,7 @@
         <div class="flex justify-center mb-6">
           <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white border border-outline-variant/40 shadow-sm text-primary text-xs sm:text-sm font-bold">
             <span class="flex h-2 w-2 rounded-full bg-tertiary"></span>
-            <span>{% if ui_lang == 'en' %}Official Early Childhood &amp; Kindergarten National Portal — Jordan{% else %}المنصة الوطنية الموحدة للحضانات ورياض الأطفال — المملكة الأردنية الهاشمية{% endif %}</span>
+            <span>{% if ui_lang == 'en' %}Official Early Childhood National Portal — Jordan{% else %}المنصة الوطنية الموحدة للحضانات والطفولة المبكرة — المملكة الأردنية الهاشمية{% endif %}</span>
           </div>
         </div>
 
@@ -394,14 +394,14 @@
             {% if ui_lang == 'en' %}
             Find Available Kindergartens in Jordan
             {% else %}
-            البحث عن الحضانات ورياض الأطفال المتاحة في الأردن
+            البحث عن الحضانات ومراكز الطفولة المبكرة المتاحة في الأردن
             {% endif %}
           </h1>
           <p class="text-base sm:text-lg text-on-surface-variant leading-relaxed">
             {% if ui_lang == 'en' %}
             Search the public kindergarten registry by name, location, or district, then review the details currently available for each listing.
             {% else %}
-            ابحث في السجل العام للحضانات ورياض الأطفال بالاسم أو الموقع أو اللواء، ثم اطّلع على البيانات المتاحة حالياً لكل منشأة.
+            ابحث في السجل العام للحضانات ومراكز الطفولة المبكرة بالاسم أو الموقع أو اللواء، ثم اطّلع على البيانات المتاحة حالياً لكل منشأة.
             {% endif %}
           </p>
         </div>
@@ -810,7 +810,7 @@
               <div class="relative w-full max-w-md rounded-2xl overflow-hidden shadow-xl border-2 border-white bg-white group hover:shadow-2xl transition-all">
                 <img
                   src="/static/images/kinjo-home-card-2.png"
-                  alt="{% if ui_lang == 'en' %}Illustration of quality and care standards in licensed nurseries and kindergartens in Jordan{% else %}صورة توضيحية لمعايير الجودة والرعاية في الحضانات ورياض الأطفال المعتمدة في الأردن{% endif %}"
+                  alt="{% if ui_lang == 'en' %}Illustration of quality and care standards in licensed nurseries and early childhood centers in Jordan{% else %}صورة توضيحية لمعايير الجودة والرعاية في الحضانات ومراكز الطفولة المبكرة المعتمدة في الأردن{% endif %}"
                   class="w-full h-auto object-cover max-h-[380px] rounded-xl transform group-hover:scale-[1.02] transition-transform duration-300"
                   loading="lazy"
                 >
@@ -1071,7 +1071,7 @@
             {% if ui_lang == 'en' %}
             A public digital reference for kindergarten information in Jordan, with shared workflows for participating families, providers, and supervisors.
             {% else %}
-            مرجع رقمي عام لمعلومات الحضانات ورياض الأطفال في الأردن، مع مسارات عمل مشتركة للأسر ومقدمي الخدمة والمشرفين المشاركين.
+            مرجع رقمي عام لمعلومات الحضانات ومراكز الطفولة المبكرة في الأردن، مع مسارات عمل مشتركة للأسر ومقدمي الخدمة والمشرفين المشاركين.
             {% endif %}
           </p>
         </div>
@@ -1141,8 +1141,6 @@
         window.location.href = '/?lang=' + targetLang;
       });
     }
-
-    // Mobile drawer toggle
     const mobileBtn = document.getElementById('mobile-menu-toggle-btn');
     const mobileDrawer = document.getElementById('mobile-nav-drawer');
     if (mobileBtn && mobileDrawer) {
@@ -1157,14 +1155,11 @@
         }
       });
     }
-
-    // Desktop menus share one click, keyboard, focus, and Escape contract.
     document.querySelectorAll('[data-menu]').forEach(function (container) {
       const button = container.querySelector('[aria-haspopup="true"]');
       const menu = container.querySelector('[role="menu"]');
       if (!button || !menu) return;
       menu.querySelectorAll('button').forEach(function (item) { item.setAttribute('role', 'menuitem'); });
-
       let hoverOpen = false;
       let clickOpen = false;
       function syncOpenState() {
@@ -1177,11 +1172,8 @@
         clickOpen = false;
         syncOpenState();
       }
-
       syncOpenState();
       button.addEventListener('click', function () {
-        // A pointer enters the button before click fires; keep that click from
-        // immediately reversing the hover-opened state.
         clickOpen = true;
         syncOpenState();
       });
@@ -1226,14 +1218,11 @@
         if (!container.contains(event.target)) closeMenu();
       });
     });
-
-    // Mobile uses the same submenu semantics without competing hover styles.
     document.querySelectorAll('[data-mobile-menu]').forEach(function (container) {
       const button = container.querySelector('[data-mobile-menu-trigger]');
       const menu = container.querySelector('[role="menu"]');
       if (!button || !menu) return;
       menu.querySelectorAll('button').forEach(function (item) { item.setAttribute('role', 'menuitem'); });
-
       function setOpen(open) {
         menu.hidden = !open;
         menu.classList.toggle('hidden', !open);
@@ -1374,7 +1363,7 @@
   </script>
 
   <!-- Search Engine Script: loaded after the public details modal markup exists. -->
-  <script src="/static/js/home-search.js?v=a502133d3140"></script>
+  <script src="/static/js/home-search.js?v=3fabf0fd9720"></script>
 
 </body>
 </html>

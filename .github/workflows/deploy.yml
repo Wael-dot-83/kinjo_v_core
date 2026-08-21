@@ -70,6 +70,8 @@ jobs:
           python-version: '3.13'
           cache: 'pip'
       - run: pip install -r requirements-dev.txt
+      - name: Install Playwright Chromium for browser-backed contracts
+        run: python -m playwright install --with-deps chromium
       - name: P0 suite
         run: pytest -m "p0" --timeout=30 -q
       - name: Full suite

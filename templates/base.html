@@ -180,9 +180,9 @@
            403, 404, auth/change-password and reports/analytics_dashboard.
 
            Same ?v= as admin_base.html on purpose: one asset, one cache key. -->
-      <link rel="stylesheet" href="/static/css/design-tokens.css?v=1ab512c29d3f" />
+      <link rel="stylesheet" href="/static/css/design-tokens.css?v=3e072906fea8" />
 
-      <link rel="stylesheet" href="/static/css/kinjo.css?v=9435f7bfa1ae" />
+      <link rel="stylesheet" href="/static/css/kinjo.css?v=44864de09ee6" />
       <link rel="stylesheet" href="/static/css/parent-dashboard.css?v=8b2aceb795e3" />
       <link rel="stylesheet" href="/static/css/chatbot.css?v=558c206e2e26" />
       {% if ui_dir == 'rtl' %}
@@ -626,8 +626,6 @@
       </script>
 
       <script>
-        // Shared CAPTCHA helper — safe no-op when CAPTCHA is disabled
-        // (hcaptcha/grecaptcha simply won't be defined, so this returns '').
         window.getCaptchaToken = function () {
           try {
             if (typeof hcaptcha !== 'undefined') return hcaptcha.getResponse() || '';
@@ -659,8 +657,6 @@
           }
 
           if (onAuthPage && hasSession) {
-            // Authenticated user on auth page: stay hidden while auth.js redirects.
-            // Safety fallback: reveal after 3 s if redirect never fires.
             var _fallback = setTimeout(reveal, 3000);
             window.__kinjoRevealPage = function () {
               clearTimeout(_fallback);

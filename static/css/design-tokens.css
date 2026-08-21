@@ -66,6 +66,16 @@
   --kinjo-color-link-accessible: #0a58ca;   /* 6.12:1 on the warm canvas;
                                                Bootstrap's #0d6efd is 4.27:1 */
   --kinjo-color-info: #3b82f6;
+  --kinjo-color-gold-soft: #f1cd82;
+  --kinjo-color-indigo: #93c5fd;
+  --kinjo-color-public-surface: #f6f8fc;
+  --kinjo-color-public-ink: #10213a;
+  --kinjo-color-public-border: #cbd8e8;
+  --kinjo-color-public-danger-surface: #fff7f7;
+  --kinjo-color-public-danger-border: #fecaca;
+  --kinjo-color-public-warning-surface: #fffaf0;
+  --kinjo-color-neutral-surface: #f8fafc;
+  --kinjo-color-info-tint: #eff6ff;
   
   /* Page canvas — a warm off-white. The previous #f8fafc was blue-tinted (its blue
      channel sat above its red), which read as cool grey rather than off-white and

@@ -3865,17 +3865,17 @@ code {
 
 /* ── KinJo Brand Header & Navigation ─────────────────────────────────────── */
 .kinjo-public-header {
-  background-color: #002F6C !important;
+  background-color: var(--kinjo-brand) !important;
   background-image: linear-gradient(rgba(0, 47, 108, 0.56), rgba(0, 31, 77, 0.42)), url('/static/images/kinjo-header-background.jpg') !important;
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-  color: #FFFFFF !important;
+  color: var(--kinjo-color-text-inverse) !important;
   box-shadow: 0px 8px 24px rgba(0, 31, 77, 0.22) !important;
 }
 .kinjo-public-header nav a,
 .kinjo-public-header nav button {
-  color: #FFFFFF !important;
+  color: var(--kinjo-color-text-inverse) !important;
   transition: all 0.2s ease-in-out;
 }
 .kinjo-public-header nav a:hover,
@@ -3883,8 +3883,8 @@ code {
   background-color: rgba(255, 255, 255, 0.1) !important;
 }
 .kinjo-public-header .nav-active-indicator {
-  color: #F2C94C !important;
-  border-bottom: 2px solid #F2C94C;
+  color: var(--kinjo-color-gold-soft) !important;
+  border-bottom: 2px solid var(--kinjo-color-gold-soft);
 }
 
 /* ── Modal / Dialog Backdrop Filter (60% Black + 4px Blur) ──────────────── */
@@ -3896,34 +3896,34 @@ code {
 
 /* ── Login Required Dialog Styling (Material UI compliant) ───────────────── */
 .login-dialog-container {
-  background-color: #FFFFFF !important;
+  background-color: var(--kinjo-color-bg-surface) !important;
   border-radius: 12px !important;
   padding: 32px !important;
   box-shadow: 0px 20px 25px -5px rgba(0, 0, 0, 0.1), 0px 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
 }
 .login-dialog-title {
-  color: #002F6C !important;
+  color: var(--kinjo-brand) !important;
   font-weight: 600 !important;
   font-size: 1.35rem !important;
 }
 .login-dialog-body {
-  color: #4F4F4F !important;
+  color: var(--kinjo-color-neutral-text) !important;
   font-size: 1rem !important;
   line-height: 1.6 !important;
 }
 .login-dialog-btn-primary {
-  background-color: #002F6C !important;
-  color: #FFFFFF !important;
+  background-color: var(--kinjo-brand) !important;
+  color: var(--kinjo-color-text-inverse) !important;
   font-weight: 600 !important;
   transition: background-color 0.2s ease;
 }
 .login-dialog-btn-primary:hover {
-  background-color: #1E4C9A !important;
+  background-color: var(--kinjo-action) !important;
 }
 .login-dialog-btn-secondary {
   background-color: transparent !important;
-  border: 2px solid #002F6C !important;
-  color: #002F6C !important;
+  border: 2px solid var(--kinjo-brand) !important;
+  color: var(--kinjo-brand) !important;
   font-weight: 600 !important;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
