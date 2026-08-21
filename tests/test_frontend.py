@@ -374,16 +374,14 @@ class TestFrontendRoutes:
         text = client.get("/login?lang=en").text
         assert 'lang="en"' in text and 'dir="ltr"' in text
         assert "Welcome back" in text
-        assert "Phone number or email" in text
+        assert "Email, phone number, or username" in text
         assert "Keep me signed in" in text
 
     def test_login_identifier_label_phone_email_first(self, client):
-        """Identifier label leads with phone/email to reduce cognitive load (§8);
-        username is demoted to the helper text, not the label."""
+        """Identifier label consolidates email, phone and username into a single clear field."""
         norm = re.sub(r"\s+", " ", client.get("/login").text)
-        assert "رقم الهاتف أو البريد الإلكتروني" in norm
+        assert "البريد الإلكتروني، رقم الهاتف، أو اسم المستخدم" in norm
         assert "اسم المستخدم أو رقم الهاتف" not in norm  # old label gone
-        assert "يمكنك أيضاً استخدام اسم المستخدم" in norm  # helper mentions username
 
     def test_login_localized_validation_messages(self, client):
         """Empty-field messages are the localized, human phrasings (§13.1/13.2),
