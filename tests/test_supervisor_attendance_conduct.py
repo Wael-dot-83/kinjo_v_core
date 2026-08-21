@@ -12,10 +12,20 @@ Verifies:
 5. Scope enforcement: supervisors cannot record attendance for children outside assigned classes.
 6. Role enforcement: non-supervisors receive 403.
 """
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 import pytest
 import models
 from conftest import bearer_headers
+
+
+@pytest.fixture
+def weekday_attendance_clock(monkeypatch):
+    """Keep attendance conduct tests independent of the wall-clock weekday."""
+    from routers import supervisor
+
+    fixed_now = datetime(2026, 8, 17, 9, 0, tzinfo=supervisor.KSA_TZ)  # Monday
+    monkeypatch.setattr(supervisor, "_ksa_now", lambda: fixed_now)
+    return fixed_now
 
 
 def _setup_supervisor_class_and_child(test_db, supervisor_user, sample_kindergarten, sample_class, sample_child):
@@ -79,7 +89,7 @@ def test_supervisor_attendance_page_access(client, supervisor_user, parent_user)
         app.dependency_overrides.clear()
 
 
-def test_get_supervisor_attendance_api(client, supervisor_token, test_db, supervisor_user, sample_kindergarten, sample_class, sample_child):
+def test_get_supervisor_attendance_api(client, supervisor_token, test_db, supervisor_user, sample_kindergarten, sample_class, sample_child, weekday_attendance_clock):
     _setup_supervisor_class_and_child(test_db, supervisor_user, sample_kindergarten, sample_class, sample_child)
 
     res = client.get("/api/supervisor/attendance", headers=bearer_headers(supervisor_token))
@@ -109,7 +119,7 @@ def test_supervisor_attendance_summary_and_status(client, supervisor_token, test
     assert "children" in st_data
 
 
-def test_supervisor_attendance_checkin_checkout_conduct(client, supervisor_token, test_db, supervisor_user, sample_kindergarten, sample_class, sample_child):
+def test_supervisor_attendance_checkin_checkout_conduct(client, supervisor_token, test_db, supervisor_user, sample_kindergarten, sample_class, sample_child, weekday_attendance_clock):
     _setup_supervisor_class_and_child(test_db, supervisor_user, sample_kindergarten, sample_class, sample_child)
 
     # Clean existing logs for child today
@@ -141,7 +151,7 @@ def test_supervisor_attendance_checkin_checkout_conduct(client, supervisor_token
     assert out_data["check_out_time"] is not None
 
 
-def test_supervisor_attendance_mark_absent_and_late(client, supervisor_token, test_db, supervisor_user, sample_kindergarten, sample_class, sample_child):
+def test_supervisor_attendance_mark_absent_and_late(client, supervisor_token, test_db, supervisor_user, sample_kindergarten, sample_class, sample_child, weekday_attendance_clock):
     _setup_supervisor_class_and_child(test_db, supervisor_user, sample_kindergarten, sample_class, sample_child)
 
     from routers.supervisor import _ksa_now
