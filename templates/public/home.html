@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="/static/css/home_premium.css?v=2">
   <link rel="stylesheet" href="/static/css/design-tokens.css?v=3e072906fea8">
   <link rel="stylesheet" href="/static/css/home_modern.css?v=3df4c7ff418b">
-  <link rel="stylesheet" href="/static/css/home_public_overrides.css?v=d919568132dd">
+  <link rel="stylesheet" href="/static/css/home_public_overrides.css?v=221aa1377794">
 
   <style>
     .material-symbols-outlined {
@@ -278,7 +278,7 @@
           <span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
         </a>
         {% else %}
-        <a class="hidden sm:inline-flex items-center px-3.5 py-2 text-white font-semibold text-sm hover:bg-white/10 transition-colors rounded-lg min-h-[40px]" href="/login" aria-label="Sign in">
+        <a class="hidden sm:inline-flex items-center px-3.5 py-2 text-white font-semibold text-sm hover:bg-white/10 transition-colors rounded-lg min-h-[40px]" href="/login" aria-label="{% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}">
           {% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}
         </a>
         {% if public_registration_enabled %}
