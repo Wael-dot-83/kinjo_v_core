@@ -193,7 +193,7 @@
 }
 
 /* ============================================================================
-    MOBILE DRAWER NAVIGATION (<1024px)
+    MOBILE DRAWER NAVIGATION (<1200px)
     ============================================================================ */
 
 .mobile-nav-toggle-btn {
@@ -416,10 +416,10 @@
 }
 
 /* ============================================================================
-    RESPONSIVE BREAKPOINTS (<1024px)
+    RESPONSIVE BREAKPOINTS (<1200px)
     ============================================================================ */
 
-@media (max-width: 1023.98px) {
+@media (max-width: 1199.98px) {
   .top-nav-desktop-container {
     display: none !important;
   }
@@ -429,7 +429,7 @@
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1200px) {
   .mobile-nav-drawer,
   .mobile-nav-backdrop,
   .mobile-nav-toggle-btn {

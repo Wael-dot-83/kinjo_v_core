@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import inspect
 import logging
+from pathlib import Path
 
 import pytest
 
@@ -13,6 +14,9 @@ from audit_actions import AuditAction
 from api import kindergartens as kindergarten_api
 from cache_service import cache_service
 from dashboard_customization import DashboardCustomizationService, dashboard_customization
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _clear_widget_cache(*user_ids: int) -> None:
@@ -28,6 +32,37 @@ def _admin_widgets() -> list[dict]:
 
 def _manager_widgets() -> list[dict]:
     return copy.deepcopy(DashboardCustomizationService.DEFAULT_WIDGETS["manager"])
+
+
+def test_command_center_summary_has_actionable_structured_data_state():
+    summary_js = (
+        PROJECT_ROOT / "static" / "js" / "admin_agency_reports_dashboard_summary.js"
+    ).read_text(encoding="utf-8")
+
+    assert "جهات رسمية" in summary_js
+    assert "requires_structured_data" in summary_js
+    assert 'status: requiresData > 0 ? "warning" : "good"' in summary_js
+    assert "agency-summary-pill__action" in summary_js
+
+
+def test_command_center_toolbar_and_navigation_breakpoint_contracts():
+    dashboard_template = (
+        PROJECT_ROOT / "templates" / "admin_dashboard.html"
+    ).read_text(encoding="utf-8")
+    admin_base = (PROJECT_ROOT / "templates" / "admin_base.html").read_text(
+        encoding="utf-8"
+    )
+    top_menu_css = (PROJECT_ROOT / "static" / "css" / "top-menu.css").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'role="toolbar"' in dashboard_template
+    assert "admin-toolbar-freshness" in dashboard_template
+    assert "admin-toolbar-actions" in dashboard_template
+    assert "admin_agency_reports_dashboard_summary.js?v=1.1" in dashboard_template
+    assert "top-menu.css?v=9411a1b4de42" in admin_base
+    assert "@media (max-width: 1199.98px)" in top_menu_css
+    assert "@media (min-width: 1200px)" in top_menu_css
 
 
 def test_default_and_cached_widgets_are_isolated_between_callers(test_db):

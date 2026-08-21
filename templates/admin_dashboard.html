@@ -1,7 +1,7 @@
 {% extends "admin_base.html" %} {% block title %} {% if ui_lang == 'en' %}KinJo Admin{% else %}إدارة KinJo{% endif %} — {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %} {% endblock %}
 {% block extra_head %} {{ super() }}
 <link rel="stylesheet" href="/static/vendor/uswds/css/uswds.min.css" />
-<link rel="stylesheet" href="/static/css/agency_reports.css?v=ca009fcd7d8b" />
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=ca009fcd7d8c" />
 <link rel="stylesheet" href="/static/css/dashboard-enhanced.css?v=ede6965ae308" />
 <style>
   /* USWDS ships a Latin-only type stack (Source Sans Pro Web) and applies it to
@@ -67,6 +67,29 @@
     flex-wrap: wrap;
   }
 
+  .admin-uswds-dashboard .admin-dashboard-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .admin-uswds-dashboard .admin-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .admin-uswds-dashboard .admin-toolbar-freshness {
+    flex: 1 1 auto;
+  }
+
+  .admin-uswds-dashboard .admin-toolbar-actions {
+    flex: 0 0 auto;
+  }
+
   .admin-uswds-dashboard .admin-header-metric {
     display: inline-flex;
     align-items: center;
@@ -78,6 +101,8 @@
     border: 1px solid var(--dashboard-border);
     border-radius: 999px;
     padding: 0.3rem 0.75rem;
+    white-space: nowrap;
+    min-width: 0;
   }
 
   .admin-uswds-dashboard .admin-header-metric i {
@@ -276,8 +301,36 @@
       justify-content: space-between;
     }
 
+    .admin-uswds-dashboard .admin-dashboard-toolbar {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .admin-uswds-dashboard .admin-toolbar-freshness {
+      flex: 1 1 100%;
+    }
+
+    .admin-uswds-dashboard .admin-toolbar-actions {
+      margin-inline-start: auto;
+    }
+
     .admin-uswds-dashboard .admin-header-metric {
       order: -1;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .admin-uswds-dashboard .admin-toolbar-freshness,
+    .admin-uswds-dashboard .admin-toolbar-actions {
+      width: 100%;
+    }
+
+    .admin-uswds-dashboard .admin-toolbar-freshness {
+      justify-content: space-between;
+    }
+
+    .admin-uswds-dashboard .admin-toolbar-actions .admin-btn-enterprise-refresh {
+      width: 100%;
     }
   }
 </style>
@@ -296,34 +349,38 @@
         endif %}
       </p>
     </div>
-    <div class="admin-page-header-actions admin-header-controls">
-      <span id="last-updated-time" class="admin-header-metric">
-        <i class="bi bi-clock-history" aria-hidden="true"></i>
-        <span id="last-updated-time-value"
-          >{% if ui_lang == 'en' %}Last updated: --:--{% else %}آخر تحديث:
-          --:--{% endif %}</span
-        >
-      </span>
-      <div class="form-check form-check-inline admin-auto-refresh">
-        <input class="form-check-input" type="checkbox" id="autoRefreshCheck" />
-        <label class="form-check-label small" for="autoRefreshCheck">
-          <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
-          {% if ui_lang == 'en' %}Auto-refresh{% else %}تحديث تلقائي{% endif %}
-        </label>
+    <div class="admin-page-header-actions admin-header-controls admin-dashboard-toolbar"
+      role="toolbar"
+      aria-label="{% if ui_lang == 'en' %}Dashboard freshness and update controls{% else %}أدوات حداثة وتحديث بيانات لوحة التحكم{% endif %}">
+      <div class="admin-toolbar-group admin-toolbar-freshness"
+        role="group"
+        aria-label="{% if ui_lang == 'en' %}Data freshness{% else %}حداثة البيانات{% endif %}">
+        <span id="last-updated-time" class="admin-header-metric">
+          <i class="bi bi-clock-history" aria-hidden="true"></i>
+          <span id="last-updated-time-value">{% if ui_lang == 'en' %}Last updated: --:--{% else %}آخر تحديث: --:--{% endif %}</span>
+        </span>
+        <div class="form-check form-check-inline admin-auto-refresh">
+          <input class="form-check-input" type="checkbox" id="autoRefreshCheck" />
+          <label class="form-check-label small" for="autoRefreshCheck">
+            <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+            {% if ui_lang == 'en' %}Auto-refresh{% else %}تحديث تلقائي{% endif %}
+          </label>
+        </div>
       </div>
-      <button
-        class="admin-btn-enterprise-refresh"
-        id="refresh-dashboard"
-        type="button"
-        aria-controls="dashboard-content"
-        aria-label="{% if ui_lang == 'en' %}Refresh dashboard data{% else %}تحديث بيانات لوحة التحكم{% endif %}"
-      >
-        <i class="bi bi-arrow-clockwise refresh-icon" aria-hidden="true"></i>
-        <span class="refresh-text"
-          >{% if ui_lang == 'en' %}Update Data{% else %}تحديث البيانات{% endif
-          %}</span
+      <div class="admin-toolbar-group admin-toolbar-actions"
+        role="group"
+        aria-label="{% if ui_lang == 'en' %}Dashboard actions{% else %}إجراءات لوحة التحكم{% endif %}">
+        <button
+          class="admin-btn-enterprise-refresh"
+          id="refresh-dashboard"
+          type="button"
+          aria-controls="dashboard-content"
+          aria-label="{% if ui_lang == 'en' %}Refresh dashboard data{% else %}تحديث بيانات لوحة التحكم{% endif %}"
         >
-      </button>
+          <i class="bi bi-arrow-clockwise refresh-icon" aria-hidden="true"></i>
+          <span class="refresh-text">{% if ui_lang == 'en' %}Update Data{% else %}تحديث البيانات{% endif %}</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -677,7 +734,7 @@
 <script src="/static/js/chart_utils.js?v=2.1"></script>
 <script src="/static/js/admin_dashboard.js?v=5ef4a2883bd6"></script>
 <script src="/static/js/admin_activity_filters.js?v=1.0"></script>
-<script src="/static/js/admin_agency_reports_dashboard_summary.js?v=1.0"></script>
+<script src="/static/js/admin_agency_reports_dashboard_summary.js?v=1.1"></script>
 {% endblock %}
 
 <!-- impeccable-disable cramped-padding -- measured in Chromium on /admin/dashboard. The flagged

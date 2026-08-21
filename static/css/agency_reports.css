@@ -423,6 +423,13 @@ details[open] .agency-help-summary::before{transform:rotate(90deg)}
 .agency-summary-pill{background:var(--ag-surface-sunken);border-color:var(--ag-border)}
 .agency-summary-pill strong{color:var(--ag-ink)}
 .agency-summary-pill span{color:var(--ag-ink-2)}
+.agency-summary-pill--warning{background:#fffbeb;border-color:#f59e0b}
+.agency-summary-pill--warning strong,.agency-summary-pill--warning span{color:#78350f}
+.agency-summary-pill--good{background:#f0fdf4;border-color:#86efac}
+.agency-summary-pill--good strong,.agency-summary-pill--good span{color:#166534}
+.agency-summary-pill__status{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;font-weight:700}
+.agency-summary-pill__action{display:inline-flex;align-items:center;gap:5px;margin-top:4px;color:#92400e;font-size:.8125rem;font-weight:700;text-decoration:underline;text-underline-offset:2px}
+.agency-summary-pill__action:hover,.agency-summary-pill__action:focus-visible{color:#78350f}
 .agency-status{background:var(--ag-surface-sunken);border-color:var(--ag-border);color:var(--ag-ink)}
 /* Alerts: keep the semantic left border, neutral surface so tints don't glow in dark. */
 @media (prefers-color-scheme: dark){
