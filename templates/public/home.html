@@ -591,7 +591,6 @@
               <span class="material-symbols-outlined animate-spin text-tertiary text-xl" aria-hidden="true">sync</span>
               <span>{% if ui_lang == 'en' %}Loading public listings...{% else %}جارٍ تحميل السجلات العامة...{% endif %}</span>
             </div>
-
             <!-- Results Grid -->
             <div id="kg-results-grid" class="kinjo-results-grid"></div>
 
@@ -621,45 +620,45 @@
 
           </div>
         </div>
-
       </div>
     </section>
 
     <!-- Key Metrics & National Scale Strip -->
-    <section class="bg-primary text-white py-8 border-y border-white/10" aria-label="Key Portal Highlights">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+    <section class="relative text-white py-10 border-y border-white/20 overflow-hidden" style="background: linear-gradient(135deg, rgba(0, 20, 45, 0.78) 0%, rgba(0, 20, 45, 0.86) 100%), url('/static/images/flag.jpg') center/cover no-repeat;" aria-label="Key Portal Highlights">
+      <div class="absolute inset-0 bg-black/40 backdrop-blur-[1px] pointer-events-none"></div>
+      <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 text-center">
           
-          <div class="p-3">
-            <div class="text-2xl sm:text-3xl font-extrabold text-tertiary mb-1">12</div>
-            <div class="text-xs sm:text-sm font-semibold text-white/90">
+          <div class="p-4 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/15 shadow-sm">
+            <div class="text-3xl sm:text-4xl font-extrabold text-[#F2C94C] mb-1 drop-shadow-sm">12</div>
+            <div class="text-xs sm:text-sm font-bold text-white leading-snug">
               {% if ui_lang == 'en' %}Governorates Covered{% else %}محافظة مشمولة بالكامل{% endif %}
             </div>
-            <div class="text-[11px] text-white/70 mt-0.5">{% if ui_lang == 'en' %}Nationwide coverage{% else %}تغطية جغرافية شاملة{% endif %}</div>
+            <div class="text-[11px] text-white/80 mt-1 font-medium">{% if ui_lang == 'en' %}Nationwide coverage{% else %}تغطية جغرافية شاملة{% endif %}</div>
           </div>
 
-          <div class="p-3 border-s border-white/15">
-            <div class="text-2xl sm:text-3xl font-extrabold text-tertiary mb-1">12</div>
-            <div class="text-xs sm:text-sm font-semibold text-white/90">
+          <div class="p-4 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/15 shadow-sm">
+            <div class="text-3xl sm:text-4xl font-extrabold text-[#F2C94C] mb-1 drop-shadow-sm">12</div>
+            <div class="text-xs sm:text-sm font-bold text-white leading-snug">
               {% if ui_lang == 'en' %}Governorates Listed{% else %}المحافظات المدرجة{% endif %}
             </div>
-            <div class="text-[11px] text-white/70 mt-0.5">{% if ui_lang == 'en' %}Browse by location{% else %}تصفح حسب الموقع{% endif %}</div>
+            <div class="text-[11px] text-white/80 mt-1 font-medium">{% if ui_lang == 'en' %}Browse by location{% else %}تصفح حسب الموقع{% endif %}</div>
           </div>
 
-          <div class="p-3 border-s border-white/15">
-            <div class="text-2xl sm:text-3xl font-extrabold text-tertiary mb-1">1</div>
-            <div class="text-xs sm:text-sm font-semibold text-white/90">
-              {% if ui_lang == 'en' %}Public Search{% else %}بحث عام{% endif %}
+          <div class="p-4 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/15 shadow-sm">
+            <div class="text-3xl sm:text-4xl font-extrabold text-[#F2C94C] mb-1 drop-shadow-sm">1</div>
+            <div class="text-xs sm:text-sm font-bold text-white leading-snug">
+              {% if ui_lang == 'en' %}Public Search{% else %}بحث عام مجاني{% endif %}
             </div>
-            <div class="text-[11px] text-white/70 mt-0.5">{% if ui_lang == 'en' %}No login required{% else %}لا يتطلب تسجيل الدخول{% endif %}</div>
+            <div class="text-[11px] text-white/80 mt-1 font-medium">{% if ui_lang == 'en' %}No login required{% else %}لا يتطلب تسجيل الدخول{% endif %}</div>
           </div>
 
-          <div class="p-3 border-s border-white/15">
-            <div class="text-2xl sm:text-3xl font-extrabold text-tertiary mb-1">7+</div>
-            <div class="text-xs sm:text-sm font-semibold text-white/90">
+          <div class="p-4 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/15 shadow-sm">
+            <div class="text-3xl sm:text-4xl font-extrabold text-[#F2C94C] mb-1 drop-shadow-sm">7+</div>
+            <div class="text-xs sm:text-sm font-bold text-white leading-snug">
               {% if ui_lang == 'en' %}Partner Institutions{% else %}جهات ومؤسسات شريكة{% endif %}
             </div>
-            <div class="text-[11px] text-white/70 mt-0.5">{% if ui_lang == 'en' %}Integrated governance{% else %}حوكمة وتنسيق وطني متكامل{% endif %}</div>
+            <div class="text-[11px] text-white/80 mt-1 font-medium">{% if ui_lang == 'en' %}Integrated governance{% else %}حوكمة وتنسيق وطني متكامل{% endif %}</div>
           </div>
 
         </div>
