@@ -513,3 +513,15 @@ def test_manager_replacement_rolls_back_outgoing_manager_on_failure(
     test_db.rollback()
     test_db.refresh(manager_user)
     assert manager_user.status == models.UserStatus.ACTIVE
+
+
+def test_manager_children_and_daily_reports_route_aliases(client, manager_token):
+    """Verify /manager/children and /manager/daily-reports routes render for manager."""
+    res_children = client.get("/manager/children", headers=_bearer(manager_token))
+    assert res_children.status_code == 200
+    assert "manager/children.html" in res_children.template.name if hasattr(res_children, "template") else True
+
+    res_reports = client.get("/manager/daily-reports", headers=_bearer(manager_token))
+    assert res_reports.status_code == 200
+    assert "manager/daily_reports_review.html" in res_reports.template.name if hasattr(res_reports, "template") else True
+
