@@ -4,6 +4,8 @@
 import pytest
 from fastapi.testclient import TestClient
 from main import app
+import models
+from dependencies import get_current_user_optional
 
 
 @pytest.fixture
@@ -93,6 +95,85 @@ def test_assistant_chat_english_support(client):
     assert any(a["url"] == "/contact" for a in data["actions"])
 
 
+def test_assistant_chat_child_age_policy(client):
+    """Test child age policy inquiry (70 days to KG2)."""
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "ما هي الأعمار المقبولة في الحضانة وشروط سن القبول؟", "lang": "ar"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent"] == "child_age_policy"
+    assert "70" in data["reply"] or "الأعمار" in data["reply"]
+
+
+def test_assistant_chat_parent_absence_pickup(client):
+    """Test parent absence notification and pickup contact questions."""
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "كيف أبلغ عن غياب طفلي أو أضيف شخص مستلم مخول بالاستلام؟", "lang": "ar", "role": "parent"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent"] == "parent_attendance_absence"
+    assert any("/parent/children" in a["url"] for a in data["actions"])
+
+
+def test_assistant_chat_parent_messaging(client):
+    """Test parent messaging inquiry."""
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "كيف يمكنني مراسلة المعلمة والاطلاع على الإعلانات؟", "lang": "ar", "role": "parent"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent"] == "parent_messaging_communication"
+
+
+def test_assistant_chat_manager_admissions_workflow(client):
+    """Test manager admissions and waitlist workflow inquiry."""
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "كيف أدير قائمة الانتظار واعتماد طلبات الالتحاق؟", "lang": "ar", "role": "manager"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent"] == "manager_admissions_workflow"
+
+
+def test_assistant_chat_manager_financial_billing(client):
+    """Test manager financial billing and Ri'aya subsidy inquiry."""
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "كيف أصدر مطالبات رعاية والفوترة للأقساط المستحقة؟", "lang": "ar", "role": "manager"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent"] == "manager_financial_billing"
+
+
+def test_assistant_chat_supervisor_daily_reports_workflow(client):
+    """Test supervisor daily report authoring workflow inquiry."""
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "كيف أقوم بكتابة التقرير اليومي وتسجيل الوجبات والقيلولة؟", "lang": "ar", "role": "supervisor"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent"] == "supervisor_daily_reports_workflow"
+
+
+def test_assistant_chat_supervisor_incident_reporting(client):
+    """Test supervisor incident reporting inquiry."""
+    response = client.post(
+        "/api/assistant/chat",
+        json={"message": "كيف أوثق بلاغ سلامة أو إصابة طفل في الصف؟", "lang": "ar", "role": "supervisor"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent"] == "supervisor_incident_reporting"
+
+
 def test_assistant_chat_general_fallback_arabic(client):
     response = client.post(
         "/api/assistant/chat",
@@ -169,9 +250,6 @@ def test_assistant_chat_admin_role_escalation_blocked(client):
 
 def test_assistant_chat_authenticated_admin_kpis(client):
     """Verify authenticated admin gets admin-specific responses."""
-    import models
-    from dependencies import get_current_user_optional
-
     mock_admin = models.User(
         id=1,
         username="admin_test",
@@ -193,11 +271,31 @@ def test_assistant_chat_authenticated_admin_kpis(client):
         app.dependency_overrides.pop(get_current_user_optional, None)
 
 
+def test_assistant_chat_authenticated_admin_charts_explorer(client):
+    """Verify authenticated admin can query charts explorer and scheduled exports."""
+    mock_admin = models.User(
+        id=1,
+        username="admin_test",
+        role=models.UserRole.ADMIN,
+        status=models.UserStatus.ACTIVE,
+    )
+    app.dependency_overrides[get_current_user_optional] = lambda: mock_admin
+
+    try:
+        response = client.post(
+            "/api/assistant/chat",
+            json={"message": "كيف أستخدم مستكشف الرسوم البيانية وأنواع الرسوم وتصدير الرسم؟", "lang": "ar", "role": "admin"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["intent"] == "admin_advanced_analytics_charts"
+        assert any("/admin/analytics/charts" in a["url"] for a in data["actions"])
+    finally:
+        app.dependency_overrides.pop(get_current_user_optional, None)
+
+
 def test_assistant_chat_authenticated_admin_user_directory(client):
     """Verify authenticated admin can query user directory & access tools in English."""
-    import models
-    from dependencies import get_current_user_optional
-
     mock_admin = models.User(
         id=1,
         username="admin_test",
@@ -270,5 +368,3 @@ def test_assistant_raaf_redacted_response_on_admin_guardrail(client):
     data = response.json()
     assert data["intent"] == "admin_security_restricted"
     assert data["audit_trail"]["redactions_applied"] is True
-
-
