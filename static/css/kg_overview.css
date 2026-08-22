@@ -773,3 +773,203 @@
 .ko-pg-btn:hover:not([disabled]) { background: var(--ko-surface2); border-color: var(--ko-blue); }
 .ko-pg-btn.active { background: var(--ko-blue); border-color: var(--ko-blue); color: #fff; font-weight: 700; }
 .ko-pg-btn[disabled] { opacity: .4; cursor: default; }
+
+/* ── 24. Executive Anomaly Strip ────────────────────────── */
+.ko-executive-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: .75rem;
+  padding: 0 1.5rem 1rem;
+}
+.ko-exec-card {
+  background: var(--ko-surface);
+  border-radius: var(--ko-radius-sm);
+  border: 1.5px solid var(--ko-border);
+  padding: .75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  cursor: pointer;
+  transition: all var(--ko-transition);
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+.ko-exec-card:hover {
+  border-color: var(--exec-color, var(--ko-blue));
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+}
+.ko-exec-card.active {
+  border-color: var(--exec-color, var(--ko-blue));
+  background: color-mix(in srgb, var(--exec-color, var(--ko-blue)) 8%, var(--ko-surface));
+  box-shadow: 0 0 0 1px var(--exec-color, var(--ko-blue));
+}
+.ko-exec-icon {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--exec-color, var(--ko-blue)) 14%, transparent);
+  color: var(--exec-color, var(--ko-blue));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+.ko-exec-info { flex: 1; min-width: 0; }
+.ko-exec-num {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--ko-text);
+}
+.ko-exec-label {
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--ko-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: .15rem;
+}
+
+/* ── 25. Search & Filter Bar ────────────────────────────── */
+.ko-search-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: 0 1.5rem 1rem;
+  flex-wrap: wrap;
+}
+.ko-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+}
+.ko-search-icon {
+  position: absolute;
+  inset-inline-start: .75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ko-text-muted);
+  font-size: .9rem;
+  pointer-events: none;
+}
+.ko-search-input {
+  width: 100%;
+  height: 38px;
+  padding-inline-start: 2.25rem;
+  padding-inline-end: 2rem;
+  border-radius: var(--ko-radius-sm);
+  border: 1.5px solid var(--ko-border);
+  background: var(--ko-surface);
+  color: var(--ko-text);
+  font-size: .84rem;
+  transition: border-color var(--ko-transition), box-shadow var(--ko-transition);
+}
+.ko-search-input:focus {
+  outline: none;
+  border-color: var(--ko-blue);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+}
+.ko-search-clear {
+  position: absolute;
+  inset-inline-end: .5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--ko-text-muted);
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: .8rem;
+  transition: all var(--ko-transition);
+}
+.ko-search-clear:hover { background: var(--ko-surface2); color: var(--ko-text); }
+
+/* ── 26. Governorate Drill-Down Chips ───────────────────── */
+.ko-gov-chips-wrap {
+  padding: 0 1.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  white-space: nowrap;
+}
+.ko-gov-chip {
+  padding: .35rem .75rem;
+  border-radius: 100px;
+  border: 1.5px solid var(--ko-border);
+  background: var(--ko-surface);
+  color: var(--ko-text-muted);
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  transition: all var(--ko-transition);
+}
+.ko-gov-chip:hover {
+  border-color: var(--ko-blue);
+  color: var(--ko-blue);
+  background: rgba(37,99,235,.04);
+}
+.ko-gov-chip.active {
+  background: var(--ko-blue);
+  border-color: var(--ko-blue);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(37,99,235,.3);
+}
+.ko-gov-chip-count {
+  padding: .1rem .45rem;
+  border-radius: 100px;
+  background: var(--ko-surface2);
+  color: var(--ko-text);
+  font-size: .7rem;
+  font-weight: 700;
+}
+.ko-gov-chip.active .ko-gov-chip-count {
+  background: rgba(255,255,255,.25);
+  color: #fff;
+}
+
+/* ── 27. Health & Status Indicators ─────────────────────── */
+.ko-health-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .2rem .55rem;
+  border-radius: 100px;
+  font-size: .72rem;
+  font-weight: 700;
+}
+.ko-health-excellent { background: rgba(22,163,74,.12); color: var(--ko-green); border: 1px solid rgba(22,163,74,.25); }
+.ko-health-good      { background: rgba(8,145,178,.12); color: var(--ko-teal);  border: 1px solid rgba(8,145,178,.25); }
+.ko-health-attention { background: rgba(217,119,6,.12); color: var(--ko-amber); border: 1px solid rgba(217,119,6,.25); }
+.ko-health-critical  { background: rgba(220,38,38,.12); color: var(--ko-red);   border: 1px solid rgba(220,38,38,.25); }
+.ko-health-unknown   { background: rgba(107,122,153,.12); color: var(--ko-text-muted); border: 1px solid rgba(107,122,153,.25); }
+
+.ko-fallback-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  font-size: .7rem;
+  color: var(--ko-text-muted);
+  font-style: italic;
+}
+
+/* Page size select */
+.ko-page-size-wrap {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .8rem;
+  color: var(--ko-text-muted);
+}
+

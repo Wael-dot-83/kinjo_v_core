@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/kg_overview.css?v=83d7dd50f8a6">
+<link rel="stylesheet" href="/static/css/kg_overview.css?v=616267bde386">
 {% endblock %}
 
 {% block content %}
@@ -55,6 +55,11 @@
     </small>
   </div>
 
+  <!-- ══ EXECUTIVE HEALTH SUMMARY ══════════════════════════ -->
+  <section aria-label="{% if ui_lang == 'en' %}Executive Health Summary{% else %}الملخص التنفيذي لحالة المنظومة{% endif %}">
+    <div class="ko-executive-strip" id="ko-executive-strip"></div>
+  </section>
+
   <!-- ══ CUSTOMISE DRAWER ══════════════════════════════════ -->
   <div id="ko-customise-wrap"></div>
 
@@ -81,6 +86,12 @@
   </section>
 
   <div class="ko-divider"></div>
+
+  <!-- ══ DRILL-DOWN GOVERNORATE CHIPS ══════════════════════ -->
+  <nav class="ko-gov-chips-wrap" id="ko-gov-chips" aria-label="{% if ui_lang == 'en' %}Governorate drill-down{% else %}التصفح حسب المحافظات{% endif %}"></nav>
+
+  <!-- ══ SEARCH & FILTER BAR ═══════════════════════════════ -->
+  <div class="ko-search-filter-bar" id="ko-search-filter-bar" role="search" aria-label="{% if ui_lang == 'en' %}Search and filter kindergartens{% else %}البحث وتصفية الحضانات{% endif %}"></div>
 
   <!-- ══ DATA EXPLORATION SECTION ══════════════════════════ -->
   <section class="ko-section" aria-live="polite">
@@ -143,5 +154,5 @@ if (!window.Chart) {
   /* Pass server-side lang to JS before kg_overview.js boots */
   window.KINJO_LANG = {{ ('"en"' if ui_lang == 'en' else '"ar"') | safe }};
 </script>
-<script defer src="/static/js/kg_overview.js?v=be9816330636"></script>
+<script defer src="/static/js/kg_overview.js?v=c4abba103d4e"></script>
 {% endblock %}

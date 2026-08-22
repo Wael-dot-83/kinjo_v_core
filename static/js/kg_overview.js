@@ -41,11 +41,30 @@ class KoStore {
   }
 }
 
-function computeKPIs(kgs) {
-  const totalChildren = kgs.reduce((s, k) => s + k.children, 0);
-  const totalTeachers = kgs.reduce((s, k) => s + k.teachers, 0);
-  const avgAttendance = kgs.length ? Math.round(kgs.reduce((s, k) => s + k.attendance, 0) / kgs.length) : 0;
-  const totalAlerts   = kgs.reduce((s, k) => s + k.alerts, 0);
+function computeKPIs(kgs, backendKpis = null) {
+  if (Array.isArray(backendKpis) && backendKpis.length >= 4) {
+    const kpiMap = {};
+    backendKpis.forEach(k => {
+      const title = (k.title_en || k.title_ar || '').toLowerCase();
+      if (title.includes('child') || title.includes('أطفال')) kpiMap.totalChildren = Number(k.value || 0);
+      else if (title.includes('attend') || title.includes('حضور')) kpiMap.avgAttendance = Number(k.value || 0);
+      else if (title.includes('teach') || title.includes('معلمات')) kpiMap.totalTeachers = Number(k.value || 0);
+      else if (title.includes('alert') || title.includes('تنبيه')) kpiMap.totalAlerts = Number(k.value || 0);
+    });
+    if (kpiMap.totalChildren !== undefined) {
+      return {
+        totalChildren: kpiMap.totalChildren ?? 0,
+        totalTeachers: kpiMap.totalTeachers ?? 0,
+        avgAttendance: kpiMap.avgAttendance ?? 0,
+        totalAlerts: kpiMap.totalAlerts ?? 0,
+      };
+    }
+  }
+
+  const totalChildren = kgs.reduce((s, k) => s + (Number(k.children) || 0), 0);
+  const totalTeachers = kgs.reduce((s, k) => s + (Number(k.teachers) || 0), 0);
+  const avgAttendance = kgs.length ? Math.round(kgs.reduce((s, k) => s + (Number(k.attendance) || 0), 0) / kgs.length) : 0;
+  const totalAlerts   = kgs.reduce((s, k) => s + (Number(k.alerts) || 0), 0);
   return { totalChildren, totalTeachers, avgAttendance, totalAlerts };
 }
 
@@ -72,6 +91,7 @@ function normalizeSeverity(severity) {
 }
 
 function mapOverviewPayload(payload) {
+  const isEn = window.KINJO_LANG === 'en';
   const kindergartens = Array.isArray(payload?.kindergartens) ? payload.kindergartens : [];
   const kgs = kindergartens.map((kg) => {
     const children = Number(kg.children_count ?? kg.active_children ?? kg.children ?? 0);
@@ -84,18 +104,36 @@ function mapOverviewPayload(payload) {
     // its real enrollment vs. real capacity.
     const occupancy = Number(kg.capacity_utilization ?? kg.occupancy_rate ?? 0);
     const capacity = Number(kg.capacity ?? kg.total_capacity ?? (occupancy > 0 ? Math.ceil(children / (occupancy / 100)) : children));
-    const name = window.KINJO_LANG === 'en'
+    const name = isEn
       ? (kg.name_en || kg.name_ar || kg.name || `KG ${kg.id}`)
       : (kg.name_ar || kg.name_en || kg.name || `KG ${kg.id}`);
+    
+    const healthScore = String(kg.health_score || 'good').toLowerCase();
+    const healthLabelAr = kg.health_label_ar || (healthScore === 'critical' ? 'حرج' : healthScore === 'at_risk' ? 'في خطر' : healthScore === 'needs_attention' ? 'يحتاج متابعة' : 'مستقر');
+    const healthLabelEn = kg.health_label_en || (healthScore === 'critical' ? 'Critical' : healthScore === 'at_risk' ? 'At Risk' : healthScore === 'needs_attention' ? 'Needs Attention' : 'Stable');
+
     return {
       id: kg.id,
       name,
+      name_ar: kg.name_ar || name,
+      name_en: kg.name_en || name,
       gov: kg.governorate || kg.governorate_name_ar || kg.governorate_name_en || '',
+      district: kg.district || '',
       children,
       teachers: Number(kg.teachers_count ?? kg.teachers ?? 0),
       attendance: Number(kg.attendance_rate ?? kg.attendance ?? 0),
-      alerts: Number(kg.open_alerts ?? kg.alerts ?? 0),
+      attendance_status: kg.attendance_status || 'on_target',
+      occupancy: occupancy,
       capacity: Math.max(capacity || children || 1, 1),
+      capacity_status: kg.capacity_status || 'safe',
+      alerts: Number(kg.open_alerts ?? kg.alerts ?? 0),
+      health_score: healthScore,
+      health_label: isEn ? healthLabelEn : healthLabelAr,
+      recommended_action: isEn ? (kg.recommended_action_en || '') : (kg.recommended_action_ar || ''),
+      supervisor_gap: Number(kg.supervisor_gap || 0),
+      children_per_supervisor: Number(kg.children_per_supervisor || 0),
+      last_report_date: kg.last_report_date || null,
+      teacher_data_status: kg.teacher_data_status || 'updated',
     };
   });
 
@@ -113,13 +151,24 @@ function mapOverviewPayload(payload) {
     };
   });
 
+  const govComp = Array.isArray(payload?.charts?.governorate_comparison) ? payload.charts.governorate_comparison : [];
+  const execHealth = payload?.executive_health || {
+    critical_alerts: kgs.filter(k => k.health_score === 'critical' || k.health_score === 'at_risk').length,
+    below_target_attendance: kgs.filter(k => k.attendance_status === 'below_target' || k.attendance_status === 'critical_low').length,
+    near_capacity_kgs: kgs.filter(k => k.capacity_status === 'near_capacity' || k.capacity_status === 'full').length,
+    data_quality_issues: kgs.filter(k => k.teacher_data_status === 'needs_update').length,
+  };
+
   return {
     kgs,
     alerts,
+    kpis: payload?.kpis || null,
+    executiveHealth: execHealth,
+    govComparison: govComp,
     trend: {
-      labels: kgs.map((kg) => kg.name),
-      attendance: kgs.map((kg) => kg.attendance),
-      enrollment: kgs.map((kg) => kg.children),
+      labels: kgs.slice(0, 15).map((kg) => kg.name),
+      attendance: kgs.slice(0, 15).map((kg) => kg.attendance),
+      enrollment: kgs.slice(0, 15).map((kg) => kg.children),
     },
   };
 }
@@ -353,41 +402,50 @@ class KgOverview {
   #store;
   #charts;
   #dnd;
-  #rtTimer = null;
-  #alertFilterSev = 'all';
-  #dismissedAlerts = new Set();
-  #chartType = 'line';
   #currentView = 'cards';
+  #chartType = 'line';
+  #alertFilterSev = 'all';
   #panelOpen = false;
-  #panelKey = null;
   #customiseOpen = false;
+  #panelKey = null;
+  #rtTimer = null;
+  #dismissedAlerts = new Set();
+
+  #tablePage = 1;
+  #tablePageSize = 25;
+  #tableAllKgs = [];
+  #cardsPage = 1;
+  #cardsPageSize = 24;
+  #cardsAllKgs = [];
+  #sortKey = 'name';
+  #sortDir = {};
 
   constructor() {
     const saved = KoPersist.load() || {};
-
     this.#store = new KoStore({
-      period:     saved.period     || 'month',
-      // The custom range lives in the store, not only in the inputs: the control
-      // bar is built *after* the first load, so reading the DOM during a load
-      // would find nothing on a reload with period='custom' persisted.
-      dateFrom:   saved.dateFrom   || this.#today(-30),
-      dateTo:     saved.dateTo     || this.#today(0),
-      govFilter:  saved.govFilter  || 'all',
-      kgFilter:   saved.kgFilter   || 'all',
+      period:     saved.period || 'month',
+      dateFrom:   saved.dateFrom || this.#today(-29),
+      dateTo:     saved.dateTo   || this.#today(0),
+      govFilter:  saved.govFilter || 'all',
+      kgFilter:   saved.kgFilter || 'all',
+      healthFilter: 'all',
+      searchQuery: '',
+      theme:      saved.theme || (document.documentElement.getAttribute('data-theme') || 'light'),
+      hiddenKPIs: saved.hiddenKPIs || [],
+      kpiOrder:   saved.kpiOrder   || ['children', 'attendance', 'teachers', 'alerts'],
       kgs:        [],
       kpis:       computeKPIs([]),
+      backendKpis: null,
+      executiveHealth: { critical_alerts: 0, below_target_attendance: 0, near_capacity_kgs: 0, data_quality_issues: 0 },
+      govComparison: [],
       alerts:     [],
-      trend:      { labels: [], attendance: [], enrollment: [] },
-      theme:      saved.theme      || 'light',
-      hiddenKPIs: saved.hiddenKPIs || [],
-      kpiOrder:   saved.kpiOrder   || ['children','attendance','teachers','alerts'],
+      trend:      { labels:[], attendance:[], enrollment:[] },
     });
 
     this.#charts = new KoCharts();
     this.#dnd    = new KoDnD();
   }
 
-  /* ── Init ─────────────────────────────────────────────── */
   async init() {
     this.#applyTheme(this.#store.get('theme'));
     await this.#loadOverviewData().catch(error => {
@@ -395,9 +453,12 @@ class KgOverview {
       this.#showLoadError(error);
     });
     this.#buildControlBar();
+    this.#renderExecutiveStrip();
+    this.#renderGovChips();
+    this.#renderSearchFilterBar();
     this.#renderKPIs();
-    this.#renderDataSection();
     this.#renderQuickActions();
+    this.#renderDataSection();
     this.#renderAlerts();
     this.#buildCustomisePanel();
     this.#bindGlobalEvents();
@@ -407,7 +468,6 @@ class KgOverview {
     this.#openDeepLinkedKG();
   }
 
-  /* ── Deep link (e.g. /admin/kg-overview?id=42 from the KPI dashboard) ── */
   #openDeepLinkedKG() {
     const id = new URLSearchParams(window.location.search).get('id');
     if (!id) return;
@@ -415,17 +475,14 @@ class KgOverview {
     if (kg) this.#openKGPanel(kg);
   }
 
+  /* ── Network Data Loading ──────────────────────────────── */
   async #loadOverviewData() {
     const params = new URLSearchParams();
     const period = this.#store.get('period');
     if (period && period !== 'all') {
       if (period === 'custom') {
-        // The custom range was never sent to the server, so picking dates
-        // silently returned the default 30-day window instead. Read the range
-        // from the store — the control bar is built after the first load, so the
-        // inputs do not exist yet on a reload with period='custom' persisted.
         const from = this.#store.get('dateFrom');
-        const to = this.#store.get('dateTo');
+        const to   = this.#store.get('dateTo');
         if (from && to) {
           params.set('period', 'custom');
           params.set('start_date', from);
@@ -444,7 +501,10 @@ class KgOverview {
     const mapped = mapOverviewPayload(payload);
     this.#store.set({
       kgs: mapped.kgs,
-      kpis: computeKPIs(mapped.kgs),
+      kpis: computeKPIs(mapped.kgs, mapped.kpis),
+      backendKpis: mapped.kpis,
+      executiveHealth: mapped.executiveHealth,
+      govComparison: mapped.govComparison,
       alerts: mapped.alerts,
       trend: mapped.trend,
     });
@@ -462,13 +522,15 @@ class KgOverview {
     if (!box || !text || !retry) return;
     const isAr = (window.KINJO_LANG || 'ar') !== 'en';
     text.textContent = isAr
-      ? `تعذر تحميل بيانات الحضانات. أعد المحاولة واحتفظ بالرقم المرجعي إن ظهر. (${error.message})`
-      : `Unable to load kindergarten data. Retry and retain any reference ID shown. (${error.message})`;
+      ? `تعذر تحميل بيانات الحضانات. أعد المحاولة. (${error.message})`
+      : `Unable to load kindergarten data. Retry. (${error.message})`;
     box.classList.remove('d-none');
     retry.onclick = async () => {
       retry.disabled = true;
       try {
         await this.#loadOverviewData();
+        this.#renderExecutiveStrip();
+        this.#renderGovChips();
         this.#renderKPIs();
         this.#renderDataSection();
         this.#renderAlerts();
@@ -479,6 +541,161 @@ class KgOverview {
         retry.disabled = false;
       }
     };
+  }
+
+  /* ── Executive Anomaly Strip ───────────────────────────── */
+  #renderExecutiveStrip() {
+    const wrap = document.getElementById('ko-executive-strip');
+    if (!wrap) return;
+    const isAr = (window.KINJO_LANG || 'ar') !== 'en';
+    const eh = this.#store.get('executiveHealth') || {};
+    const curHealthFilter = this.#store.get('healthFilter');
+
+    const items = [
+      {
+        key: 'critical',
+        label: isAr ? 'حالات حرجة / في خطر' : 'Critical / At Risk',
+        num: eh.critical_alerts ?? 0,
+        color: 'var(--ko-red)',
+        icon: 'bi-exclamation-octagon-fill',
+        filter: 'critical'
+      },
+      {
+        key: 'attendance_low',
+        label: isAr ? 'حضور أقل من 80%' : 'Below 80% Attendance',
+        num: eh.below_target_attendance ?? 0,
+        color: 'var(--ko-amber)',
+        icon: 'bi-calendar-x-fill',
+        filter: 'attendance_low'
+      },
+      {
+        key: 'capacity_high',
+        label: isAr ? 'إشغال مرتفع (>95%)' : 'Near Capacity (>95%)',
+        num: eh.near_capacity_kgs ?? 0,
+        color: 'var(--ko-purple)',
+        icon: 'bi-pie-chart-fill',
+        filter: 'capacity_high'
+      },
+      {
+        key: 'data_update',
+        label: isAr ? 'تحديث كادر المعلمات' : 'Staff Data Update',
+        num: eh.data_quality_issues ?? 0,
+        color: 'var(--ko-teal)',
+        icon: 'bi-person-exclamation',
+        filter: 'data_update'
+      },
+    ];
+
+    wrap.innerHTML = items.map(item => `
+      <div class="ko-exec-card ${curHealthFilter === item.filter ? 'active' : ''}"
+           data-health-filter="${item.filter}"
+           style="--exec-color:${item.color}"
+           role="button" tabindex="0"
+           aria-label="${item.label}: ${item.num}">
+        <div class="ko-exec-icon"><i class="bi ${item.icon}"></i></div>
+        <div class="ko-exec-info">
+          <div class="ko-exec-num">${item.num}</div>
+          <div class="ko-exec-label">${item.label}</div>
+        </div>
+      </div>`).join('');
+
+    wrap.querySelectorAll('.ko-exec-card').forEach(card => {
+      const toggle = () => {
+        const filter = card.dataset.healthFilter;
+        const next = this.#store.get('healthFilter') === filter ? 'all' : filter;
+        this.#store.set({ healthFilter: next });
+        this.#renderExecutiveStrip();
+        this.#renderActiveView();
+      };
+      card.addEventListener('click', toggle);
+      card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+    });
+  }
+
+  /* ── Governorate Drill-Down Chips ──────────────────────── */
+  #renderGovChips() {
+    const wrap = document.getElementById('ko-gov-chips');
+    if (!wrap) return;
+    const isAr = (window.KINJO_LANG || 'ar') !== 'en';
+    const allKgs = this.#store.get('kgs');
+    const curGov = this.#store.get('govFilter');
+
+    const counts = { all: allKgs.length };
+    allKgs.forEach(k => {
+      if (k.gov) counts[k.gov] = (counts[k.gov] || 0) + 1;
+    });
+
+    const govs = ['all', ...Object.keys(counts).filter(k => k !== 'all').sort()];
+
+    wrap.innerHTML = govs.map(g => {
+      const label = g === 'all' ? (isAr ? 'كل المحافظات' : 'All Governorates') : g;
+      const cnt = counts[g] || 0;
+      return `
+        <button class="ko-gov-chip ${curGov === g ? 'active' : ''}" data-gov="${koEscape(g)}"
+                aria-pressed="${curGov === g}" role="tab">
+          <span>${koEscape(label)}</span>
+          <span class="ko-gov-chip-count">${cnt}</span>
+        </button>`;
+    }).join('');
+
+    wrap.querySelectorAll('.ko-gov-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const gov = btn.dataset.gov;
+        this.#store.set({ govFilter: gov });
+        this.#renderGovChips();
+        const sel = document.getElementById('ko-gov-filter');
+        if (sel) sel.value = gov;
+        this.#onFilterChange();
+      });
+    });
+  }
+
+  /* ── Search & Filter Bar ───────────────────────────────── */
+  #renderSearchFilterBar() {
+    const bar = document.getElementById('ko-search-filter-bar');
+    if (!bar) return;
+    const isAr = (window.KINJO_LANG || 'ar') !== 'en';
+    const query = this.#store.get('searchQuery');
+
+    bar.innerHTML = `
+      <div class="ko-search-wrap">
+        <i class="bi bi-search ko-search-icon" aria-hidden="true"></i>
+        <input type="text" class="ko-search-input" id="ko-search-input"
+               placeholder="${isAr ? 'ابحث باسم الحضانة أو المحافظة...' : 'Search kindergarten or governorate...'}"
+               value="${koEscape(query)}"
+               aria-label="${isAr ? 'البحث عن حضانة' : 'Search kindergarten'}">
+        ${query ? `<button class="ko-search-clear" id="ko-search-clear" aria-label="${isAr ? 'مسح البحث' : 'Clear search'}"><i class="bi bi-x"></i></button>` : ''}
+      </div>
+      <div class="ko-page-size-wrap ms-auto">
+        <label for="ko-page-size-select">${isAr ? 'عرض في الصفحة:' : 'Per page:'}</label>
+        <select class="ko-filter-select" id="ko-page-size-select" aria-label="${isAr ? 'عدد العناصر' : 'Items per page'}">
+          <option value="25" selected>25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="500">${isAr ? 'الكل' : 'All'}</option>
+        </select>
+      </div>`;
+
+    const input = document.getElementById('ko-search-input');
+    input?.addEventListener('input', e => {
+      this.#store.set({ searchQuery: e.target.value });
+      this.#renderSearchFilterBar();
+      this.#renderActiveView();
+      document.getElementById('ko-search-input')?.focus();
+    });
+
+    document.getElementById('ko-search-clear')?.addEventListener('click', () => {
+      this.#store.set({ searchQuery: '' });
+      this.#renderSearchFilterBar();
+      this.#renderActiveView();
+    });
+
+    document.getElementById('ko-page-size-select')?.addEventListener('change', e => {
+      const sz = Number(e.target.value) || 25;
+      this.#tablePageSize = sz;
+      this.#cardsPageSize = Math.min(sz, 48);
+      this.#renderActiveView();
+    });
   }
 
   /* ── Control Bar ──────────────────────────────────────── */
@@ -495,9 +712,6 @@ class KgOverview {
     const currentKgs = this.#store.get('kgs');
     const govs = ['all', ...new Set(currentKgs.map(k => k.gov).filter(Boolean))];
     const kgNames = ['all', ...currentKgs.map(k => k.name)];
-    // Both filters are persisted and applied on load, so the options must show
-    // which one is active: without `selected` the bar reads "All Governorates"
-    // while the list below it is filtered to one governorate.
     const curGov = this.#store.get('govFilter');
     const curKg = this.#store.get('kgFilter');
     const lang = window.KINJO_LANG || 'ar';
@@ -550,32 +764,20 @@ class KgOverview {
         </button>
       </div>`;
 
-    /* Period buttons — unlike governorate/kg (client-side-only filters over
-       an already-fetched full dataset), `period` genuinely changes the
-       server-side attendance date window (admin_endpoints.py), so choosing
-       "Today"/"Week"/"Month" used to have no visible effect until the next
-       manual refresh or the 60s auto-poll: #onFilterChange() only re-rendered
-       already-fetched data, it never called #loadOverviewData() again. */
     bar.querySelectorAll('.ko-period-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const p = btn.dataset.period;
         bar.querySelectorAll('.ko-period-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed','false'); });
         btn.classList.add('active'); btn.setAttribute('aria-pressed','true');
         const dateWrap = document.getElementById('ko-date-range-wrap');
-        dateWrap.style.display = p === 'custom' ? '' : 'none';
+        if (dateWrap) dateWrap.style.display = p === 'custom' ? '' : 'none';
         this.#store.set({ period: p });
         this.#onPeriodChange();
       });
     });
 
-    /* Date range — the server resolves the custom window, so a date change must
-       refetch; #onFilterChange only re-filters what is already loaded. */
     [['ko-date-from', 'dateFrom'], ['ko-date-to', 'dateTo']].forEach(([id, key]) => {
       document.getElementById(id)?.addEventListener('change', e => {
-        // A date input can be cleared. Accepting '' would leave the store without
-        // a resolvable range, and the loader would quietly ask for the month
-        // window while the bar still showed "Custom" — the same lie as before.
-        // Keep the last good value and put it back in the input instead.
         if (!e.target.value) {
           e.target.value = this.#store.get(key);
           return;
@@ -586,45 +788,39 @@ class KgOverview {
       });
     });
 
-    /* Governorate filter */
-    document.getElementById('ko-gov-filter').addEventListener('change', e => {
+    document.getElementById('ko-gov-filter')?.addEventListener('change', e => {
       this.#store.set({ govFilter: e.target.value });
+      this.#renderGovChips();
       this.#onFilterChange();
     });
 
-    /* KG filter */
-    document.getElementById('ko-kg-filter').addEventListener('change', e => {
+    document.getElementById('ko-kg-filter')?.addEventListener('change', e => {
       this.#store.set({ kgFilter: e.target.value });
       this.#onFilterChange();
     });
 
-    /* Refresh */
-    document.getElementById('ko-refresh-btn').addEventListener('click', () => this.#refresh());
+    document.getElementById('ko-refresh-btn')?.addEventListener('click', () => this.#refresh());
 
-    /* Theme toggle */
-    document.getElementById('ko-theme-btn').addEventListener('click', () => {
+    document.getElementById('ko-theme-btn')?.addEventListener('click', () => {
       const next = this.#store.get('theme') === 'dark' ? 'light' : 'dark';
       this.#store.set({ theme: next });
       this.#applyTheme(next);
-      document.getElementById('ko-theme-btn').querySelector('i').className =
-        `bi ${next === 'dark' ? 'bi-sun-fill' : 'bi-moon-fill'}`;
+      const icon = document.getElementById('ko-theme-btn')?.querySelector('i');
+      if (icon) icon.className = `bi ${next === 'dark' ? 'bi-sun-fill' : 'bi-moon-fill'}`;
       this.#charts.updateTheme();
       this.#savePrefs();
     });
 
-    /* Customise */
-    document.getElementById('ko-customise-btn').addEventListener('click', () => this.#toggleCustomise());
-
-    /* Export */
-    document.getElementById('ko-export-btn').addEventListener('click', () => this.#exportCSV());
+    document.getElementById('ko-customise-btn')?.addEventListener('click', () => this.#toggleCustomise());
+    document.getElementById('ko-export-btn')?.addEventListener('click', () => this.#exportCSV());
   }
 
   /* ── KPI Cards ────────────────────────────────────────── */
   #KPI_META = {
-    children:   { label_ar:'إجمالي الأطفال', label_en:'Children',   icon:'bi-people-fill',           accent:'#2563eb', unit:'' },
-    attendance: { label_ar:'نسبة الحضور',    label_en:'Attendance', icon:'bi-calendar-check-fill',   accent:'#16a34a', unit:'%' },
-    teachers:   { label_ar:'المعلمات',        label_en:'Teachers',   icon:'bi-person-badge-fill',     accent:'#7c3aed', unit:'' },
-    alerts:     { label_ar:'التنبيهات',       label_en:'Alerts',     icon:'bi-bell-fill',             accent:'#dc2626', unit:'' },
+    children:   { label_ar:'إجمالي الأطفال', label_en:'Total Children',   icon:'bi-people-fill',           accent:'#2563eb', unit:'' },
+    attendance: { label_ar:'نسبة الحضور',    label_en:'Attendance Rate',  icon:'bi-calendar-check-fill',   accent:'#16a34a', unit:'%' },
+    teachers:   { label_ar:'المعلمات',        label_en:'Teachers',         icon:'bi-person-badge-fill',     accent:'#7c3aed', unit:'' },
+    alerts:     { label_ar:'التنبيهات النشطة', label_en:'Active Alerts',   icon:'bi-bell-fill',             accent:'#dc2626', unit:'' },
   };
 
   #kpiValue(key) {
@@ -638,29 +834,35 @@ class KgOverview {
   }
 
   #kpiDelta(key) {
-    const base = { children:230, attendance:78, teachers:25, alerts:8 };
-    const cur  = this.#kpiValue(key);
-    const diff = cur - base[key];
-    if (Math.abs(diff) < 1) return { dir:'flat', text:'—' };
-    const pct  = ((diff / base[key]) * 100).toFixed(1);
-    return diff > 0
-      ? { dir:'up',   text:`+${pct}%` }
-      : { dir:'down', text:`${pct}%` };
+    const cur = this.#kpiValue(key);
+    const isAr = (window.KINJO_LANG || 'ar') !== 'en';
+    if (key === 'attendance') {
+      const target = 80.0;
+      if (cur >= target) return { dir:'up', text: isAr ? `مستقر (الهدف ${target}%)` : `On target (${target}%)` };
+      return { dir:'down', text: isAr ? `أقل من الهدف ${target}%` : `Below target ${target}%` };
+    }
+    if (key === 'alerts') {
+      if (cur === 0) return { dir:'up', text: isAr ? 'لا توجد تنبيهات' : 'No active alerts' };
+      if (cur <= 5)  return { dir:'flat', text: isAr ? 'مستوى معتدل' : 'Moderate alerts' };
+      return { dir:'down', text: isAr ? 'تنبيهات بحاجة لمراجعة' : 'Requires review' };
+    }
+    if (key === 'children') {
+      const kgs = this.#store.get('kgs');
+      return { dir:'flat', text: isAr ? `عبر ${kgs.length} حضانة` : `Across ${kgs.length} KGs` };
+    }
+    if (key === 'teachers') {
+      return { dir:'flat', text: isAr ? 'كادر إشرافي نشط' : 'Active staff' };
+    }
+    return { dir:'flat', text:'—' };
   }
 
   #renderKPIs() {
     const grid = document.getElementById('ko-kpi-grid');
     if (!grid) return;
-    const lang  = window.KINJO_LANG || 'ar';
-    const isAr  = lang !== 'en';
+    const isAr  = (window.KINJO_LANG || 'ar') !== 'en';
     const hidden = this.#store.get('hiddenKPIs');
     const order  = this.#store.get('kpiOrder');
-    const sparkData = {
-      children:   [220,225,230,228,235,240,238,245,242,248,250,252,255,this.#kpiValue('children')],
-      attendance: [72,75,73,78,76,80,79,82,80,83,81,84,82,this.#kpiValue('attendance')],
-      teachers:   [22,22,23,23,24,24,25,25,25,26,26,26,27,this.#kpiValue('teachers')],
-      alerts:     [5,6,8,7,9,8,6,7,8,9,7,8,9,this.#kpiValue('alerts')],
-    };
+    const kgs    = this.#filteredKGs();
 
     grid.innerHTML = order.map(key => {
       const meta  = this.#KPI_META[key];
@@ -679,8 +881,8 @@ class KgOverview {
           <div class="ko-kpi-label">${isAr ? meta.label_ar : meta.label_en}</div>
           <div class="ko-kpi-value" id="ko-val-${key}">${val}${meta.unit}</div>
           <div class="ko-kpi-delta ${delta.dir}" id="ko-delta-${key}">
-            ${delta.dir === 'up' ? '<i class="bi bi-arrow-up-short"></i>' : delta.dir === 'down' ? '<i class="bi bi-arrow-down-short"></i>' : '<i class="bi bi-dash"></i>'}
-            ${delta.text} ${isAr ? 'مقارنة بالشهر السابق' : 'vs last period'}
+            ${delta.dir === 'up' ? '<i class="bi bi-check-circle-fill"></i>' : delta.dir === 'down' ? '<i class="bi bi-exclamation-circle-fill"></i>' : '<i class="bi bi-info-circle-fill"></i>'}
+            ${delta.text}
           </div>
           <div style="height:44px;overflow:hidden;position:relative;margin-top:.875rem;">
             <canvas id="ko-spark-${key}" aria-hidden="true" style="display:block;width:100%;height:44px;"></canvas>
@@ -688,16 +890,24 @@ class KgOverview {
         </div>`;
     }).join('');
 
-    order.forEach(key => this.#charts.renderSparkline(`ko-spark-${key}`, sparkData[key], this.#KPI_META[key].accent));
+    const sparkData = {
+      children:   kgs.slice(0, 14).map(k => k.children),
+      attendance: kgs.slice(0, 14).map(k => k.attendance),
+      teachers:   kgs.slice(0, 14).map(k => k.teachers),
+      alerts:     kgs.slice(0, 14).map(k => k.alerts),
+    };
+    order.forEach(key => {
+      const vals = sparkData[key]?.length ? sparkData[key] : [this.#kpiValue(key)];
+      this.#charts.renderSparkline(`ko-spark-${key}`, vals, this.#KPI_META[key].accent);
+    });
 
     grid.querySelectorAll('[data-action="open-panel"]').forEach(el => {
       el.addEventListener('click', () => this.#openPanel(el.dataset.panelKey));
-      el.addEventListener('keydown', e => { if (e.key === 'Enter') this.#openPanel(el.dataset.panelKey); });
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.#openPanel(el.dataset.panelKey); } });
     });
   }
 
   #updateKPIValues() {
-    const hidden = this.#store.get('hiddenKPIs');
     this.#store.get('kpiOrder').forEach(key => {
       const el = document.getElementById(`ko-val-${key}`);
       if (!el) return;
@@ -715,8 +925,7 @@ class KgOverview {
   #renderDataSection() {
     const sec = document.getElementById('ko-data-section');
     if (!sec) return;
-    const lang = window.KINJO_LANG || 'ar';
-    const isAr = lang !== 'en';
+    const isAr = (window.KINJO_LANG || 'ar') !== 'en';
 
     sec.innerHTML = `
       <div class="ko-section-header">
@@ -770,13 +979,14 @@ class KgOverview {
             <thead>
               <tr>
                 ${[
-                  { k:'name', ar:'اسم الحضانة',     en:'Kindergarten'  },
-                  { k:'gov',  ar:'المحافظة',        en:'Governorate'   },
-                  { k:'children', ar:'الأطفال',     en:'Children'      },
-                  { k:'teachers', ar:'المعلمات',    en:'Teachers'      },
-                  { k:'attendance', ar:'الحضور %',  en:'Attendance %'  },
-                  { k:'alerts', ar:'التنبيهات',     en:'Alerts'        },
-                  { k:'status', ar:'الحالة',        en:'Status'        },
+                  { k:'name',       ar:'اسم الحضانة',     en:'Kindergarten'  },
+                  { k:'gov',        ar:'المحافظة',        en:'Governorate'   },
+                  { k:'children',   ar:'الأطفال',         en:'Children'      },
+                  { k:'teachers',   ar:'المعلمات',        en:'Teachers'      },
+                  { k:'attendance', ar:'الحضور %',        en:'Attendance %'  },
+                  { k:'occupancy',  ar:'الإشغال %',       en:'Occupancy %'   },
+                  { k:'alerts',     ar:'التنبيهات',       en:'Alerts'        },
+                  { k:'health_score', ar:'الحالة العامة',  en:'Health Status' },
                 ].map(c => `<th scope="col" data-sort="${c.k}" tabindex="0" role="button" aria-sort="none">${isAr ? c.ar : c.en} <i class="bi bi-arrow-down-up" style="opacity:.4;font-size:.7em" aria-hidden="true"></i></th>`).join('')}
               </tr>
             </thead>
@@ -786,7 +996,6 @@ class KgOverview {
         <div id="ko-table-pagination" class="d-flex align-items-center justify-content-center gap-1 py-2 flex-wrap" style="border-top:1px solid var(--ko-border)"></div>
       </div>`;
 
-    /* View switcher */
     sec.querySelectorAll('.ko-view-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         this.#currentView = btn.dataset.view;
@@ -800,7 +1009,6 @@ class KgOverview {
       });
     });
 
-    /* Chart type */
     sec.querySelectorAll('.ko-chart-type-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         this.#chartType = btn.dataset.chartType;
@@ -813,9 +1021,6 @@ class KgOverview {
       });
     });
 
-    /* Table sort — was mouse-only (no tabindex/keydown), and the `th`
-       argument was never used inside #sortTable, so there was no aria-sort
-       or icon-direction feedback for any sort state either. */
     sec.querySelectorAll('[data-sort]').forEach(th => {
       th.addEventListener('click', () => this.#sortTable(th.dataset.sort, th));
       th.addEventListener('keydown', (e) => {
@@ -849,11 +1054,10 @@ class KgOverview {
     const wrap = document.getElementById('ko-kg-cards');
     if (!wrap) return;
     const kgs  = this.#cardsAllKgs;
-    const lang = window.KINJO_LANG || 'ar';
-    const isAr = lang !== 'en';
+    const isAr = (window.KINJO_LANG || 'ar') !== 'en';
 
     if (!kgs.length) {
-      wrap.innerHTML = `<div class="ko-empty"><i class="bi bi-search"></i><p>${isAr ? 'لا توجد نتائج' : 'No results'}</p></div>`;
+      wrap.innerHTML = `<div class="ko-empty"><i class="bi bi-search"></i><p>${isAr ? 'لا توجد حضانات مطابقة للتصفية الحالية' : 'No kindergartens match your filters'}</p></div>`;
       const pg = document.getElementById('ko-cards-pagination');
       if (pg) pg.innerHTML = '';
       return;
@@ -866,29 +1070,45 @@ class KgOverview {
       const pct     = Math.max(0, Math.min(100, Number(kg.attendance) || 0));
       const cls     = pct >= 80 ? '' : pct >= 65 ? 'warn' : 'alert';
       const badge   = pct >= 80 ? 'green' : pct >= 65 ? 'amber' : 'red';
-      const cap     = Math.max(0, Math.min(100, Math.round((kg.children / kg.capacity) * 100)));
+      const cap     = Math.max(0, Math.min(100, Math.round(Number(kg.occupancy) || (kg.children / kg.capacity) * 100)));
       const safeId  = koEscape(kg.id);
+
+      const healthTagClass = kg.health_score === 'critical' || kg.health_score === 'at_risk'
+        ? 'ko-health-critical'
+        : kg.health_score === 'needs_attention'
+        ? 'ko-health-attention'
+        : 'ko-health-excellent';
+
       return `
         <div class="ko-kg-card" data-kg-id="${safeId}" role="button" tabindex="0"
              aria-label="${koEscape(kg.name)} — ${isAr ? 'عرض التفاصيل' : 'View details'}">
-          <div class="ko-kg-card-name">${koEscape(kg.name)}</div>
-          <div class="ko-kg-card-meta">${koEscape(kg.gov)} · ${kg.children} ${isAr ? 'طفل' : 'children'}</div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.375rem;gap:.5rem;">
+            <div class="ko-kg-card-name" title="${koEscape(kg.name)}">${koEscape(kg.name)}</div>
+            <span class="ko-health-tag ${healthTagClass}">${koEscape(kg.health_label)}</span>
+          </div>
+          <div class="ko-kg-card-meta">${koEscape(kg.gov)} ${kg.district ? '· ' + koEscape(kg.district) : ''} · ${kg.children} ${isAr ? 'طفل' : 'children'}</div>
+          
           <div class="ko-kg-bar-wrap">
             <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--ko-text-muted);margin-bottom:.25rem;">
               <span>${isAr ? 'الحضور' : 'Attendance'}</span>
-              <span class="${cls ? `ko-badge ko-badge-${badge}` : ''}">${pct}%</span>
+              <span class="ko-badge ko-badge-${badge}">${pct}%</span>
             </div>
             <div class="ko-kg-bar"><div class="ko-kg-bar-fill ${cls}" style="width:${pct}%"></div></div>
           </div>
+
           <div style="margin-top:.625rem;">
             <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--ko-text-muted);margin-bottom:.25rem;">
-              <span>${isAr ? 'الإشغال' : 'Occupancy'}</span><span>${cap}%</span>
+              <span>${isAr ? 'نسبة الإشغال' : 'Occupancy'}</span>
+              <span>${cap}%</span>
             </div>
             <div class="ko-kg-bar"><div class="ko-kg-bar-fill" style="width:${cap}%;background:var(--ko-teal)"></div></div>
           </div>
-          <div style="display:flex;justify-content:space-between;margin-top:.875rem;font-size:.75rem;">
-            <span style="color:var(--ko-text-muted)"><i class="bi bi-person-badge me-1"></i>${kg.teachers}</span>
-            ${kg.alerts > 0 ? `<span class="ko-badge ko-badge-red"><i class="bi bi-bell me-1"></i>${kg.alerts}</span>` : '<span class="ko-badge ko-badge-green"><i class="bi bi-check-circle me-1"></i>OK</span>'}
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.875rem;font-size:.75rem;">
+            <span style="color:var(--ko-text-muted)"><i class="bi bi-person-badge me-1"></i>${kg.teachers} ${isAr ? 'معلمات' : 'teachers'}</span>
+            ${kg.alerts > 0 
+              ? `<span class="ko-badge ko-badge-red"><i class="bi bi-bell-fill me-1"></i>${kg.alerts} ${isAr ? 'تنبيه' : 'alerts'}</span>` 
+              : `<span class="ko-badge ko-badge-green"><i class="bi bi-check-circle-fill me-1"></i>${isAr ? 'سليمة' : 'Healthy'}</span>`}
           </div>
         </div>`;
     }).join('');
@@ -913,12 +1133,10 @@ class KgOverview {
     const totalPages = Math.ceil(total / this.#cardsPageSize);
     if (totalPages <= 1) { el.innerHTML = ''; return; }
 
-    const lang  = window.KINJO_LANG || 'ar';
-    const isAr  = lang !== 'en';
+    const isAr  = (window.KINJO_LANG || 'ar') !== 'en';
     const cur   = this.#cardsPage;
 
-    const show = new Set([1, totalPages, cur, cur - 1, cur + 1]
-      .filter(p => p >= 1 && p <= totalPages));
+    const show = new Set([1, totalPages, cur, cur - 1, cur + 1].filter(p => p >= 1 && p <= totalPages));
     const pages = [...show].sort((a, b) => a - b);
 
     let prev = 0;
@@ -947,22 +1165,17 @@ class KgOverview {
     });
   }
 
-  #tablePage = 1;
-  #tablePageSize = 25;
-  #tableAllKgs = [];
-  #cardsPage = 1;
-  #cardsPageSize = 24;
-  #cardsAllKgs = [];
-
-  #sortDir = {};
   #sortTable(key, th) {
     const dir = this.#sortDir[key] === 'asc' ? 'desc' : 'asc';
     this.#sortDir[key] = dir;
+    this.#sortKey = key;
+
     const kgs = [...this.#filteredKGs()].sort((a, b) => {
       const va = a[key] ?? ''; const vb = b[key] ?? '';
       if (dir === 'asc') return va > vb ? 1 : -1;
       return va < vb ? 1 : -1;
     });
+
     if (th) {
       const row = th.closest('tr');
       row?.querySelectorAll('[data-sort]').forEach(otherTh => {
@@ -988,11 +1201,10 @@ class KgOverview {
     const tbody = document.getElementById('ko-table-body');
     if (!tbody) return;
     const kgs  = this.#tableAllKgs;
-    const lang = window.KINJO_LANG || 'ar';
-    const isAr = lang !== 'en';
+    const isAr = (window.KINJO_LANG || 'ar') !== 'en';
 
     if (!kgs.length) {
-      tbody.innerHTML = `<tr><td colspan="7" class="ko-empty"><i class="bi bi-search"></i><br>${isAr ? 'لا توجد نتائج' : 'No results'}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="ko-empty"><i class="bi bi-search"></i><br>${isAr ? 'لا توجد نتائج مطابقة' : 'No matching results'}</td></tr>`;
       const pg = document.getElementById('ko-table-pagination');
       if (pg) pg.innerHTML = '';
       return;
@@ -1005,6 +1217,14 @@ class KgOverview {
       const attCls = kg.attendance >= 80 ? 'green' : kg.attendance >= 65 ? 'amber' : 'red';
       const alCls  = kg.alerts === 0 ? 'green' : kg.alerts <= 2 ? 'amber' : 'red';
       const safeId = koEscape(kg.id);
+      const occPct = Math.round(Number(kg.occupancy) || (kg.children / kg.capacity) * 100);
+
+      const healthTagClass = kg.health_score === 'critical' || kg.health_score === 'at_risk'
+        ? 'ko-health-critical'
+        : kg.health_score === 'needs_attention'
+        ? 'ko-health-attention'
+        : 'ko-health-excellent';
+
       return `
         <tr style="cursor:pointer" data-kg-id="${safeId}" tabindex="0" role="button"
             aria-label="${koEscape(kg.name)} — ${isAr ? 'عرض التفاصيل' : 'View details'}">
@@ -1013,8 +1233,9 @@ class KgOverview {
           <td>${kg.children}</td>
           <td>${kg.teachers}</td>
           <td><span class="ko-badge ko-badge-${attCls}">${kg.attendance}%</span></td>
-          <td>${kg.alerts > 0 ? `<span class="ko-badge ko-badge-${alCls}">${kg.alerts}</span>` : '<span class="ko-badge ko-badge-green">0</span>'}</td>
-          <td><span class="ko-badge ko-badge-${attCls}">${kg.attendance >= 80 ? (isAr ? 'جيد' : 'Good') : kg.attendance >= 65 ? (isAr ? 'مقبول' : 'Fair') : (isAr ? 'ضعيف' : 'Poor')}</span></td>
+          <td><span class="ko-badge ko-badge-blue">${occPct}%</span></td>
+          <td>${kg.alerts > 0 ? `<span class="ko-badge ko-badge-${alCls}">${kg.alerts}</span>` : `<span class="ko-badge ko-badge-green">0</span>`}</td>
+          <td><span class="ko-health-tag ${healthTagClass}">${koEscape(kg.health_label)}</span></td>
         </tr>`;
     }).join('');
 
@@ -1038,12 +1259,10 @@ class KgOverview {
     const totalPages = Math.ceil(total / this.#tablePageSize);
     if (totalPages <= 1) { el.innerHTML = ''; return; }
 
-    const lang  = window.KINJO_LANG || 'ar';
-    const isAr  = lang !== 'en';
+    const isAr  = (window.KINJO_LANG || 'ar') !== 'en';
     const cur   = this.#tablePage;
 
-    const show = new Set([1, totalPages, cur, cur - 1, cur + 1]
-      .filter(p => p >= 1 && p <= totalPages));
+    const show = new Set([1, totalPages, cur, cur - 1, cur + 1].filter(p => p >= 1 && p <= totalPages));
     const pages = [...show].sort((a, b) => a - b);
 
     let prev = 0;
@@ -1076,13 +1295,12 @@ class KgOverview {
   #renderQuickActions() {
     const wrap = document.getElementById('ko-quick-actions');
     if (!wrap) return;
-    const lang = window.KINJO_LANG || 'ar';
-    const isAr = lang !== 'en';
+    const isAr = (window.KINJO_LANG || 'ar') !== 'en';
 
     const actions = [
       { icon:'bi-building-fill',    ar:'إدارة الحضانات',  en:'Manage KGs',    accent:'#7c3aed', href:'/admin/kindergartens',  cls:'' },
-      { icon:'bi-bar-chart-fill',   ar:'عرض تقرير',      en:'View Report',   accent:'#16a34a', href:'/admin/analytics',cls:'' },
-      { icon:'bi-bell-fill',        ar:'مراجعة التنبيهات',en:'Review Alerts', accent:'#dc2626', href:'/admin/alerts',   cls:'' },
+      { icon:'bi-bar-chart-fill',   ar:'عرض تقرير',      en:'View Report',   accent:'#16a34a', href:'/admin/analytics',      cls:'' },
+      { icon:'bi-bell-fill',        ar:'مراجعة التنبيهات',en:'Review Alerts', accent:'#dc2626', href:'/admin/alerts',         cls:'' },
     ];
 
     wrap.innerHTML = actions.map(a => `
@@ -1093,18 +1311,15 @@ class KgOverview {
       </a>`).join('');
   }
 
-  /* ── Alerts ───────────────────────────────────────────── */
+  /* ── Alerts Section ───────────────────────────────────── */
   #renderAlerts() {
     const wrap = document.getElementById('ko-alerts-section');
     if (!wrap) return;
-    const lang = window.KINJO_LANG || 'ar';
-    const isAr = lang !== 'en';
-    const sevColors = { high:'#dc2626', medium:'#d97706', low:'#16a34a' };
-    const sevText   = { high: isAr ? 'عالي' : 'High', medium: isAr ? 'متوسط' : 'Medium', low: isAr ? 'منخفض' : 'Low' };
+    const isAr = (window.KINJO_LANG || 'ar') !== 'en';
 
     const filterBtns = [
       { sev:'all',    ar:'الكل',    en:'All'    },
-      { sev:'high',   ar:'عالي',   en:'High'   },
+      { sev:'high',   ar:'عالي / حرج', en:'Critical' },
       { sev:'medium', ar:'متوسط',  en:'Medium' },
       { sev:'low',    ar:'منخفض',  en:'Low'    },
     ];
@@ -1132,8 +1347,7 @@ class KgOverview {
   #renderAlertItems() {
     const list = document.getElementById('ko-alert-list');
     if (!list) return;
-    const lang = window.KINJO_LANG || 'ar';
-    const isAr = lang !== 'en';
+    const isAr = (window.KINJO_LANG || 'ar') !== 'en';
     const sevColors = { high:'#dc2626', medium:'#d97706', low:'#16a34a' };
 
     const filtered = this.#store.get('alerts').filter(a =>
@@ -1142,7 +1356,7 @@ class KgOverview {
     );
 
     if (!filtered.length) {
-      list.innerHTML = `<div class="ko-empty"><i class="bi bi-check-circle-fill" style="color:var(--ko-green)"></i><p>${isAr ? 'لا توجد تنبيهات' : 'No alerts'}</p></div>`;
+      list.innerHTML = `<div class="ko-empty"><i class="bi bi-check-circle-fill" style="color:var(--ko-green)"></i><p>${isAr ? 'لا توجد تنبيهات نشطة' : 'No active alerts'}</p></div>`;
       return;
     }
 
@@ -1186,13 +1400,12 @@ class KgOverview {
     });
   }
 
-  /* ── Side Panel ───────────────────────────────────────── */
+  /* ── Detail Side Panel ─────────────────────────────────── */
   #openPanel(key) {
     this.#panelKey = key;
     const meta  = this.#KPI_META[key];
     const val   = this.#kpiValue(key);
-    const lang  = window.KINJO_LANG || 'ar';
-    const isAr  = lang !== 'en';
+    const isAr  = (window.KINJO_LANG || 'ar') !== 'en';
     const kgs   = this.#filteredKGs();
 
     const panelBody = document.getElementById('ko-panel-body');
@@ -1213,7 +1426,7 @@ class KgOverview {
       <h3 style="font-size:.85rem;font-weight:700;color:var(--ko-text-muted);margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.06em;">
         ${isAr ? 'توزيع حسب الحضانة' : 'Breakdown by Kindergarten'}
       </h3>
-      ${kgs.map(kg => {
+      ${kgs.slice(0, 20).map(kg => {
         const v = key === 'children' ? kg.children : key === 'attendance' ? kg.attendance : key === 'teachers' ? kg.teachers : kg.alerts;
         const pct = key === 'attendance' ? v : Math.round((v / (val || 1)) * 100);
         return `
@@ -1226,17 +1439,17 @@ class KgOverview {
           </div>`;
       }).join('')}`;
 
-    const panelData = kgs.map(kg => {
-      const v = key === 'children' ? kg.children : key === 'attendance' ? kg.attendance : key === 'teachers' ? kg.teachers : kg.alerts;
-      return v;
+    const panelData = kgs.slice(0, 15).map(kg => {
+      return key === 'children' ? kg.children : key === 'attendance' ? kg.attendance : key === 'teachers' ? kg.teachers : kg.alerts;
     });
+
     setTimeout(() => {
       const ctx = document.getElementById('ko-panel-chart');
       if (ctx && window.Chart) {
         new Chart(ctx, {
           type: 'bar',
           data: {
-            labels: kgs.map(k => k.name.replace('حضانة ','').substring(0,6)),
+            labels: kgs.slice(0, 15).map(k => k.name.replace('حضانة ','').substring(0,8)),
             datasets: [{ data: panelData, backgroundColor: meta.accent + 'bb', borderRadius: 6 }]
           },
           options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ x:{display:true,ticks:{font:{size:9}}}, y:{display:true} } }
@@ -1251,14 +1464,27 @@ class KgOverview {
     const panelBody  = document.getElementById('ko-panel-body');
     const panelTitle = document.getElementById('ko-panel-title');
     if (!panelBody || !panelTitle) return;
-    const lang = window.KINJO_LANG || 'ar';
-    const isAr = lang !== 'en';
+    const isAr = (window.KINJO_LANG || 'ar') !== 'en';
 
     panelTitle.textContent = kg.name;
     const attColor = kg.attendance >= 80 ? 'var(--ko-green)' : kg.attendance >= 65 ? 'var(--ko-amber)' : 'var(--ko-red)';
+    const occPct = Math.round(Number(kg.occupancy) || (kg.children / kg.capacity) * 100);
+
+    const healthTagClass = kg.health_score === 'critical' || kg.health_score === 'at_risk'
+      ? 'ko-health-critical'
+      : kg.health_score === 'needs_attention'
+      ? 'ko-health-attention'
+      : 'ko-health-excellent';
 
     panelBody.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <span class="ko-health-tag ${healthTagClass}" style="font-size:.85rem;padding:.35rem .75rem;">
+          <i class="bi bi-shield-check me-1"></i> ${koEscape(kg.health_label)}
+        </span>
+        ${kg.recommended_action ? `<span style="font-size:.78rem;color:var(--ko-text-muted);">${koEscape(kg.recommended_action)}</span>` : ''}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.875rem;margin-bottom:1.5rem;">
         ${[
           { l: isAr ? 'الأطفال' : 'Children',   v: kg.children,       c: 'var(--ko-blue)'  },
           { l: isAr ? 'الحضور'  : 'Attendance', v: kg.attendance+'%',  c: attColor          },
@@ -1267,31 +1493,40 @@ class KgOverview {
         ].map(s => `
           <div class="ko-panel-stat" style="background:var(--ko-surface2);padding:.875rem;border-radius:8px;border:1px solid var(--ko-border);">
             <div class="ko-panel-stat-label">${s.l}</div>
-            <div class="ko-panel-stat-val" style="font-size:1.5rem;color:${s.c}">${s.v}</div>
+            <div class="ko-panel-stat-val" style="font-size:1.4rem;color:${s.c}">${s.v}</div>
           </div>`).join('')}
       </div>
+
       <div class="ko-panel-stat">
-        <div class="ko-panel-stat-label">${isAr ? 'المحافظة' : 'Governorate'}</div>
-        <div style="font-size:1rem;font-weight:600;color:var(--ko-text)">${koEscape(kg.gov)}</div>
+        <div class="ko-panel-stat-label">${isAr ? 'المحافظة والمنطقة' : 'Governorate & District'}</div>
+        <div style="font-size:.95rem;font-weight:600;color:var(--ko-text)">${koEscape(kg.gov)} ${kg.district ? '— ' + koEscape(kg.district) : ''}</div>
       </div>
+
       <div class="ko-panel-stat">
-        <div class="ko-panel-stat-label">${isAr ? 'الطاقة الاستيعابية' : 'Capacity'}</div>
+        <div class="ko-panel-stat-label">${isAr ? 'الطاقة الاستيعابية والإشغال' : 'Capacity & Occupancy'}</div>
         <div style="margin-top:.5rem;">
           <div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:.375rem;">
-            <span>${kg.children} / ${kg.capacity}</span>
-            <span>${Math.round((kg.children/kg.capacity)*100)}%</span>
+            <span>${kg.children} / ${kg.capacity} ${isAr ? 'طفل' : 'children'}</span>
+            <strong>${occPct}%</strong>
           </div>
           <div class="ko-kg-bar" style="height:10px;">
-            <div class="ko-kg-bar-fill" style="width:${Math.round((kg.children/kg.capacity)*100)}%;background:var(--ko-teal)"></div>
+            <div class="ko-kg-bar-fill" style="width:${occPct}%;background:var(--ko-teal)"></div>
           </div>
         </div>
       </div>
+
+      ${kg.supervisor_gap > 0 ? `
+        <div class="alert alert-warning py-2 px-3 mt-3" style="font-size:.8rem;">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>
+          ${isAr ? `نقص كادر إشرافي: بحاجة إلى ${kg.supervisor_gap} مشرف/معلم إضافي` : `Staff gap: requires ${kg.supervisor_gap} additional supervisor(s)`}
+        </div>` : ''}
+
       <div style="margin-top:1.5rem;display:flex;flex-direction:column;gap:.625rem;">
-        <a href="/kindergartens/${encodeURIComponent(kg.id)}" class="ko-action-btn" style="justify-content:center">
-          <i class="bi bi-building-fill"></i> ${isAr ? 'عرض الحضانة' : 'View Kindergarten'}
+        <a href="/admin/kindergartens" class="ko-action-btn" style="justify-content:center">
+          <i class="bi bi-building-fill"></i> ${isAr ? 'إدارة بيانات الحضانة' : 'Manage Kindergarten'}
         </a>
         <a href="/attendance/daily?kg=${encodeURIComponent(kg.id)}" class="ko-action-btn" style="justify-content:center">
-          <i class="bi bi-calendar-check-fill"></i> ${isAr ? 'سجل الحضور' : 'Attendance Log'}
+          <i class="bi bi-calendar-check-fill"></i> ${isAr ? 'سجل الحضور اليومي' : 'Daily Attendance Log'}
         </a>
       </div>`;
 
@@ -1312,8 +1547,7 @@ class KgOverview {
   #buildCustomisePanel() {
     const wrap = document.getElementById('ko-customise-wrap');
     if (!wrap) return;
-    const lang   = window.KINJO_LANG || 'ar';
-    const isAr   = lang !== 'en';
+    const isAr   = (window.KINJO_LANG || 'ar') !== 'en';
     const hidden = this.#store.get('hiddenKPIs');
 
     wrap.innerHTML = `
@@ -1365,17 +1599,14 @@ class KgOverview {
 
   /* ── Global Events ────────────────────────────────────── */
   #bindGlobalEvents() {
-    /* Close panel */
     document.getElementById('ko-overlay')?.addEventListener('click', () => this.#togglePanel(false));
     document.getElementById('ko-panel-close')?.addEventListener('click', () => this.#togglePanel(false));
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && this.#panelOpen) this.#togglePanel(false); });
 
-    /* DnD reorder saved */
     document.addEventListener('ko:reorder', e => {
       this.#store.set({ kpiOrder: e.detail.order.filter(Boolean) });
       this.#savePrefs();
     });
-
   }
 
   /* ── Realtime Simulation ──────────────────────────────── */
@@ -1390,18 +1621,40 @@ class KgOverview {
   #renderLastUpdated() {
     const el = document.getElementById('ko-last-updated');
     if (!el) return;
-    const lang = window.KINJO_LANG || 'ar';
-    const isAr = lang !== 'en';
+    const isAr = (window.KINJO_LANG || 'ar') !== 'en';
     el.textContent = (isAr ? 'آخر تحديث: ' : 'Updated: ') + new Date().toLocaleTimeString(isAr ? 'ar-JO' : 'en-US');
   }
 
-  /* ── Helpers ──────────────────────────────────────────── */
+  /* ── Filtering & Helpers ───────────────────────────────── */
   #filteredKGs() {
     let kgs = this.#store.get('kgs');
     const gov = this.#store.get('govFilter');
     const kg  = this.#store.get('kgFilter');
+    const hf  = this.#store.get('healthFilter');
+    const q   = (this.#store.get('searchQuery') || '').trim().toLowerCase();
+
     if (gov !== 'all') kgs = kgs.filter(k => k.gov === gov);
     if (kg  !== 'all') kgs = kgs.filter(k => k.name === kg);
+
+    if (hf === 'critical') {
+      kgs = kgs.filter(k => k.health_score === 'critical' || k.health_score === 'at_risk' || k.alerts > 0);
+    } else if (hf === 'attendance_low') {
+      kgs = kgs.filter(k => k.attendance < 80);
+    } else if (hf === 'capacity_high') {
+      kgs = kgs.filter(k => (Number(k.occupancy) || (k.children / k.capacity) * 100) >= 95);
+    } else if (hf === 'data_update') {
+      kgs = kgs.filter(k => k.teacher_data_status === 'needs_update');
+    }
+
+    if (q) {
+      kgs = kgs.filter(k =>
+        k.name.toLowerCase().includes(q) ||
+        k.gov.toLowerCase().includes(q) ||
+        (k.district && k.district.toLowerCase().includes(q)) ||
+        String(k.id).includes(q)
+      );
+    }
+
     return kgs;
   }
 
@@ -1414,6 +1667,8 @@ class KgOverview {
     this.#savePrefs();
     try {
       await this.#loadOverviewData();
+      this.#renderExecutiveStrip();
+      this.#renderGovChips();
       this.#updateKPIValues();
       this.#renderActiveView();
       this.#renderAlertItems();
@@ -1429,6 +1684,8 @@ class KgOverview {
     if (icon) icon.style.animation = 'koShimmer .6s linear infinite';
     try {
       await this.#loadOverviewData();
+      this.#renderExecutiveStrip();
+      this.#renderGovChips();
       this.#updateKPIValues();
       this.#renderActiveView();
       this.#renderAlertItems();
@@ -1444,9 +1701,6 @@ class KgOverview {
   }
 
   #today(offsetDays = 0) {
-    // Jordan is UTC+3 and the backend resolves every window in Jordan time, so
-    // derive the date there: toISOString() is UTC and would seed "yesterday"
-    // between 00:00 and 03:00 local.
     const d = new Date(Date.now() + 3 * 60 * 60 * 1000);
     d.setUTCDate(d.getUTCDate() + offsetDays);
     return d.toISOString().split('T')[0];
@@ -1467,8 +1721,6 @@ class KgOverview {
   #savePrefs() {
     KoPersist.save({
       period:     this.#store.get('period'),
-      // Persisted alongside `period`: restoring period='custom' without its dates
-      // would silently resolve to a different window than the bar displays.
       dateFrom:   this.#store.get('dateFrom'),
       dateTo:     this.#store.get('dateTo'),
       govFilter:  this.#store.get('govFilter'),
@@ -1479,11 +1731,19 @@ class KgOverview {
   }
 
   #exportCSV() {
+    const isAr = (window.KINJO_LANG || 'ar') !== 'en';
     const kgs  = this.#filteredKGs();
-    const rows = [['الحضانة','المحافظة','الأطفال','المعلمات','الحضور %','التنبيهات']];
-    kgs.forEach(k => rows.push([k.name, k.gov, k.children, k.teachers, k.attendance, k.alerts]));
-    const csv  = rows.map(r => r.join(',')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type:'text/csv;charset=utf-8;' });
+    const rows = [
+      isAr 
+        ? ['المعرف','الحضانة','المحافظة','الأطفال','المعلمات','الحضور %','الإشغال %','التنبيهات','الحالة العامة']
+        : ['ID','Kindergarten','Governorate','Children','Teachers','Attendance %','Occupancy %','Alerts','Health Status']
+    ];
+    kgs.forEach(k => {
+      const occPct = Math.round(Number(k.occupancy) || (kg.children / kg.capacity) * 100);
+      rows.push([k.id, k.name, k.gov, k.children, k.teachers, k.attendance, occPct, k.alerts, k.health_label]);
+    });
+    const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type:'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
     const a    = Object.assign(document.createElement('a'), { href:url, download:'kg_overview.csv' });
     a.click(); URL.revokeObjectURL(url);
@@ -1508,3 +1768,4 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('[KgOverview] initialisation failed', error);
   });
 });
+
