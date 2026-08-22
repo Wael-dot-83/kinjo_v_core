@@ -60,7 +60,7 @@ def test_command_center_toolbar_and_navigation_breakpoint_contracts():
     assert "admin-toolbar-freshness" in dashboard_template
     assert "admin-toolbar-actions" in dashboard_template
     assert "admin_agency_reports_dashboard_summary.js?v=1.1" in dashboard_template
-    assert "top-menu.css?v=9411a1b4de42" in admin_base
+    assert "top-menu.css?v=1b2d8c0b754a" in admin_base
     assert "@media (max-width: 1199.98px)" in top_menu_css
     assert "@media (min-width: 1200px)" in top_menu_css
 
