@@ -2061,23 +2061,73 @@ class AdminDashboard {
   }
 
   exportAttendanceAsCSV(attendanceData) {
-    if (!attendanceData || !Array.isArray(attendanceData)) return;
-    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
-    const headers = lang === "en" ? ["Date", "Attendance Count"] : ["التاريخ", "عدد الحضور"];
-    const rows = attendanceData.map((item) => [item.date, item.value]);
-    this._downloadCSV([headers, ...rows], "kinjo_daily_attendance.csv");
+    try {
+      if (!attendanceData) {
+        if (this.charts.attendance?.data) {
+          const d = this.charts.attendance.data;
+          const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+          const headers = lang === "en" ? ["Date", "Attendance Count"] : ["التاريخ", "عدد الحضور"];
+          const labels = d.labels || [];
+          const values = d.datasets?.[0]?.data || [];
+          const rows = labels.map((l, i) => [l, values[i] ?? 0]);
+          if (rows.length) {
+            this._downloadCSV([headers, ...rows], "kinjo_daily_attendance.csv");
+          }
+        }
+        return;
+      }
+      const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+      const headers = lang === "en" ? ["Date", "Attendance Count"] : ["التاريخ", "عدد الحضور"];
+      let rows = [];
+      if (Array.isArray(attendanceData)) {
+        rows = attendanceData.map((item) => [item.date || item.label || "", item.value ?? item.count ?? 0]);
+      } else if (attendanceData && Array.isArray(attendanceData.labels) && Array.isArray(attendanceData.values)) {
+        rows = attendanceData.labels.map((date, i) => [date, attendanceData.values[i] ?? 0]);
+      } else if (typeof attendanceData === "object") {
+        rows = Object.entries(attendanceData).map(([k, v]) => [k, v]);
+      }
+      if (rows.length) {
+        this._downloadCSV([headers, ...rows], "kinjo_daily_attendance.csv");
+      }
+    } catch (err) {
+      console.error("[AdminDashboard] exportAttendanceAsCSV error:", err);
+    }
   }
 
   exportEnrollmentAsCSV(enrollmentData) {
-    if (!enrollmentData || typeof enrollmentData !== "object") return;
-    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
-    const headers = lang === "en" ? ["Status", "Applications Count"] : ["الحالة", "عدد الطلبات"];
-    const rows = Object.entries(enrollmentData).map(([status, count]) => {
-      const fallback = (ENROLLMENT_FALLBACK[lang] || ENROLLMENT_FALLBACK.en)[status] || status;
-      const label = ENROLLMENT_I18N[status] ? this.t(ENROLLMENT_I18N[status], fallback) : fallback;
-      return [label, count];
-    });
-    this._downloadCSV([headers, ...rows], "kinjo_enrollment_status.csv");
+    try {
+      if (!enrollmentData) {
+        if (this.charts.dataSubmissions?.data) {
+          const d = this.charts.dataSubmissions.data;
+          const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+          const headers = lang === "en" ? ["Status", "Applications Count"] : ["الحالة", "عدد الطلبات"];
+          const labels = d.labels || [];
+          const values = d.datasets?.[0]?.data || [];
+          const rows = labels.map((l, i) => [l, values[i] ?? 0]);
+          if (rows.length) {
+            this._downloadCSV([headers, ...rows], "kinjo_enrollment_status.csv");
+          }
+        }
+        return;
+      }
+      const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+      const headers = lang === "en" ? ["Status", "Applications Count"] : ["الحالة", "عدد الطلبات"];
+      let rows = [];
+      if (Array.isArray(enrollmentData.labels) && Array.isArray(enrollmentData.values)) {
+        rows = enrollmentData.labels.map((label, i) => [label, enrollmentData.values[i] ?? 0]);
+      } else if (typeof enrollmentData === "object" && !Array.isArray(enrollmentData)) {
+        rows = Object.entries(enrollmentData).map(([status, count]) => {
+          const fallback = (ENROLLMENT_FALLBACK[lang] || ENROLLMENT_FALLBACK.en)[status] || status;
+          const label = ENROLLMENT_I18N[status] ? this.t(ENROLLMENT_I18N[status], fallback) : fallback;
+          return [label, count];
+        });
+      }
+      if (rows.length) {
+        this._downloadCSV([headers, ...rows], "kinjo_enrollment_status.csv");
+      }
+    } catch (err) {
+      console.error("[AdminDashboard] exportEnrollmentAsCSV error:", err);
+    }
   }
 
   _downloadCSV(dataArray, filename = "export.csv") {
