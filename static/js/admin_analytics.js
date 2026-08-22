@@ -807,6 +807,32 @@ function updateNetworkSummary(summary) {
      enrollmentBar.style.width = Math.min(enrollmentRate, 100) + "%";
      enrollmentBar.className = `progress-bar ${enrollmentRate > 90 ? "bg-success" : enrollmentRate > 70 ? "bg-info" : "bg-warning"}`;
    }
+   
+   // Update attendance benchmark bar
+   const attendanceBar = document.getElementById("avgAttendanceBar");
+   if (attendanceBar) {
+     attendanceBar.style.width = Math.min(attendanceRate, 100) + "%";
+     attendanceBar.className = `progress-bar ${attendanceRate >= 80 ? "bg-success" : attendanceRate >= 60 ? "bg-warning" : "bg-danger"}`;
+   }
+
+   // Anomaly spike check on incidents
+   const incCard = document.getElementById("incidents");
+   const incDelta = summary?.deltas?.incident_rate;
+   const incSpikeBadge = document.getElementById("incidentSpikeBadge");
+   if (incCard) {
+     const isSpike = incDelta && incDelta.direction === "up" && (Number(incDelta.delta_percent || 0) >= 30 || incDelta.severity === "high" || incDelta.severity === "critical");
+     if (isSpike) {
+       incCard.classList.add("kpi-card-v2--alert-spike");
+       if (incSpikeBadge) {
+         incSpikeBadge.classList.remove("d-none");
+         const isAr = (window.KINJO_LANG || 'ar') === 'ar';
+         incSpikeBadge.textContent = isAr ? "ارتفاع ملحوظ ⚠️" : "Spike Detected ⚠️";
+       }
+     } else {
+       incCard.classList.remove("kpi-card-v2--alert-spike");
+       if (incSpikeBadge) incSpikeBadge.classList.add("d-none");
+     }
+   }
 
    // Add visual score indicators to KPI cards
    const kgCard = document.querySelector('[aria-label*="Facilities"]');
@@ -830,6 +856,8 @@ function updateNetworkSummary(summary) {
    }
 
    const ohGov = document.getElementById("ohGovernanceScore");
+   const govBar = document.getElementById("ohGovernanceBar");
+   const govTier = document.getElementById("ohGovernanceTier");
    if (ohGov) {
      const govVal = summary.governance_avg_score || 0;
      ohGov.textContent = govVal.toFixed(1);
@@ -837,6 +865,16 @@ function updateNetworkSummary(summary) {
      ohGov.removeAttribute('class');
      // Add score tier class for visual indication
      ohGov.classList.add(govVal >= 80 ? "text-success" : govVal >= 60 ? "text-warning" : "text-danger");
+
+     if (govBar) {
+       govBar.style.width = Math.min(govVal, 100) + "%";
+       govBar.className = `progress-bar ${govVal >= 80 ? "bg-success" : govVal >= 60 ? "bg-warning" : "bg-danger"}`;
+     }
+     if (govTier) {
+       const isAr = (window.KINJO_LANG || 'ar') === 'ar';
+       govTier.textContent = govVal >= 80 ? (isAr ? "ممتاز" : "Good") : govVal >= 60 ? (isAr ? "متوسط" : "Needs Attention") : (isAr ? "حرج" : "Critical");
+       govTier.className = `badge ${govVal >= 80 ? "bg-success" : govVal >= 60 ? "bg-warning text-dark" : "bg-danger"}`;
+     }
    }
    // Update data quality ring if already loaded
    if (typeof window._updateDQRing === 'function' && summary.data_quality_score != null) {
@@ -871,12 +909,13 @@ function renderDeltaIndicator(delta, elementId, metricKey) {
   const percent = Math.abs(Number(delta.delta_percent || 0)).toFixed(1);
   const direction = delta.direction || "neutral";
   const isNeutral = direction === "neutral";
+  const isUp = direction === "up";
   const isImprovement =
-    direction === "up" ||
-    (metricKey === "incident_rate" && direction === "down");
+    (metricKey === "incident_rate" && direction === "down") ||
+    (metricKey !== "incident_rate" && direction === "up");
   const icon = isNeutral
     ? "bi-dash"
-    : isImprovement
+    : isUp
       ? "bi-arrow-up-short"
       : "bi-arrow-down-short";
   const className = isNeutral ? "kpi-delta kpi-delta--flat" : isImprovement ? "kpi-delta kpi-delta--up" : "kpi-delta kpi-delta--down";
@@ -889,7 +928,7 @@ function renderDeltaIndicator(delta, elementId, metricKey) {
 
   // For incidents, down is good (fewer incidents)
   // For other metrics, up is good (more facilities, more attendance, etc.)
-  const displaySign = isNeutral ? "" : (isImprovement ? "▲" : "▼");
+  const displaySign = isNeutral ? "" : (isUp ? "▲" : "▼");
 
   element.className = className;
   element.setAttribute("aria-label", ariaLabel);

@@ -2195,3 +2195,59 @@ a:focus-visible {
 .sortable-header:hover {
   background-color: var(--slate-100, #f1f5f9) !important;
 }
+
+/* --- High-Visibility Anomaly & Severity Indicators --- */
+.kpi-card-v2--alert-spike {
+  border: 2px solid var(--az-danger) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15), 0 8px 20px -4px rgba(220, 38, 38, 0.2) !important;
+  background: linear-gradient(135deg, #fff 0%, #fef2f2 100%) !important;
+  animation: pulse-border 2.5s infinite ease-in-out;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15), 0 8px 20px -4px rgba(220, 38, 38, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(220, 38, 38, 0.28), 0 12px 24px -4px rgba(220, 38, 38, 0.3);
+  }
+}
+
+.kpi-gauge-track {
+  height: 6px;
+  background: var(--slate-100);
+  border-radius: var(--r-full);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.kpi-anomaly-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.725rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  background: var(--az-danger-light);
+  color: var(--az-danger);
+  border: 1px solid rgba(220, 38, 38, 0.25);
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+  color: var(--slate-400);
+}
+[dir="rtl"] .breadcrumb-item + .breadcrumb-item::before {
+  float: right;
+  padding-left: 0.5rem;
+  padding-right: 0;
+}
+
+.freshness-traffic-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.freshness-traffic-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+

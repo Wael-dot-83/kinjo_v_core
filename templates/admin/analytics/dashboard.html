@@ -5,7 +5,7 @@
 {% block title %}{% if ui_lang == 'en' %}Analytics Intelligence Center{% else %}مركز الذكاء التحليلي{% endif %} — KinJo{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/admin_analytics_v2.css?v=76cb49181074">
+<link rel="stylesheet" href="/static/css/admin_analytics_v2.css?v=1c27818c531e">
 <style>
   /* Suppress Bootstrap's default card styling where we use az-card */
   .kpi-grid, .kpi-card { display: none !important; }
@@ -15,27 +15,45 @@
 {% block content %}
 <div class="az-analytics-page" id="azAnalyticsPage">
 
-  {# ══ SECTION 0 — Page Header (compact) ══════════════════════════════════ #}
-  <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap" style="margin-bottom:-8px">
+  {# ══ SECTION 0 — Page Header & Breadcrumbs ══════════════════════════════ #}
+  <nav aria-label="breadcrumb" class="mb-2">
+    <ol class="breadcrumb mb-0 py-1" style="font-size:0.825rem;">
+      <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none text-muted"><i class="bi bi-house-door me-1"></i>{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}</a></li>
+      <li class="breadcrumb-item"><a href="/admin/dashboard" class="text-decoration-none text-muted">{% if ui_lang == 'en' %}Admin Panel{% else %}لوحة الإدارة{% endif %}</a></li>
+      <li class="breadcrumb-item active text-primary fw-semibold" aria-current="page">{% if ui_lang == 'en' %}Analytics Intelligence{% else %}مركز الذكاء والتحليلات{% endif %}</li>
+    </ol>
+  </nav>
+
+  <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap mb-2">
     <div>
-      <h1 class="admin-page-title mb-1">
+      <h1 class="admin-page-title mb-1 fw-bold">
         <i class="bi bi-bar-chart-line-fill me-2 text-primary"></i>
-        {% if ui_lang == 'en' %}Analytics Intelligence Center{% else %}مركز الذكاء التحليلي{% endif %}
+        {% if ui_lang == 'en' %}Analytics Intelligence Center{% else %}مركز الذكاء والتحليلات المتقدمة{% endif %}
       </h1>
-      <small class="text-muted" id="analyticsLastUpdated">
-        <i class="bi bi-clock me-1"></i>
-        <span id="lastUpdatedText">{% if ui_lang == 'en' %}Initializing…{% else %}جاري التهيئة…{% endif %}</span>
-      </small>
-      <span id="dateRangeBadge" class="badge bg-light text-dark border ms-2 d-none" style="font-size:.75rem;font-weight:500"></span>
+      <p class="text-muted mb-1" style="font-size:0.875rem;">
+        {% if ui_lang == 'en' %}Comprehensive diagnostic telemetry, risk projections, data freshness, and governance insights across Jordan nursery network.{% else %}لوحة المؤشرات التشخيصية الشاملة، استشراف المخاطر، حداثة البيانات، ومقاييس الحوكمة لشبكة الحضانات في المملكة.{% endif %}
+      </p>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <small class="text-muted" id="analyticsLastUpdated">
+          <i class="bi bi-clock me-1"></i>
+          <span id="lastUpdatedText">{% if ui_lang == 'en' %}Initializing…{% else %}جاري التهيئة…{% endif %}</span>
+        </small>
+        <span id="dateRangeBadge" class="badge bg-light text-dark border ms-1 d-none" style="font-size:.75rem;font-weight:500"></span>
+      </div>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 align-items-center flex-wrap">
       <button class="btn btn-sm btn-outline-secondary" id="helpBtn"
               data-bs-toggle="modal" data-bs-target="#helpExpressModal"
               aria-label="{% if ui_lang == 'ar' %}مساعدة{% else %}Help{% endif %}">
         <i class="bi bi-question-circle me-1"></i>{% if ui_lang == 'ar' %}مساعدة{% else %}Help{% endif %}
       </button>
+      <button class="btn btn-sm btn-outline-primary" id="headerExportBtn"
+              data-bs-toggle="modal" data-bs-target="#exportModal"
+              aria-label="{% if ui_lang == 'en' %}Export Report{% else %}تصدير تقرير{% endif %}">
+        <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export Report{% else %}تصدير التقرير{% endif %}
+      </button>
       <button class="btn btn-sm btn-primary" id="refreshBtn" onclick="loadAdminAnalytics()">
-        <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+        <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh Data{% else %}تحديث البيانات{% endif %}
       </button>
     </div>
   </div>
@@ -260,6 +278,10 @@
                 <span class="skel skel-chip" aria-hidden="true"></span>
               </span>
             </div>
+            <div style="height:6px;background:var(--slate-100);border-radius:var(--r-full);overflow:hidden;margin-top:4px"
+                 role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+              <div id="avgAttendanceBar" style="height:100%;width:0%;background:var(--kpi-accent-attendance);border-radius:var(--r-full);"></div>
+            </div>
             <div class="kpi-sparkline-v2" data-metric="attendance_rate" aria-hidden="true"></div>
           </article>
 
@@ -267,7 +289,10 @@
           <article class="kpi-card-v2" id="incidents" style="--kpi-accent:var(--kpi-accent-incident);--kpi-icon-bg:var(--kpi-icon-bg-incident);"
                    aria-label="{% if ui_lang == 'ar' %}معدل الحوادث{% else %}Incident Rate{% endif %}">
             <div class="kpi-card-v2__header">
-              <p class="kpi-card-v2__label">{% if ui_lang == 'en' %}Safety Incidents{% else %}حوادث السلامة{% endif %}</p>
+              <div class="d-flex align-items-center gap-2">
+                <p class="kpi-card-v2__label mb-0">{% if ui_lang == 'en' %}Safety Incidents{% else %}حوادث السلامة{% endif %}</p>
+                <span class="badge bg-danger d-none" id="incidentSpikeBadge" style="font-size:0.7rem;animation:pulse 2s infinite"></span>
+              </div>
               <span class="kpi-card-v2__icon" aria-hidden="true"><i class="bi bi-exclamation-triangle"></i></span>
             </div>
             <p class="kpi-card-v2__value" id="incidentRate" aria-live="polite">
@@ -277,7 +302,7 @@
               <span class="kpi-delta kpi-delta--flat" id="incidentTrend" aria-live="polite">
                 <span class="skel skel-chip" aria-hidden="true"></span>
               </span>
-              <span class="text-muted" style="font-size:.75rem">{% if ui_lang == 'en' %}per 1k days{% else %}لكل ألف يوم{% endif %}</span>
+              <span class="text-muted" style="font-size:.75rem">{% if ui_lang == 'en' %}per 1k child-days{% else %}لكل ألف يوم طفل{% endif %}</span>
             </div>
             <div class="kpi-sparkline-v2" data-metric="incident_rate" aria-hidden="true"></div>
           </article>
@@ -286,7 +311,10 @@
           <article class="kpi-card-v2" style="--kpi-accent:var(--kpi-accent-governance);--kpi-icon-bg:var(--kpi-icon-bg-governance);"
                    aria-label="{% if ui_lang == 'ar' %}درجة الحوكمة{% else %}Governance Score{% endif %}">
             <div class="kpi-card-v2__header">
-              <p class="kpi-card-v2__label">{% if ui_lang == 'en' %}Governance Score{% else %}درجة الحوكمة{% endif %}</p>
+              <div class="d-flex align-items-center gap-2">
+                <p class="kpi-card-v2__label mb-0">{% if ui_lang == 'en' %}Governance Score{% else %}درجة الحوكمة{% endif %}</p>
+                <span class="badge bg-secondary" id="ohGovernanceTier" style="font-size:0.7rem">—</span>
+              </div>
               <span class="kpi-card-v2__icon" aria-hidden="true"><i class="bi bi-shield-check"></i></span>
             </div>
             <p class="kpi-card-v2__value" id="ohGovernanceScore" aria-live="polite">
@@ -294,6 +322,10 @@
             </p>
             <div class="kpi-card-v2__footer">
               <span class="kpi-delta kpi-delta--flat" id="govScoreTrend" aria-live="polite">—</span>
+            </div>
+            <div style="height:6px;background:var(--slate-100);border-radius:var(--r-full);overflow:hidden;margin-top:4px"
+                 role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+              <div id="ohGovernanceBar" style="height:100%;width:0%;background:var(--kpi-accent-governance);border-radius:var(--r-full);"></div>
             </div>
             <div class="kpi-sparkline-v2" data-metric="governance_score" aria-hidden="true"></div>
           </article>
@@ -1359,7 +1391,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script defer src="/static/js/chart_utils.js?v=2.1" charset="utf-8"></script>
 <script defer src="/static/js/kpi-validation.js?v=2878ed231030" charset="utf-8"></script>
-<script defer src="/static/js/admin_analytics.js?v=1f4bcd20c028" charset="utf-8"></script>
+<script defer src="/static/js/admin_analytics.js?v=280080b94b61" charset="utf-8"></script>
 <script>
 /* ── Analytics v2 Enhancement Layer ───────────────────────────────────────── */
 (function () {
