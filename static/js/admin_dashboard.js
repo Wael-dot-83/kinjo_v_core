@@ -148,6 +148,7 @@ class AdminDashboard {
       true,
     );
     this._chartRuntimeFailureReported = false;
+    this._dismissedAlerts = new Set();
     this.isLoading = false;
     this._listeners = {};
 
@@ -159,6 +160,7 @@ class AdminDashboard {
   init() {
     this.initEventListeners();
     this.initChartDefaults();
+    this.initChartExportButtons();
     this.loadDashboardData();
 
     // Accessibility: announce timestamp changes to screen readers.
@@ -737,6 +739,10 @@ class AdminDashboard {
       trendMeta.measurable === false || trendMeta.baseline_available === false;
     if (noBaseline) {
       row.className = "admin-kpi-card-trend admin-kpi-card-trend--flat";
+      row.title = this.t(
+        "dashboard.trend_no_baseline_tooltip",
+        "Baseline comparison requires historical records from the previous reporting period.",
+      );
       const icon = document.createElement("i");
       icon.className = "bi bi-dash-lg";
       icon.setAttribute("aria-hidden", "true");
@@ -1775,12 +1781,20 @@ class AdminDashboard {
 
   // ── Alerts ────────────────────────────────────────────────────────────────
 
+  _getAlertKey(alert) {
+    return `${alert.severity || "info"}_${alert.message || alert.message_ar || alert.message_en || ""}_${alert.timestamp || ""}`;
+  }
+
   renderAlerts(alerts) {
     const container = document.getElementById("alerts-list");
     if (!container) return;
     container.innerHTML = "";
 
-    if (!alerts || alerts.length === 0) {
+    const activeAlerts = (alerts || []).filter(
+      (a) => !this._dismissedAlerts.has(this._getAlertKey(a)),
+    );
+
+    if (activeAlerts.length === 0) {
       container.appendChild(
         this.createEmptyState(
           "dashboard.no_alerts",
@@ -1792,16 +1806,24 @@ class AdminDashboard {
       );
       return;
     }
-    alerts.forEach((a) => container.appendChild(this.createAlertItem(a)));
+
+    const severityWeight = { critical: 4, error: 3, warning: 2, info: 1, success: 0 };
+    const sorted = [...activeAlerts].sort(
+      (a, b) =>
+        (severityWeight[b.severity] || 0) - (severityWeight[a.severity] || 0),
+    );
+
+    sorted.forEach((a) => container.appendChild(this.createAlertItem(a)));
   }
 
   createAlertItem(alert) {
     const lang = window.KINJO_LANG === "en" ? "en" : "ar";
     const message = alert[`message_${lang}`] || alert.message || "";
-    return this._createFeedItem({
-      wrapperClass: `admin-alert-item admin-alert-${alert.severity || "info"}`,
+    const severity = alert.severity || "info";
+    const item = this._createFeedItem({
+      wrapperClass: `admin-alert-item admin-alert-${severity}`,
       iconWrapClass: "admin-alert-icon",
-      iconClass: this.getAlertIcon(alert.severity),
+      iconClass: this.getAlertIcon(severity),
       contentClass: "admin-alert-content",
       msgClass: "admin-alert-message",
       timeClass: "admin-alert-time",
@@ -1809,6 +1831,36 @@ class AdminDashboard {
       timestamp: alert.timestamp,
       role: "listitem",
     });
+
+    // Add severity badge to header/content
+    const severityBadge = document.createElement("span");
+    severityBadge.className = `admin-alert-severity-badge admin-alert-severity-badge--${severity}`;
+    severityBadge.textContent = this.formatSeverity(severity);
+    const contentDiv = item.querySelector(".admin-alert-content");
+    if (contentDiv) {
+      contentDiv.insertBefore(severityBadge, contentDiv.firstChild);
+    }
+
+    // Dismiss action button
+    const dismissBtn = document.createElement("button");
+    dismissBtn.type = "button";
+    dismissBtn.className = "admin-alert-dismiss-btn";
+    dismissBtn.setAttribute("aria-label", this.t("dashboard.dismiss_alert", "Dismiss alert"));
+    dismissBtn.title = this.t("dashboard.dismiss_alert", "Dismiss alert");
+    dismissBtn.innerHTML = '<i class="bi bi-x" aria-hidden="true"></i>';
+    dismissBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this._dismissedAlerts.add(this._getAlertKey(alert));
+      item.style.transition = "opacity 0.2s ease, transform 0.2s ease";
+      item.style.opacity = "0";
+      item.style.transform = "translateX(12px)";
+      setTimeout(() => {
+        this.renderAlerts(this._lastData?.alerts || []);
+      }, 200);
+    });
+    item.appendChild(dismissBtn);
+
+    return item;
   }
 
   // Shared DOM builder for activity and alert feed items — eliminates duplication.
@@ -1976,11 +2028,75 @@ class AdminDashboard {
     );
   }
 
-  stopAutoRefresh() {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
+  // ── Chart Export Utilities ───────────────────────────────────────────────
+
+  initChartExportButtons() {
+    document.getElementById("export-attendance-png")?.addEventListener("click", () => {
+      this.exportChartAsPNG(this.charts.attendance, "kinjo_daily_attendance.png");
+    });
+    document.getElementById("export-attendance-csv")?.addEventListener("click", () => {
+      this.exportAttendanceAsCSV(this._lastData?.charts?.attendance);
+    });
+    document.getElementById("export-enrollment-png")?.addEventListener("click", () => {
+      this.exportChartAsPNG(this.charts.dataSubmissions, "kinjo_enrollment_status.png");
+    });
+    document.getElementById("export-enrollment-csv")?.addEventListener("click", () => {
+      this.exportEnrollmentAsCSV(this._lastData?.charts?.enrollment);
+    });
+  }
+
+  exportChartAsPNG(chartInstance, filename = "chart.png") {
+    if (!chartInstance || !chartInstance.canvas) return;
+    try {
+      const url = chartInstance.toBase64Image();
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      console.error("[AdminDashboard] exportChartAsPNG error:", e);
     }
+  }
+
+  exportAttendanceAsCSV(attendanceData) {
+    if (!attendanceData || !Array.isArray(attendanceData)) return;
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    const headers = lang === "en" ? ["Date", "Attendance Count"] : ["التاريخ", "عدد الحضور"];
+    const rows = attendanceData.map((item) => [item.date, item.value]);
+    this._downloadCSV([headers, ...rows], "kinjo_daily_attendance.csv");
+  }
+
+  exportEnrollmentAsCSV(enrollmentData) {
+    if (!enrollmentData || typeof enrollmentData !== "object") return;
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    const headers = lang === "en" ? ["Status", "Applications Count"] : ["الحالة", "عدد الطلبات"];
+    const rows = Object.entries(enrollmentData).map(([status, count]) => {
+      const fallback = (ENROLLMENT_FALLBACK[lang] || ENROLLMENT_FALLBACK.en)[status] || status;
+      const label = ENROLLMENT_I18N[status] ? this.t(ENROLLMENT_I18N[status], fallback) : fallback;
+      return [label, count];
+    });
+    this._downloadCSV([headers, ...rows], "kinjo_enrollment_status.csv");
+  }
+
+  _downloadCSV(dataArray, filename = "export.csv") {
+    const csvContent =
+      "\uFEFF" +
+      dataArray
+        .map((row) =>
+          row.map((v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`).join(","),
+        )
+        .join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   destroy() {

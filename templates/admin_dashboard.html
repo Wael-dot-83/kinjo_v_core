@@ -2,7 +2,7 @@
 {% block extra_head %} {{ super() }}
 <link rel="stylesheet" href="/static/vendor/uswds/css/uswds.min.css" />
 <link rel="stylesheet" href="/static/css/agency_reports.css?v=706aa7d5c7fe" />
-<link rel="stylesheet" href="/static/css/dashboard-enhanced.css?v=ede6965ae308" />
+<link rel="stylesheet" href="/static/css/dashboard-enhanced.css?v=52a518c05eda" />
 <style>
   /* USWDS ships a Latin-only type stack (Source Sans Pro Web) and applies it to
    .usa-prose / .usa-summary-box. It loads after kinjo.css, so it beat the Arabic
@@ -336,6 +336,15 @@
 </style>
 {% endblock %} {% block content %}
 <div class="admin-main-content admin-uswds-dashboard usa-section">
+  <!-- Breadcrumb Navigation -->
+  <nav aria-label="breadcrumb" class="mb-2">
+    <ol class="breadcrumb mb-0 py-1 px-0 bg-transparent">
+      <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}</a></li>
+      <li class="breadcrumb-item"><a href="/admin/dashboard">{% if ui_lang == 'en' %}Admin Panel{% else %}لوحة الإدارة{% endif %}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{% if ui_lang == 'en' %}Operational Indicators{% else %}المؤشرات التشغيلية{% endif %}</li>
+    </ol>
+  </nav>
+
   <!-- Page Header -->
   <div class="admin-page-header usa-prose">
     <div class="admin-page-header-content">
@@ -542,11 +551,31 @@
       <div class="admin-dashboard-charts">
         <div class="admin-dashboard-chart-container">
           <div class="admin-card">
-            <div class="admin-card-header">
-              <h3 class="admin-card-title">
+            <div class="admin-card-header d-flex justify-content-between align-items-center">
+              <h3 class="admin-card-title mb-0">
                 {% if ui_lang == 'en' %}Daily Attendance{% else %}الحضور
                 اليومي{% endif %}
               </h3>
+              <div class="admin-chart-actions btn-group btn-group-sm">
+                <button
+                  class="btn btn-sm btn-outline-secondary"
+                  id="export-attendance-png"
+                  type="button"
+                  title="{% if ui_lang == 'en' %}Download chart image{% else %}تحميل صورة المخطط{% endif %}"
+                  aria-label="{% if ui_lang == 'en' %}Download chart image{% else %}تحميل صورة المخطط{% endif %}"
+                >
+                  <i class="bi bi-download" aria-hidden="true"></i>
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-secondary"
+                  id="export-attendance-csv"
+                  type="button"
+                  title="{% if ui_lang == 'en' %}Export data as CSV{% else %}تصدير البيانات CSV{% endif %}"
+                  aria-label="{% if ui_lang == 'en' %}Export data as CSV{% else %}تصدير البيانات CSV{% endif %}"
+                >
+                  <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
             <div class="admin-card-body">
               <canvas
@@ -569,11 +598,31 @@
 
         <div class="admin-dashboard-chart-container">
           <div class="admin-card">
-            <div class="admin-card-header">
-              <h3 class="admin-card-title">
+            <div class="admin-card-header d-flex justify-content-between align-items-center">
+              <h3 class="admin-card-title mb-0">
                 {% if ui_lang == 'en' %}Enrollment Status{% else %}حالة
                 التسجيل{% endif %}
               </h3>
+              <div class="admin-chart-actions btn-group btn-group-sm">
+                <button
+                  class="btn btn-sm btn-outline-secondary"
+                  id="export-enrollment-png"
+                  type="button"
+                  title="{% if ui_lang == 'en' %}Download chart image{% else %}تحميل صورة المخطط{% endif %}"
+                  aria-label="{% if ui_lang == 'en' %}Download chart image{% else %}تحميل صورة المخطط{% endif %}"
+                >
+                  <i class="bi bi-download" aria-hidden="true"></i>
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-secondary"
+                  id="export-enrollment-csv"
+                  type="button"
+                  title="{% if ui_lang == 'en' %}Export data as CSV{% else %}تصدير البيانات CSV{% endif %}"
+                  aria-label="{% if ui_lang == 'en' %}Export data as CSV{% else %}تصدير البيانات CSV{% endif %}"
+                >
+                  <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
             <div class="admin-card-body">
               <canvas
@@ -732,7 +781,7 @@
   window.KINJO_LANG = "{{ ui_lang }}";
 </script>
 <script src="/static/js/chart_utils.js?v=2.1"></script>
-<script src="/static/js/admin_dashboard.js?v=5ef4a2883bd6"></script>
+<script src="/static/js/admin_dashboard.js?v=2080a3755974"></script>
 <script src="/static/js/admin_activity_filters.js?v=1.0"></script>
 <script src="/static/js/admin_agency_reports_dashboard_summary.js?v=1.1"></script>
 {% endblock %}

@@ -931,3 +931,112 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
 .dfe-alert-item .dfe-alert-icon {
   color: var(--sev-color, var(--kinjo-color-text-muted));
 }
+
+/* ── Alert Severity Badges & Dismiss Action ─────────────── */
+.admin-alert-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--dashboard-border, #d7dee8);
+  background: var(--dashboard-surface, #ffffff);
+  transition: all 180ms ease;
+  margin-bottom: 0.65rem;
+}
+
+.admin-alert-item:hover {
+  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.06);
+}
+
+.admin-alert-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-alert-severity-badge {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.2rem;
+}
+
+.admin-alert-severity-badge--critical,
+.admin-alert-severity-badge--error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.admin-alert-severity-badge--warning {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.admin-alert-severity-badge--info {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.admin-alert-severity-badge--success {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.admin-alert-dismiss-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 0.2rem;
+  margin: -0.25rem -0.25rem 0 0;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: color 140ms ease, background-color 140ms ease;
+}
+
+.admin-alert-dismiss-btn:hover {
+  color: #475569;
+  background-color: #f1f5f9;
+}
+
+/* ── Chart Header Actions ──────────────────────────────── */
+.admin-chart-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.admin-chart-actions .btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  color: #64748b;
+  border-color: #cbd5e1;
+  background: #ffffff;
+  transition: all 140ms ease;
+}
+
+.admin-chart-actions .btn:hover {
+  color: var(--kinjo-action, #1e40af);
+  border-color: var(--kinjo-action, #1e40af);
+  background: #f8fafc;
+}
+
