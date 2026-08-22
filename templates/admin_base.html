@@ -111,7 +111,7 @@
 
       <!-- KinJo Admin Design System -->
       <link rel="stylesheet" href="/static/css/admin_design_system.css?v=f3ec127009f4" />
-      <link rel="stylesheet" href="/static/css/top-menu.css?v=1b2d8c0b754a" />
+      <link rel="stylesheet" href="/static/css/top-menu.css?v=d37ee5674696" />
       <link rel="stylesheet" href="/static/css/design-tokens.css?v=3e072906fea8" />
       <link rel="stylesheet" href="/static/css/layout.css?v=1.4" />
       <link rel="stylesheet" href="/static/css/components.css?v=d95c54d15066" />
@@ -301,11 +301,8 @@
                       current_user else 'System Admin') }}
                     </span>
                     <span class="header-user-role">
-                      {% if ui_lang == 'en' %}{{ current_user.role | title if
-                      current_user and current_user.role else 'Administrator'
-                      }}{% else %}{{ current_user.role.value | role_ar if
-                      current_user and current_user.role else 'مدير النظام' }}{%
-                      endif %}
+                      {% set current_user_role_str = (current_user.role.value if (current_user and current_user.role and current_user.role.value is defined) else (current_user.role if (current_user and current_user.role) else 'ADMIN')) | string | upper %}
+                      {% if ui_lang == 'en' %}{{ current_user_role_str | title if current_user and current_user.role else 'Administrator' }}{% else %}{{ current_user_role_str | role_ar if current_user and current_user.role else 'مدير النظام' }}{% endif %}
                     </span>
                   </div>
                 </button>
@@ -688,7 +685,8 @@
                   ]
                 }
               ] %}
-              {% set full_admin_navigation = current_user and current_user.role.value == "ADMIN" %}
+              {% set current_user_role_str = (current_user.role.value if (current_user and current_user.role and current_user.role.value is defined) else (current_user.role if (current_user and current_user.role) else 'ADMIN')) | string | upper %}
+              {% set full_admin_navigation = (current_user_role_str == "ADMIN" or not current_user) %}
               {# Exact destinations take precedence over broader contextual prefixes. #}
               {% set nav_state = namespace(exact_match=false) %}
               {% for section in sidebar_sections %}
@@ -1000,6 +998,7 @@
 
               btn.addEventListener("click", function (e) {
                 e.preventDefault();
+                e.stopPropagation();
                 var isOpen = item.classList.contains("open");
                 // Close other open desktop dropdowns
                 menuItems.forEach(function (other) {

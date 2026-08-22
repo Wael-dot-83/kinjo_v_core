@@ -101,6 +101,11 @@
   transform: rotate(180deg);
 }
 
+/* Suppress Bootstrap 5 caret on top menu links */
+.top-menu-link.dropdown-toggle::after {
+  display: none !important;
+}
+
 /* ============================================================================
     DROPDOWN MENUS (Desktop)
     ============================================================================ */
@@ -120,9 +125,21 @@
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   opacity: 0;
   visibility: hidden;
+  pointer-events: none;
   transform: translateY(8px);
   transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
   z-index: 1110;
+}
+
+/* Invisible hover bridge to prevent subpixel gap hover loss */
+.top-menu-dropdown::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: transparent;
 }
 
 /* Show dropdown on hover, focus-within, or when .open class is set via JS */
@@ -131,6 +148,7 @@
 .top-menu-item.has-dropdown.open .top-menu-dropdown {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
   transform: translateY(0);
 }
 
