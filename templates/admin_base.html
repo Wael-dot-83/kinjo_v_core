@@ -943,9 +943,30 @@
           };
 
           /* ── Global error handler ─────────────────────────────── */
+          var _lastErrorToastTime = 0;
           window.addEventListener("error", function (e) {
-            console.error("Admin interface error:", e.error);
+            console.error("Admin interface error:", e.error || e.message);
             if (!e.error) return;
+
+            // Ignore external and browser extension scripts
+            var filename = e.filename || "";
+            if (filename && !filename.startsWith(window.location.origin) && !filename.startsWith("/") && !filename.startsWith("blob:")) {
+              return;
+            }
+            if (filename && (filename.includes("extension") || filename.includes("chrome-extension") || filename.includes("moz-extension") || filename.includes("safari-extension"))) {
+              return;
+            }
+
+            // Ignore benign browser noise (e.g. Chart.js ResizeObserver loop notifications)
+            var msg = String(e.message || (e.error && e.error.message) || "");
+            if (msg.includes("ResizeObserver") || msg.includes("Script error") || msg.includes("cancelled")) {
+              return;
+            }
+
+            var now = Date.now();
+            if (now - _lastErrorToastTime < 5000) return;
+            _lastErrorToastTime = now;
+
             if (window.AdminComponents && window.AdminI18n) {
               var _i = window.AdminI18n;
               window.AdminComponents.showNotification({
@@ -959,6 +980,18 @@
             }
           });
           window.addEventListener("unhandledrejection", function (e) {
+            console.error("Admin unhandled rejection:", e.reason);
+            if (!e.reason) return;
+
+            var reasonStr = String(e.reason && e.reason.message ? e.reason.message : e.reason);
+            if (reasonStr.includes("AbortError") || reasonStr.includes("cancelled") || reasonStr.includes("Failed to fetch") || reasonStr.includes("NetworkError")) {
+              return;
+            }
+
+            var now = Date.now();
+            if (now - _lastErrorToastTime < 5000) return;
+            _lastErrorToastTime = now;
+
             if (window.AdminComponents && window.AdminI18n) {
               var _i = window.AdminI18n;
               window.AdminComponents.showNotification({
